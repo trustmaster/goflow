@@ -64,7 +64,7 @@ func RunProc(c interface{}) bool {
 	var vNetCtr netController
 	if hasComponent {
 		vNet = vCom.FieldByName("Net")
-		if vNet.IsValid() {
+		if vNet.IsValid() && !vNet.IsNil() {
 			if vNetCtr, hasNet = vNet.Interface().(netController); hasNet {
 				// Add an instance to the network's WaitGroup
 				vNetCtr.getWait().Add(1)
@@ -82,7 +82,7 @@ func RunProc(c interface{}) bool {
 
 	emptyArr := [0]reflect.Value{}
 	empty := emptyArr[:]
-
+	
 	// Bind channel event handlers
 	// Iterate over struct fields
 	for i := 0; i < t.NumField(); i++ {
