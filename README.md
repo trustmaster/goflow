@@ -28,7 +28,11 @@ import "github.com/trustmaster/goflow"
 
 ## Basic Example ##
 
-Below there is a listing of a simple program running a network of two processes. This first one generates greetings for given names, the second one prints them on screen. It demonstrates how components and graphs are defined and how they are embedded into the main program.
+Below there is a listing of a simple program running a network of two processes.
+
+![Greeter example diagram](http://flowbased.wdfiles.com/local--files/goflow/goflow-hello.png)
+
+This first one generates greetings for given names, the second one prints them on screen. It demonstrates how components and graphs are defined and how they are embedded into the main program.
 
 ```go
 package main
