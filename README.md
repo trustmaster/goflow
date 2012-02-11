@@ -1,4 +1,4 @@
-# go-flow - Flow-based programming library for Go (golang) #
+# GoFlow - Flow-based programming library for Go (golang) #
 
 This is quite a minimalistic implementation of [Flow-based programming](http://en.wikipedia.org/wiki/Flow-based_programming) in Go programming language that aims at designing applications as graphs of components which react to data that flows through the graph.
 
@@ -139,7 +139,7 @@ For more information please visit [project wiki](https://github.com/trustmaster/
 
 ## More examples ##
 
-Other examples will be added as separate GitHub projects soon.
+* [GoChat](https://github.com/trustmaster/gochat), a simple chat in Go using this library
 
 ## Links ##
 
