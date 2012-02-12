@@ -38,7 +38,7 @@ This first one generates greetings for given names, the second one prints them o
 package main
 
 import (
-  "fmt"
+	"fmt"
 	"github.com/trustmaster/goflow"
 	"time"
 )
@@ -133,9 +133,17 @@ Here are some Flow-based programming terms used in GoFlow:
 * Port - is a property of a Component or Graph through which it communicates with the outer world. There are input ports (Inports) and output ports (Outports). For GoFlow components it is a channel field.
 * Process - is a Component instance running in memory. In OOP terms a Process is an object of Component class.
 
+More terms can be found in [flowbased terms](http://flowbased.org/terms) and [FBP wiki](http://www.jpaulmorrison.com/cgi-bin/wiki.pl?action=index).
+
 ## Further reading ##
 
 For more information please visit [project wiki](https://github.com/trustmaster/goflow/wiki).
+
+Documentation for the flow package can be accessed using standard godoc tool, e.g.
+
+```
+godoc github.com/trustmaster/goflow
+```
 
 ## More examples ##
 
@@ -149,10 +157,11 @@ Here are related projects and resources:
 * [Knol about FBP](http://knol.google.com/k/flow-based-programming)
 * [NoFlo](https://github.com/bergie/noflo), FBP for Node.js
 * [Pypes](http://www.pypes.org/), flow-based Python ETL
+* [Go](http://golang.org/), the Go programming language
 
 ## TODO ##
 
-* More documentation and examples
 * A tool to convert visual diagrams into Go code
 * Distributed networks via TCP/IP and UDP
+* Better run-time restructuring and evolution
 * Reflection and monitoring of networks
