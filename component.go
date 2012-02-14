@@ -77,8 +77,10 @@ func RunProc(c interface{}) bool {
 		initable.Init()
 	}
 
-	// A group to wait for all inputs to finish
+	// A group to wait for all inputs to be closed
 	inputsClose := new(sync.WaitGroup)
+	// A group to wait for all recv handlers to finish
+	handlersDone := new(sync.WaitGroup)
 
 	emptyArr := [0]reflect.Value{}
 	empty := emptyArr[:]
@@ -118,6 +120,7 @@ func RunProc(c interface{}) bool {
 						}
 						if hasRecv {
 							// Call the receival handler for this channel
+							handlersDone.Add(1)
 							go func() {
 								if hasLock {
 									lockFunc.Call(empty)
@@ -127,6 +130,7 @@ func RunProc(c interface{}) bool {
 								if hasLock {
 									unlockFunc.Call(empty)
 								}
+								handlersDone.Done()
 							}()
 						}
 					}
@@ -137,8 +141,10 @@ func RunProc(c interface{}) bool {
 		}
 	}
 	go func() {
-		// Wait for all inputs to finish
+		// Wait for all inputs to be closed
 		inputsClose.Wait()
+		// Wait all inport handlers to finish their job
+		handlersDone.Wait()
 		// Call shutdown handler (user or default)
 		shutdownProc(c)
 		// Remove the instance from the network's WaitGroup

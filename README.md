@@ -40,7 +40,6 @@ package main
 import (
 	"fmt"
 	"github.com/trustmaster/goflow"
-	"time"
 )
 
 // A component that generates greetings
@@ -109,8 +108,6 @@ func main() {
 	in <- "John"
 	in <- "Boris"
 	in <- "Hanna"
-	// Give it some time to work
-	time.Sleep(1000000)
 	// Close the input to shut the network down
 	close(in)
 	// Wait until it's done
@@ -120,7 +117,7 @@ func main() {
 
 Looks a bit heavy for such a simple task but FBP is aimed at a bit more complex things than just printing on screen. So in more complex an realistic examples the infractructure pays the price.
 
-You probably have one question left even after reading the comments in code: why do we need to sleep and wait for the finish signal? This is because flow-based world is asynchronous and while you expect things to happen in the same sequence as they are in main(), during runtime they don't necessarily follow the same order and a channel might be closed before a process can read a value from it or the application might terminate before the network has done its job. To avoid this confusion we added sleep and finish signal for synchronization.
+You probably have one question left even after reading the comments in code: why do we need to wait for the finish signal? This is because flow-based world is asynchronous and while you expect things to happen in the same sequence as they are in main(), during runtime they don't necessarily follow the same order and the application might terminate before the network has done its job. To avoid this confusion we added the finish signal for synchronization.
 
 ## Terminology ##
 
