@@ -5,19 +5,19 @@ import (
 	"sync"
 )
 
-// Default channel buffer capacity
+// DefaultBufferSize is the default channel buffer capacity.
 var DefaultBufferSize = 32
 
-// Default capacity of network's processes/connections maps
+// DefaultNetworkCapacity is the default capacity of network's processes/ports maps.
 var DefaultNetworkCapacity = 32
 
-// Full port name within the network
+// portName stores full port name within the network.
 type portName struct {
 	proc string // Process name in the network
 	port string // Port name of the process
 }
 
-// An interface used to obtain subnet's ports
+// portMapper interface is used to obtain subnet's ports.
 type portMapper interface {
 	getInPort(string) reflect.Value
 	getOutPort(string) reflect.Value
@@ -27,27 +27,27 @@ type portMapper interface {
 	SetOutPort(string, interface{}) bool
 }
 
-// An interface used to run the subnet
+// netController interface is used to run a subnet.
 type netController interface {
 	getWait() *sync.WaitGroup
 	run()
 }
 
-// Graph of processes connected with packet channels
+// Graph represents a graph of processes connected with packet channels.
 type Graph struct {
-	// Used for graceful network termination
+	// Wait is used for graceful network termination.
 	Wait *sync.WaitGroup
-	// A pointer to parent network
+	// Net is a pointer to parent network.
 	Net *Graph
-	// Contains the processes
+	// procs contains the processes of the network.
 	procs map[string]interface{}
-	// Maps network incoming ports to component ports
+	// inPorts maps network incoming ports to component ports.
 	inPorts map[string]portName
-	// Maps network outgoing ports to component ports
+	// outPorts maps network outgoing ports to component ports.
 	outPorts map[string]portName
 }
 
-// Initializes graph fields
+// InitGraphState method initializes graph fields and allocates memory.
 func (n *Graph) InitGraphState() {
 	n.Wait = new(sync.WaitGroup)
 	n.procs = make(map[string]interface{}, DefaultNetworkCapacity)
@@ -55,7 +55,8 @@ func (n *Graph) InitGraphState() {
 	n.outPorts = make(map[string]portName, 16)
 }
 
-// Adds a new process to the network
+// Add adds a new process with a given name to the network.
+// It returns true on success or panics and returns false on error.
 func (n *Graph) Add(c interface{}, name string) bool {
 	// Check if passed interface is a valid pointer to struct
 	v := reflect.ValueOf(c)
@@ -87,7 +88,8 @@ func (n *Graph) Add(c interface{}, name string) bool {
 	return true
 }
 
-// Connects a sender to a receiver
+// Connect connects a sender to a receiver using a channel passed to it.
+// It returns true on success or panics and returns false if error occurs.
 func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort string, channel interface{}) bool {
 	// Ensure sender and receiver processes exist
 	sender, senderFound := n.procs[senderName]
@@ -183,7 +185,7 @@ func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort strin
 	return true
 }
 
-// Returns the inport with given name as reflect.Value channel
+// getInPort returns the inport with given name as reflect.Value channel.
 func (n *Graph) getInPort(name string) reflect.Value {
 	pName, ok := n.inPorts[name]
 	if !ok {
@@ -205,7 +207,7 @@ func (n *Graph) getInPort(name string) reflect.Value {
 	return ret
 }
 
-// Returns the outport with given name as reflect.Value channel
+// getOutPort returns the outport with given name as reflect.Value channel.
 func (n *Graph) getOutPort(name string) reflect.Value {
 	pName, ok := n.outPorts[name]
 	if !ok {
@@ -227,24 +229,25 @@ func (n *Graph) getOutPort(name string) reflect.Value {
 	return ret
 }
 
-// Returns net's wait group
+// getWait returns net's wait group.
 func (n *Graph) getWait() *sync.WaitGroup {
 	return n.Wait
 }
 
-// Checks if the net has an inport with given name
+// hasInPort checks if the net has an inport with given name.
 func (n *Graph) hasInPort(name string) bool {
 	_, has := n.inPorts[name]
 	return has
 }
 
-// Checks if the net has an outport with given name
+// hasOutPort checks if the net has an outport with given name.
 func (n *Graph) hasOutPort(name string) bool {
 	_, has := n.outPorts[name]
 	return has
 }
 
-// Adds an inport to the net and maps it to a contained proc's port
+// MapInPort adds an inport to the net and maps it to a contained proc's port.
+// It returns true on success or panics and returns false on error.
 func (n *Graph) MapInPort(name, procName, procPort string) bool {
 	ret := false
 	// Check if target component and port exists
@@ -269,7 +272,8 @@ func (n *Graph) MapInPort(name, procName, procPort string) bool {
 	return ret
 }
 
-// Adds an outport to the net and maps it to a contained proc's port
+// MapOutPort adds an outport to the net and maps it to a contained proc's port.
+// It returns true on success or panics and returns false on error.
 func (n *Graph) MapOutPort(name, procName, procPort string) bool {
 	ret := false
 	// Check if target component and port exists
@@ -294,7 +298,7 @@ func (n *Graph) MapOutPort(name, procName, procPort string) bool {
 	return ret
 }
 
-// Runs the network and waits for all processes to finish
+// run runs the network and waits for all processes to finish.
 func (n *Graph) run() {
 	hasParent := n.Net != nil
 	if hasParent {
@@ -318,7 +322,8 @@ func (n *Graph) run() {
 	}
 }
 
-// Assigns a channel to a network's inport to talk to the outer world
+// SetInPort assigns a channel to a network's inport to talk to the outer world.
+// It returns true on success or false if the inport cannot be set.
 func (n *Graph) SetInPort(name string, channel interface{}) bool {
 	res := false
 	// Get the component's inport associated
@@ -331,7 +336,8 @@ func (n *Graph) SetInPort(name string, channel interface{}) bool {
 	return res
 }
 
-// Assigns a channel to a network's outport to talk to the outer world
+// SetOutPort assigns a channel to a network's outport to talk to the outer world.
+// It returns true on success or false if the outport cannot be set.
 func (n *Graph) SetOutPort(name string, channel interface{}) bool {
 	res := false
 	// Get the component's outport associated
@@ -344,7 +350,8 @@ func (n *Graph) SetOutPort(name string, channel interface{}) bool {
 	return res
 }
 
-// Runs the network by starting all of its processes.
+// RunNet runs the network by starting all of its processes.
+// It runs Init/Finish handlers if the network implements Initializable/Finalizable interfaces.
 func RunNet(i interface{}) {
 	// Call user init function if exists
 	if initable, ok := i.(Initializable); ok {

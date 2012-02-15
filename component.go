@@ -1,3 +1,4 @@
+// The flow package is a framework for Flow-based programming in Go.
 package flow
 
 import (
@@ -5,29 +6,31 @@ import (
 	"sync"
 )
 
-// Generic flow component that has to becontained
-// in real components. It stores network-specific information.
+// Component is a generic flow component that has to be contained in concrete components.
+// It stores network-specific information.
 type Component struct {
-	// A pointer to network to inform it when the process is started and over
+	// Net is a pointer to network to inform it when the process is started and over
+	// or to change its structure at run time.
 	Net *Graph
 }
 
-// A component/graph with custom initialization code
+// Initalizable is the interface implemented by components/graphs with custom initialization code.
 type Initializable interface {
 	Init()
 }
 
-// A component/graph with extra finalization code
+// Finalizable is the interface implemented by components/graphs with extra finalization code.
 type Finalizable interface {
 	Finish()
 }
 
-// A component overriding default Shutdown() behavior
+// Shutdowner is the interface implemented by components overriding default Shutdown() behavior.
 type Shutdowner interface {
 	Shutdown()
 }
 
-// Runs event handling loop on component ports
+// RunProc runs event handling loop on component ports.
+// It returns true on success or panics with error message and returns false on error.
 func RunProc(c interface{}) bool {
 	// Check if passed interface is a valid pointer to struct
 	v := reflect.ValueOf(c)
@@ -155,7 +158,7 @@ func RunProc(c interface{}) bool {
 	return true
 }
 
-// Closes all output channels in a component
+// closePorts closes all output channels of a process.
 func closePorts(c interface{}) {
 	v := reflect.ValueOf(c).Elem()
 	t := v.Type()
@@ -170,7 +173,7 @@ func closePorts(c interface{}) {
 	}
 }
 
-// Graceful process shutdown
+// shutdownProc represents a standard process shutdown procedure.
 func shutdownProc(c interface{}) {
 	if s, ok := c.(Shutdowner); ok {
 		// Custom shutdown behavior
