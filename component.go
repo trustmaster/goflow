@@ -48,15 +48,9 @@ func RunProc(c interface{}) bool {
 
 	// Get internal state lock if available
 	hasLock := false
-	var lockField, lockFieldElem, lockFunc, unlockFunc reflect.Value
-	lockField = v.FieldByName("StateLock")
-	if lockField.IsValid() {
-		lockFieldElem = lockField.Elem()
-		hasLock = lockFieldElem.IsValid() && lockFieldElem.Type().Name() == "Mutex"
-	}
-	if hasLock {
-		lockFunc = lockField.MethodByName("Lock")
-		unlockFunc = lockField.MethodByName("Unlock")
+	var locker sync.Locker
+	if lockField := v.FieldByName("StateLock"); lockField.IsValid() && lockField.Elem().IsValid() {
+		locker, hasLock = lockField.Interface().(sync.Locker)
 	}
 
 	// Call user init function if exists
@@ -95,11 +89,11 @@ func RunProc(c interface{}) bool {
 							if hasClose {
 								// Lock the state and call OnClose handler
 								if hasLock {
-									lockFunc.Call(empty)
+									locker.Lock()
 								}
 								onClose.Call(empty)
 								if hasLock {
-									unlockFunc.Call(empty)
+									locker.Unlock()
 								}
 							}
 							inputsClose.Done()
@@ -110,12 +104,12 @@ func RunProc(c interface{}) bool {
 							handlersDone.Add(1)
 							go func() {
 								if hasLock {
-									lockFunc.Call(empty)
+									locker.Lock()
 								}
 								valArr := [1]reflect.Value{val}
 								onRecv.Call(valArr[:])
 								if hasLock {
-									unlockFunc.Call(empty)
+									locker.Unlock()
 								}
 								handlersDone.Done()
 							}()

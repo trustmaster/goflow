@@ -45,30 +45,37 @@ type locker struct {
 	StateLock *sync.Mutex
 
 	counter int
+	sum     int
 }
 
 // Creates a locker instance. This is required because StateLock must be a pointer
 func NewLocker() *locker {
 	l := new(locker)
 	l.counter = 0
+	l.sum = 0
 	l.StateLock = new(sync.Mutex)
 	return l
 }
 
-// Simulates long processing and serialized data storage
+// Simulates long processing and read/write access
 func (l *locker) OnIn(i int) {
 	l.counter++
 	// Half of the calls will wait to simulate long processing
 	if l.counter%2 == 0 {
 		time.Sleep(1000)
 	}
-	// Send the results to the output
-	l.Out <- i
-	// No other results should appear until it unlocks
 
+	// Parellel write data race danger is here
+	l.sum += i
 }
 
-// Tests internal state locking feature
+func (l *locker) Shutdown() {
+	// Emit the result and don't close the outport
+	l.Out <- l.sum
+}
+
+// Tests internal state locking feature.
+// Run with GOMAXPROCS > 1.
 func TestStateLock(t *testing.T) {
 	l := NewLocker()
 	in := make(chan int, 10)
@@ -76,19 +83,19 @@ func TestStateLock(t *testing.T) {
 	l.In = in
 	l.Out = out
 	RunProc(l)
-	// Simulate parallel writing
-	for i := 0; i < 10; i++ {
+	// Simulate parallel writing and count the sum
+	sum := 0
+	for i := 1; i <= 1000; i++ {
 		in <- i
+		sum += i
 	}
-	// Check if the results arrived in the correct order
-	for i := 0; i < 10; i++ {
-		i2 := <-out
-		if i2 != i {
-			t.Errorf("%d != %d", i2, i)
-		}
-	}
-	// Shutdown the component
+	// Send the close signal
 	close(in)
+	// Get the result and check if it is consistent
+	sum2 := <-out
+	if sum2 != sum {
+		t.Errorf("%d != %d", sum2, sum)
+	}
 }
 
 // An external variable
