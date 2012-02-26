@@ -59,22 +59,6 @@ func RunProc(c interface{}) bool {
 		unlockFunc = lockField.MethodByName("Unlock")
 	}
 
-	// Get the embedded flow.Component
-	vCom := v.FieldByName("Component")
-	hasComponent := vCom.IsValid() && vCom.Type().Name() == "Component"
-	var vNet reflect.Value
-	hasNet := false // indicates whether it is attached to a network
-	var vNetCtr netController
-	if hasComponent {
-		vNet = vCom.FieldByName("Net")
-		if vNet.IsValid() && !vNet.IsNil() {
-			if vNetCtr, hasNet = vNet.Interface().(netController); hasNet {
-				// Add an instance to the network's WaitGroup
-				vNetCtr.getWait().Add(1)
-			}
-		}
-	}
-
 	// Call user init function if exists
 	if initable, ok := c.(Initializable); ok {
 		initable.Init()
@@ -87,7 +71,7 @@ func RunProc(c interface{}) bool {
 
 	emptyArr := [0]reflect.Value{}
 	empty := emptyArr[:]
-	
+
 	// Bind channel event handlers
 	// Iterate over struct fields
 	for i := 0; i < t.NumField(); i++ {
@@ -148,11 +132,18 @@ func RunProc(c interface{}) bool {
 		inputsClose.Wait()
 		// Wait all inport handlers to finish their job
 		handlersDone.Wait()
+
 		// Call shutdown handler (user or default)
 		shutdownProc(c)
-		// Remove the instance from the network's WaitGroup
-		if hasNet {
-			vNetCtr.getWait().Done()
+
+		// Get the embedded flow.Component and check if it belongs to a network
+		if vCom := v.FieldByName("Component"); vCom.IsValid() && vCom.Type().Name() == "Component" {
+			if vNet := vCom.FieldByName("Net"); vNet.IsValid() && !vNet.IsNil() {
+				if vNetCtr, hasNet := vNet.Interface().(netController); hasNet {
+					// Remove the instance from the network's WaitGroup
+					vNetCtr.getWait().Done()
+				}
+			}
 		}
 	}()
 	return true

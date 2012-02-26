@@ -300,11 +300,8 @@ func (n *Graph) MapOutPort(name, procName, procPort string) bool {
 
 // run runs the network and waits for all processes to finish.
 func (n *Graph) run() {
-	hasParent := n.Net != nil
-	if hasParent {
-		// Notify parent of start
-		n.Net.Wait.Add(1)
-	}
+	// Add processes to the waitgroup before starting them
+	n.Wait.Add(len(n.procs))
 	for _, v := range n.procs {
 		// Check if it is a net or proc
 		r := reflect.ValueOf(v).Elem()
@@ -316,7 +313,8 @@ func (n *Graph) run() {
 	}
 	// Wait for all processes to terminate
 	n.Wait.Wait()
-	if hasParent {
+	// Check if there is a parent net
+	if n.Net != nil {
 		// Notify parent of finish
 		n.Net.Wait.Done()
 	}

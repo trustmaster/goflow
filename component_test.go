@@ -127,6 +127,7 @@ func TestInitFinish(t *testing.T) {
 	i := new(initfin)
 	i.Net = new(Graph)
 	i.Net.InitGraphState()
+	i.Net.Wait.Add(1)
 	in := make(chan int)
 	out := make(chan int)
 	i.In = in
@@ -165,6 +166,7 @@ func TestClose(t *testing.T) {
 	c := new(closeTest)
 	c.Net = new(Graph)
 	c.Net.InitGraphState()
+	c.Net.Wait.Add(1)
 	in := make(chan int)
 	c.In = in
 	RunProc(c)
@@ -200,6 +202,7 @@ func TestShutdown(t *testing.T) {
 	s := new(shutdownTest)
 	s.Net = new(Graph)
 	s.Net.InitGraphState()
+	s.Net.Wait.Add(1)
 	in := make(chan int)
 	s.In = in
 	RunProc(s)
