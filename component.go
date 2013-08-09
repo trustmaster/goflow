@@ -102,17 +102,15 @@ func RunProc(c interface{}) bool {
 						if hasRecv {
 							// Call the receival handler for this channel
 							handlersDone.Add(1)
-							go func() {
-								if hasLock {
-									locker.Lock()
-								}
-								valArr := [1]reflect.Value{val}
-								onRecv.Call(valArr[:])
-								if hasLock {
-									locker.Unlock()
-								}
-								handlersDone.Done()
-							}()
+							if hasLock {
+								locker.Lock()
+							}
+							valArr := [1]reflect.Value{val}
+							onRecv.Call(valArr[:])
+							if hasLock {
+								locker.Unlock()
+							}
+							handlersDone.Done()
 						}
 					}
 				}()
