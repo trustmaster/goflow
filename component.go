@@ -6,12 +6,21 @@ import (
 	"sync"
 )
 
+const (
+	ComponentModeUndefined = iota
+	ComponentModeAsync
+	ComponentModeSync
+)
+
+var DefaultComponentMode = ComponentModeAsync
+
 // Component is a generic flow component that has to be contained in concrete components.
 // It stores network-specific information.
 type Component struct {
 	// Net is a pointer to network to inform it when the process is started and over
 	// or to change its structure at run time.
-	Net *Graph
+	Net  *Graph
+	Mode int8
 }
 
 // Initalizable is the interface implemented by components/graphs with custom initialization code.
@@ -66,6 +75,18 @@ func RunProc(c interface{}) bool {
 	emptyArr := [0]reflect.Value{}
 	empty := emptyArr[:]
 
+	// Get the embedded flow.Component
+	vCom := v.FieldByName("Component")
+	isComponent := vCom.IsValid() && vCom.Type().Name() == "Component"
+
+	// Get the component mode
+	componentMode := DefaultComponentMode
+	if isComponent {
+		if vComMode := vCom.FieldByName("Mode"); vComMode.IsValid() {
+			componentMode = int(vComMode.Int())
+		}
+	}
+
 	// Bind channel event handlers
 	// Iterate over struct fields
 	for i := 0; i < t.NumField(); i++ {
@@ -104,17 +125,23 @@ func RunProc(c interface{}) bool {
 						if hasRecv {
 							// Call the receival handler for this channel
 							handlersDone.Add(1)
-							go func() {
-								if hasLock {
-									locker.Lock()
-								}
+							if componentMode == ComponentModeAsync {
+								go func() {
+									if hasLock {
+										locker.Lock()
+									}
+									valArr := [1]reflect.Value{val}
+									onRecv.Call(valArr[:])
+									if hasLock {
+										locker.Unlock()
+									}
+									handlersDone.Done()
+								}()
+							} else {
 								valArr := [1]reflect.Value{val}
 								onRecv.Call(valArr[:])
-								if hasLock {
-									locker.Unlock()
-								}
 								handlersDone.Done()
-							}()
+							}
 						}
 					}
 				}()
@@ -131,7 +158,7 @@ func RunProc(c interface{}) bool {
 		shutdownProc(c)
 
 		// Get the embedded flow.Component and check if it belongs to a network
-		if vCom := v.FieldByName("Component"); vCom.IsValid() && vCom.Type().Name() == "Component" {
+		if isComponent {
 			if vNet := vCom.FieldByName("Net"); vNet.IsValid() && !vNet.IsNil() {
 				if vNetCtr, hasNet := vNet.Interface().(netController); hasNet {
 					// Remove the instance from the network's WaitGroup

@@ -98,6 +98,66 @@ func TestStateLock(t *testing.T) {
 	}
 }
 
+// Similar to locker, but intended to test ComponentModeSync
+type syncLocker struct {
+	Component
+	In  <-chan int
+	Out chan<- int
+
+	counter int
+	sum     int
+}
+
+// Creates a syncLocker instance
+func NewSyncLocker() *syncLocker {
+	l := new(syncLocker)
+	l.counter = 0
+	l.sum = 0
+	l.Component.Mode = ComponentModeSync // Change this to ComponentModeAsync and the test will fail
+	return l
+}
+
+// Simulates long processing and read/write access
+func (l *syncLocker) OnIn(i int) {
+	l.counter++
+	// Half of the calls will wait to simulate long processing
+	if l.counter%2 == 0 {
+		time.Sleep(1000)
+	}
+
+	// Parellel write data race danger is here
+	l.sum += i
+}
+
+func (l *syncLocker) Shutdown() {
+	// Emit the result and don't close the outport
+	l.Out <- l.sum
+}
+
+// Tests synchronous process execution feature.
+// Run with GOMAXPROCS > 1.
+func TestSyncLock(t *testing.T) {
+	l := NewSyncLocker()
+	in := make(chan int, 10)
+	out := make(chan int, 10)
+	l.In = in
+	l.Out = out
+	RunProc(l)
+	// Simulate parallel writing and count the sum
+	sum := 0
+	for i := 1; i <= 1000; i++ {
+		in <- i
+		sum += i
+	}
+	// Send the close signal
+	close(in)
+	// Get the result and check if it is consistent
+	sum2 := <-out
+	if sum2 != sum {
+		t.Errorf("%d != %d", sum2, sum)
+	}
+}
+
 // An external variable
 var testInitFinFlag int
 
