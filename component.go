@@ -80,6 +80,8 @@ func RunProc(c interface{}) bool {
 			onRecv := vp.MethodByName("On" + ff.Name)
 			hasRecv := onRecv.IsValid()
 			if hasClose || hasRecv {
+				// Add the input to the wait group
+				inputsClose.Add(1)
 				// Listen on an input channel
 				go func() {
 					for {
@@ -116,8 +118,6 @@ func RunProc(c interface{}) bool {
 						}
 					}
 				}()
-				// Add it to the wait group
-				inputsClose.Add(1)
 			}
 		}
 	}
