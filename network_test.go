@@ -38,7 +38,7 @@ func newTestNet(t *testing.T) *testNet {
 	if !n.Add(e2, "e2") {
 		t.Errorf("Couldn't add e2")
 	}
-	if !n.Connect("e1", "Out", "e2", "In", make(chan int)) {
+	if !n.Connect("e1", "Out", "e2", "In") {
 		t.Errorf("net.Connect() returned false")
 	}
 	// Ports
@@ -117,13 +117,13 @@ func newCompositeTest(t *testing.T) *compositeTest {
 	if !n.Add(newTestNet(t), "sub3") {
 		t.Errorf("Couldn't add sub")
 	}
-	if !n.Connect("sub1", "Out", "e1", "In", make(chan int)) {
+	if !n.Connect("sub1", "Out", "e1", "In") {
 		t.Errorf("net.Connect() returned false")
 	}
-	if !n.Connect("e1", "Out", "sub2", "In", make(chan int)) {
+	if !n.Connect("e1", "Out", "sub2", "In") {
 		t.Errorf("net.Connect() returned false")
 	}
-	if !n.Connect("sub2", "Out", "sub3", "In", make(chan int)) {
+	if !n.Connect("sub2", "Out", "sub3", "In") {
 		t.Errorf("net.Connect() returned false")
 	}
 	// Ports

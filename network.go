@@ -90,7 +90,7 @@ func (n *Graph) Add(c interface{}, name string) bool {
 
 // Connect connects a sender to a receiver using a channel passed to it.
 // It returns true on success or panics and returns false if error occurs.
-func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort string, channel interface{}) bool {
+func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort string) bool {
 	// Ensure sender and receiver processes exist
 	sender, senderFound := n.procs[senderName]
 	receiver, receiverFound := n.procs[receiverName]
@@ -106,10 +106,10 @@ func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort strin
 	// Ensure sender and receiver are settable
 	sp := reflect.ValueOf(sender)
 	sv := sp.Elem()
-	st := sv.Type()
+	// st := sv.Type()
 	rp := reflect.ValueOf(receiver)
 	rv := rp.Elem()
-	rt := rv.Type()
+	// rt := rv.Type()
 	if !sv.CanSet() {
 		panic(senderName + " is not settable")
 		return false
@@ -119,67 +119,63 @@ func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort strin
 		return false
 	}
 
-	// Make a channel of an appropriate type
-	//chanType := sport.Type
-	//channel := reflect.MakeChan(chanType, DefaultBufferSize)
-	ch := reflect.ValueOf(channel)
-	if !ch.IsValid() || ch.Kind() != reflect.Chan {
-		panic("Passed channel is not valid")
-		return false
-	}
+	var sport reflect.Value
 
 	// Get the actual ports and link them to the channel
 	// Check if sender is a net
 	if snet := sv.FieldByName("Graph"); snet.IsValid() {
 		// Sender is a net
 		if pm, isPm := snet.Addr().Interface().(portMapper); isPm {
-			pm.SetOutPort(senderPort, channel)
+			sport = pm.getOutPort(senderPort)
 		}
 	} else {
 		// Sender is a proc
-		sport := sv.FieldByName(senderPort)
-		stport, sfound := st.FieldByName(senderPort)
-		// Ensure given ports are valid
-		if !sfound {
-			panic(senderName + "." + senderPort + " not found")
-			return false
-		}
-		if stport.Type.Kind() != reflect.Chan || stport.Type.ChanDir()&reflect.SendDir == 0 {
-			panic(senderName + "." + senderPort + " is not a valid output channel")
-			return false
-		}
-		// Set the channel
-		if sport.CanSet() {
-			sport.Set(ch)
-		} else {
-			panic(senderName + "." + senderPort + " is not settable")
-		}
+		sport = sv.FieldByName(senderPort)
 	}
+
+	// Validate sender port
+	stport := sport.Type()
+	if stport.Kind() != reflect.Chan || stport.ChanDir()&reflect.SendDir == 0 {
+		panic(senderName + "." + senderPort + " is not a valid output channel")
+		return false
+	}
+
+	// Make a channel of an appropriate type
+	chanType := reflect.ChanOf(reflect.BothDir, stport.Elem())
+	channel := reflect.MakeChan(chanType, DefaultBufferSize)
+
+	// Set the channel
+	if sport.CanSet() {
+		sport.Set(channel)
+	} else {
+		panic(senderName + "." + senderPort + " is not settable")
+	}
+
+	// Get the reciever port
+	var rport reflect.Value
 
 	// Check if receiver is a net
 	if rnet := rv.FieldByName("Graph"); rnet.IsValid() {
 		if pm, isPm := rnet.Addr().Interface().(portMapper); isPm {
-			pm.SetInPort(receiverPort, channel)
+			rport = pm.getInPort(receiverPort)
 		}
 	} else {
 		// Receiver is a proc
-		rport := rv.FieldByName(receiverPort)
-		rtport, rfound := rt.FieldByName(receiverPort)
-		// Ensure given ports are valid
-		if !rfound {
-			panic(receiverName + "." + receiverPort + " not found")
-			return false
-		}
-		if rtport.Type.Kind() != reflect.Chan || rtport.Type.ChanDir()&reflect.RecvDir == 0 {
-			panic(receiverName + "." + receiverPort + " is not a valid output channel")
-			return false
-		}
-		// Set the channel
-		if rport.CanSet() {
-			rport.Set(ch)
-		} else {
-			panic(receiverName + "." + receiverPort + " is not settable")
-		}
+		rport = rv.FieldByName(receiverPort)
+	}
+
+	// Validate receiver port
+	rtport := rport.Type()
+	if rtport.Kind() != reflect.Chan || rtport.ChanDir()&reflect.RecvDir == 0 {
+		panic(receiverName + "." + receiverPort + " is not a valid output channel")
+		return false
+	}
+
+	// Set the channel
+	if rport.CanSet() {
+		rport.Set(channel)
+	} else {
+		panic(receiverName + "." + receiverPort + " is not settable")
 	}
 
 	return true
