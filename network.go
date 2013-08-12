@@ -6,10 +6,13 @@ import (
 )
 
 // DefaultBufferSize is the default channel buffer capacity.
-var DefaultBufferSize = 32
+var DefaultBufferSize = 0
 
 // DefaultNetworkCapacity is the default capacity of network's processes/ports maps.
 var DefaultNetworkCapacity = 32
+
+// Default network output or input ports number
+var DefaultNetworkPortsNum = 16
 
 // portName stores full port name within the network.
 type portName struct {
@@ -51,8 +54,8 @@ type Graph struct {
 func (n *Graph) InitGraphState() {
 	n.Wait = new(sync.WaitGroup)
 	n.procs = make(map[string]interface{}, DefaultNetworkCapacity)
-	n.inPorts = make(map[string]portName, 16)
-	n.outPorts = make(map[string]portName, 16)
+	n.inPorts = make(map[string]portName, DefaultNetworkPortsNum)
+	n.outPorts = make(map[string]portName, DefaultNetworkPortsNum)
 }
 
 // Add adds a new process with a given name to the network.
@@ -88,9 +91,17 @@ func (n *Graph) Add(c interface{}, name string) bool {
 	return true
 }
 
-// Connect connects a sender to a receiver using a channel passed to it.
+// Connect connects a sender to a receiver and creates a channel between them using DefaultBufferSize.
+// Normally such a connection is unbuffered but you can change by setting flow.DefaultBufferSize > 0 or
+// by using ConnectBuf() function instead.
 // It returns true on success or panics and returns false if error occurs.
 func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort string) bool {
+	return n.ConnectBuf(senderName, senderPort, receiverName, receiverPort, DefaultBufferSize)
+}
+
+// Connect connects a sender to a receiver using a channel with a buffer of a given size.
+// It returns true on success or panics and returns false if error occurs.
+func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort string, bufferSize int) bool {
 	// Ensure sender and receiver processes exist
 	sender, senderFound := n.procs[senderName]
 	receiver, receiverFound := n.procs[receiverName]
@@ -142,7 +153,7 @@ func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort strin
 
 	// Make a channel of an appropriate type
 	chanType := reflect.ChanOf(reflect.BothDir, stport.Elem())
-	channel := reflect.MakeChan(chanType, DefaultBufferSize)
+	channel := reflect.MakeChan(chanType, bufferSize)
 
 	// Set the channel
 	if sport.CanSet() {
