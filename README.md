@@ -80,7 +80,7 @@ func NewGreetingApp() *GreetingApp {
 	n.Add(new(Greeter), "greeter")
 	n.Add(new(Printer), "printer")
 	// Connect them with a channel
-	n.Connect("greeter", "Res", "printer", "Line", make(chan string))
+	n.Connect("greeter", "Res", "printer", "Line")
 	// Our net has 1 inport mapped to greeter.Name
 	n.MapInPort("In", "greeter", "Name")
 	return n
