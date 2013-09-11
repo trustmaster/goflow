@@ -7,11 +7,15 @@ import (
 )
 
 const (
+	// ComponentModeUndefined stands for a fallback component mode (Async).
 	ComponentModeUndefined = iota
+	// ComponentModeAsync stands for asynchronous functioning mode.
 	ComponentModeAsync
+	// ComponentModeSync stands for synchronous functioning mode.
 	ComponentModeSync
 )
 
+// DefaultComponentMode is the preselected functioning mode of all components being run.
 var DefaultComponentMode = ComponentModeAsync
 
 // Component is a generic flow component that has to be contained in concrete components.

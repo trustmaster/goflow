@@ -91,6 +91,12 @@ func (n *Graph) Add(c interface{}, name string) bool {
 	return true
 }
 
+// AddNew creates a new process instance using component factory and adds it to the network.
+func (n *Graph) AddNew(componentName string, processName string, initialPacket interface{}) bool {
+	proc := Factory(componentName, initialPacket)
+	return n.Add(proc, processName)
+}
+
 // Connect connects a sender to a receiver and creates a channel between them using DefaultBufferSize.
 // Normally such a connection is unbuffered but you can change by setting flow.DefaultBufferSize > 0 or
 // by using ConnectBuf() function instead.
@@ -190,6 +196,15 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 	}
 
 	return true
+}
+
+// Get returns a node contained in the network by its name.
+func (n *Graph) Get(processName string) interface{} {
+	if proc, ok := n.procs[processName]; ok {
+		return proc
+	} else {
+		panic("Process with name '" + processName + "' was not found")
+	}
 }
 
 // getInPort returns the inport with given name as reflect.Value channel.

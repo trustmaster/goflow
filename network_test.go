@@ -16,6 +16,15 @@ func (e *echoer) OnIn(i int) {
 	e.Out <- i
 }
 
+// A constructor that can be used by component registry/factory
+func newEchoer(iip interface{}) interface{} {
+	return new(echoer)
+}
+
+func init() {
+	Register("echoer", newEchoer)
+}
+
 var initTestFlag int
 var finTestFlag chan bool
 
@@ -45,6 +54,15 @@ func newTestNet(t *testing.T) *testNet {
 	n.MapInPort("In", "e1", "In")
 	n.MapOutPort("Out", "e2", "Out")
 	return n
+}
+
+// A constructor that can be used by component registry/factory
+func newTestNetConstructor(iip interface{}) interface{} {
+	return newTestNet(iip.(*struct{ t *testing.T }).t)
+}
+
+func init() {
+	Register("testNet", newTestNetConstructor)
 }
 
 // Test for a network initializer
@@ -130,6 +148,15 @@ func newCompositeTest(t *testing.T) *compositeTest {
 	n.MapInPort("In", "sub1", "In")
 	n.MapOutPort("Out", "sub3", "Out")
 	return n
+}
+
+// A constructor that can be used by component registry/factory
+func newCompositeTestConstructor(iip interface{}) interface{} {
+	return newCompositeTest(iip.(*struct{ t *testing.T }).t)
+}
+
+func init() {
+	Register("compositeTest", newCompositeTestConstructor)
 }
 
 // Tests a composite with processes and subnets

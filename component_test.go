@@ -17,6 +17,15 @@ func (d *doubler) OnIn(i int) {
 	d.Out <- i * 2
 }
 
+// A constructor that can be used by component registry/factory
+func newDoubler(iip interface{}) interface{} {
+	return new(doubler)
+}
+
+func init() {
+	Register("doubler", newDoubler)
+}
+
 // Tests a component with single input and single output
 func TestSingleInput(t *testing.T) {
 	d := new(doubler)
@@ -49,12 +58,21 @@ type locker struct {
 }
 
 // Creates a locker instance. This is required because StateLock must be a pointer
-func NewLocker() *locker {
+func newLocker() *locker {
 	l := new(locker)
 	l.counter = 0
 	l.sum = 0
 	l.StateLock = new(sync.Mutex)
 	return l
+}
+
+// A constructor that can be used by component registry/factory
+func newLockerConstructor(iip interface{}) interface{} {
+	return newLocker()
+}
+
+func init() {
+	Register("locker", newLockerConstructor)
 }
 
 // Simulates long processing and read/write access
@@ -77,7 +95,7 @@ func (l *locker) Shutdown() {
 // Tests internal state locking feature.
 // Run with GOMAXPROCS > 1.
 func TestStateLock(t *testing.T) {
-	l := NewLocker()
+	l := newLocker()
 	in := make(chan int, 10)
 	out := make(chan int, 10)
 	l.In = in
@@ -109,12 +127,21 @@ type syncLocker struct {
 }
 
 // Creates a syncLocker instance
-func NewSyncLocker() *syncLocker {
+func newSyncLocker() *syncLocker {
 	l := new(syncLocker)
 	l.counter = 0
 	l.sum = 0
 	l.Component.Mode = ComponentModeSync // Change this to ComponentModeAsync and the test will fail
 	return l
+}
+
+// A constructor that can be used by component registry/factory
+func newSyncLockerConstructor(iip interface{}) interface{} {
+	return newSyncLocker()
+}
+
+func init() {
+	Register("syncLocker", newSyncLockerConstructor)
 }
 
 // Simulates long processing and read/write access
@@ -137,7 +164,7 @@ func (l *syncLocker) Shutdown() {
 // Tests synchronous process execution feature.
 // Run with GOMAXPROCS > 1.
 func TestSyncLock(t *testing.T) {
-	l := NewSyncLocker()
+	l := newSyncLocker()
 	in := make(chan int, 10)
 	out := make(chan int, 10)
 	l.In = in
