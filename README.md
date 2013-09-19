@@ -69,7 +69,8 @@ func (p *Printer) OnLine(line string) {
 
 // Our greeting network
 type GreetingApp struct {
-	flow.Graph // graph "superclass" embedded
+	flow.Graph               // graph "superclass" embedded
+	done       chan struct{} // completion semaphore
 }
 
 // Graph constructor and structure definition
@@ -83,20 +84,21 @@ func NewGreetingApp() *GreetingApp {
 	n.Connect("greeter", "Res", "printer", "Line")
 	// Our net has 1 inport mapped to greeter.Name
 	n.MapInPort("In", "greeter", "Name")
+	n.done = make(chan struct{})
 	return n
 }
 
-// We need this flag to terminate when processing is finished
-var finish chan bool
-
 // Use this handler to let the main() know when the network terminates
 func (a *GreetingApp) Finish() {
-	finish <- true
+	close(a.done)
+}
+
+// Wait returns a chan indicating the completion status of the network
+func (a *GreetingApp) Wait() <-chan struct{} {
+	return a.done
 }
 
 func main() {
-	// Termination signal channel
-	finish = make(chan bool)
 	// Create the network
 	net := NewGreetingApp()
 	// We need a channel to talk to it
@@ -111,7 +113,7 @@ func main() {
 	// Close the input to shut the network down
 	close(in)
 	// Wait until it's done
-	<-finish
+	<-net.Wait()
 }
 ```
 
