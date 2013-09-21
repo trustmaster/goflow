@@ -119,7 +119,7 @@ func main() {
 
 Looks a bit heavy for such a simple task but FBP is aimed at a bit more complex things than just printing on screen. So in more complex an realistic examples the infractructure pays the price.
 
-You probably have one question left even after reading the comments in code: why do we need to wait for the finish signal? This is because flow-based world is asynchronous and while you expect things to happen in the same sequence as they are in main(), during runtime they don't necessarily follow the same order and the application might terminate before the network has done its job. To avoid this confusion we added the finish signal for synchronization.
+You probably have one question left even after reading the comments in code: why do we need to wait for the finish signal? This is because flow-based world is asynchronous and while you expect things to happen in the same sequence as they are in main(), during runtime they don't necessarily follow the same order and the application might terminate before the network has done its job. To avoid this confusion we added a `done` semaphore to the network and a `Wait()` method that provides read-only access to it. A read on `Wait()` channel unlocks the main thread when the network finishes its job and closes the semaphore.
 
 ## Terminology ##
 
@@ -154,7 +154,7 @@ Here are related projects and resources:
 
 * [J. Paul Morrison's Flow-Based Programming](http://www.jpaulmorrison.com/fbp/), the origin of FBP, [JavaFBP, C#FBP](http://sourceforge.net/projects/flow-based-pgmg/) and [DrawFBP](http://www.jpaulmorrison.com/fbp/#DrawFBP) diagramming tool.
 * [Knol about FBP](http://knol.google.com/k/flow-based-programming)
-* [NoFlo](https://github.com/bergie/noflo), FBP for Node.js
+* [NoFlo](http://noflojs.org/), FBP for JavaScript and Node.js
 * [Pypes](http://www.pypes.org/), flow-based Python ETL
 * [Go](http://golang.org/), the Go programming language
 
