@@ -72,9 +72,6 @@ func RunProc(c interface{}) bool {
 	// A group to wait for all recv handlers to finish
 	handlersDone := new(sync.WaitGroup)
 
-	emptyArr := [0]reflect.Value{}
-	empty := emptyArr[:]
-
 	// Get the embedded flow.Component
 	vCom := v.FieldByName("Component")
 	isComponent := vCom.IsValid() && vCom.Type().Name() == "Component"
@@ -114,7 +111,7 @@ func RunProc(c interface{}) bool {
 								if hasLock {
 									locker.Lock()
 								}
-								onClose.Call(empty)
+								onClose.Call([]reflect.Value{})
 								if hasLock {
 									locker.Unlock()
 								}
