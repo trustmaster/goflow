@@ -153,3 +153,83 @@ func TestComposite(t *testing.T) {
 
 	close(in)
 }
+
+type rr struct {
+	Component
+	idx int
+	In  <-chan int
+	Out []chan<- int
+}
+
+func (r *rr) OnIn(i int) {
+	pick := r.idx
+	r.idx = (r.idx + 1) % len(r.Out)
+
+	r.Out[pick] <- i
+}
+
+/*
+ * Creates a simple network with a load balancer that round robins to its out
+ * channels. Then sends to messages in and expects a response, 1 from each
+ * of the out channels.
+ */
+func TestMultiOutChannel(t *testing.T) {
+	n := new(compositeTest)
+	n.InitGraphState()
+
+	r := new(rr)
+	if !n.Add(r, "lb") {
+		t.Error("Unable to add load balancer")
+	}
+
+	e1 := new(echoer)
+	if !n.Add(e1, "e1") {
+		t.Error("Unable to add second echoer, e1")
+	}
+
+	e2 := new(echoer)
+	if !n.Add(e2, "e2") {
+		t.Error("Unable to add second echoer, e2")
+	}
+
+	if !n.Connect("lb", "Out", "e1", "In") {
+		t.Error("Unable to connect LB to e1")
+	}
+
+	if !n.Connect("lb", "Out", "e2", "In") {
+		t.Error("Unable to connect LB to e2")
+	}
+
+	if !n.MapInPort("In", "lb", "In") {
+		t.Error("Unable to map InPort")
+	}
+	if !n.MapOutPort("Out1", "e1", "Out") {
+		t.Error("Unable to mape OutPort 1")
+	}
+
+	if !n.MapOutPort("Out2", "e2", "Out") {
+		t.Error("Unable to mape OutPort 2")
+	}
+
+	in := make(chan int)
+	out1 := make(chan int)
+	out2 := make(chan int)
+	n.SetInPort("In", in)
+	n.SetOutPort("Out1", out1)
+	n.SetOutPort("Out2", out2)
+	RunNet(n)
+
+	in <- 42
+	i := <-out1
+	if i != 42 {
+		t.Errorf("%d != %d", i, 42)
+	}
+
+	in <- 42
+	i = <-out2
+	if i != 42 {
+		t.Errorf("%d != %d", i, 42)
+	}
+
+	close(in)
+}
