@@ -176,8 +176,15 @@ func closePorts(c interface{}) {
 		fv := v.Field(i)
 		ft := fv.Type()
 		// Detect and close send-only channels
-		if fv.IsValid() && fv.Kind() == reflect.Chan && (ft.ChanDir()&reflect.SendDir) != 0 && (ft.ChanDir()&reflect.RecvDir) == 0 {
-			fv.Close()
+		if fv.IsValid() {
+			if fv.Kind() == reflect.Chan && (ft.ChanDir()&reflect.SendDir) != 0 && (ft.ChanDir()&reflect.RecvDir) == 0 {
+				fv.Close()
+			} else if fv.Kind() == reflect.Slice && ft.Elem().Kind() == reflect.Chan {
+				ll := fv.Len()
+				for i := 0; i < ll; i += 1 {
+					fv.Index(i).Close()
+				}
+			}
 		}
 	}
 }

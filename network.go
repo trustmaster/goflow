@@ -146,20 +146,31 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 
 	// Validate sender port
 	stport := sport.Type()
-	if stport.Kind() != reflect.Chan || stport.ChanDir()&reflect.SendDir == 0 {
-		panic(senderName + "." + senderPort + " is not a valid output channel")
-		return false
+	var channel reflect.Value
+	if stport.Kind() == reflect.Slice {
+
+		if sport.Type().Elem().Kind() == reflect.Chan && sport.Type().Elem().ChanDir()&reflect.SendDir != 0 {
+
+			// Need to create a new channel and add it to the array
+			chanType := reflect.ChanOf(reflect.BothDir, sport.Type().Elem().Elem())
+			channel = reflect.MakeChan(chanType, bufferSize)
+			sport.Set(reflect.Append(sport, channel))
+		}
+	} else if stport.Kind() == reflect.Chan && stport.ChanDir()&reflect.SendDir != 0 {
+		// Make a channel of an appropriate type
+		chanType := reflect.ChanOf(reflect.BothDir, stport.Elem())
+		channel = reflect.MakeChan(chanType, bufferSize)
+		// Set the channel
+		if sport.CanSet() {
+			sport.Set(channel)
+		} else {
+			panic(senderName + "." + senderPort + " is not settable")
+		}
 	}
 
-	// Make a channel of an appropriate type
-	chanType := reflect.ChanOf(reflect.BothDir, stport.Elem())
-	channel := reflect.MakeChan(chanType, bufferSize)
-
-	// Set the channel
-	if sport.CanSet() {
-		sport.Set(channel)
-	} else {
-		panic(senderName + "." + senderPort + " is not settable")
+	if channel.IsNil() {
+		panic(senderName + "." + senderPort + " is not a valid output channel")
+		return false
 	}
 
 	// Get the reciever port
