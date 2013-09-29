@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"sync"
 	"testing"
 )
 
@@ -155,10 +156,13 @@ func TestComposite(t *testing.T) {
 }
 
 type rr struct {
-	Component
-	idx int
 	In  <-chan int
 	Out []chan<- int
+
+	StateLock *sync.Mutex
+
+	Component
+	idx int
 }
 
 func (r *rr) OnIn(i int) {
