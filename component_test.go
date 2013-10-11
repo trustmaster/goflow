@@ -8,6 +8,7 @@ import (
 
 // A component that doubles its int input
 type doubler struct {
+	Component
 	In  <-chan int
 	Out chan<- int
 }
@@ -48,6 +49,7 @@ func TestSingleInput(t *testing.T) {
 
 // A component that locks to preserve concurrent modification of its state
 type locker struct {
+	Component
 	In  <-chan int
 	Out chan<- int
 
@@ -221,7 +223,7 @@ func TestInitFinish(t *testing.T) {
 	i := new(initfin)
 	i.Net = new(Graph)
 	i.Net.InitGraphState()
-	i.Net.Wait.Add(1)
+	i.Net.WaitGrp.Add(1)
 	in := make(chan int)
 	out := make(chan int)
 	i.In = in
@@ -235,7 +237,7 @@ func TestInitFinish(t *testing.T) {
 	}
 	// Shut the component down and wait for Finish() code
 	close(in)
-	i.Net.Wait.Wait()
+	i.Net.WaitGrp.Wait()
 	if testInitFinFlag != 456 {
 		t.Errorf("%d != %d", testInitFinFlag, 456)
 	}
@@ -260,13 +262,13 @@ func TestClose(t *testing.T) {
 	c := new(closeTest)
 	c.Net = new(Graph)
 	c.Net.InitGraphState()
-	c.Net.Wait.Add(1)
+	c.Net.WaitGrp.Add(1)
 	in := make(chan int)
 	c.In = in
 	RunProc(c)
 	in <- 1
 	close(in)
-	c.Net.Wait.Wait()
+	c.Net.WaitGrp.Wait()
 	if closeTestFlag != 789 {
 		t.Errorf("%d != %d", closeTestFlag, 789)
 	}
@@ -296,13 +298,13 @@ func TestShutdown(t *testing.T) {
 	s := new(shutdownTest)
 	s.Net = new(Graph)
 	s.Net.InitGraphState()
-	s.Net.Wait.Add(1)
+	s.Net.WaitGrp.Add(1)
 	in := make(chan int)
 	s.In = in
 	RunProc(s)
 	in <- 1
 	close(in)
-	s.Net.Wait.Wait()
+	s.Net.WaitGrp.Wait()
 	if shutdownTestFlag != 789 {
 		t.Errorf("%d != %d", shutdownTestFlag, 789)
 	}

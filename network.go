@@ -39,7 +39,7 @@ type netController interface {
 // Graph represents a graph of processes connected with packet channels.
 type Graph struct {
 	// Wait is used for graceful network termination.
-	Wait *sync.WaitGroup
+	WaitGrp *sync.WaitGroup
 	// Net is a pointer to parent network.
 	Net *Graph
 	// procs contains the processes of the network.
@@ -48,14 +48,17 @@ type Graph struct {
 	inPorts map[string]portName
 	// outPorts maps network outgoing ports to component ports.
 	outPorts map[string]portName
+	// done is used to let the outside world know when the net has finished its job
+	done chan struct{}
 }
 
 // InitGraphState method initializes graph fields and allocates memory.
 func (n *Graph) InitGraphState() {
-	n.Wait = new(sync.WaitGroup)
+	n.WaitGrp = new(sync.WaitGroup)
 	n.procs = make(map[string]interface{}, DefaultNetworkCapacity)
 	n.inPorts = make(map[string]portName, DefaultNetworkPortsNum)
 	n.outPorts = make(map[string]portName, DefaultNetworkPortsNum)
+	n.done = make(chan struct{})
 }
 
 // Add adds a new process with a given name to the network.
@@ -264,7 +267,7 @@ func (n *Graph) getOutPort(name string) reflect.Value {
 
 // getWait returns net's wait group.
 func (n *Graph) getWait() *sync.WaitGroup {
-	return n.Wait
+	return n.WaitGrp
 }
 
 // hasInPort checks if the net has an inport with given name.
@@ -334,7 +337,7 @@ func (n *Graph) MapOutPort(name, procName, procPort string) bool {
 // run runs the network and waits for all processes to finish.
 func (n *Graph) run() {
 	// Add processes to the waitgroup before starting them
-	n.Wait.Add(len(n.procs))
+	n.WaitGrp.Add(len(n.procs))
 	for _, v := range n.procs {
 		// Check if it is a net or proc
 		r := reflect.ValueOf(v).Elem()
@@ -345,12 +348,18 @@ func (n *Graph) run() {
 		}
 	}
 	// Wait for all processes to terminate
-	n.Wait.Wait()
+	n.WaitGrp.Wait()
 	// Check if there is a parent net
 	if n.Net != nil {
 		// Notify parent of finish
-		n.Net.Wait.Done()
+		n.Net.WaitGrp.Done()
 	}
+}
+
+// Wait returns a channel that can be used to suspend the caller
+// goroutine until the network finishes its job
+func (n *Graph) Wait() <-chan struct{} {
+	return n.done
 }
 
 // SetInPort assigns a channel to a network's inport to talk to the outer world.
@@ -384,6 +393,20 @@ func (n *Graph) SetOutPort(name string, channel interface{}) bool {
 // RunNet runs the network by starting all of its processes.
 // It runs Init/Finish handlers if the network implements Initializable/Finalizable interfaces.
 func RunNet(i interface{}) {
+	// Get the contained network
+	net, isGraph := i.(*Graph)
+	if !isGraph {
+		v := reflect.ValueOf(i).Elem()
+		if v.Kind() != reflect.Struct {
+			panic("flow.RunNet(): argument is not a pointer to struct")
+		}
+		vGraph := v.FieldByName("Graph")
+		if !vGraph.IsValid() || vGraph.Type().Name() != "Graph" {
+			panic("flow.RunNet(): argument is not a valid graph instance")
+		}
+		net = vGraph.Addr().Interface().(*Graph)
+	}
+
 	// Call user init function if exists
 	if initable, ok := i.(Initializable); ok {
 		initable.Init()
@@ -391,24 +414,14 @@ func RunNet(i interface{}) {
 
 	// Run the contained processes
 	go func() {
-		// Should contain a pointer to graph as its field
-		v := reflect.ValueOf(i).Elem()
-		if v.Kind() == reflect.Struct {
-			vGraph := v.FieldByName("Graph")
-			if vGraph.IsValid() && vGraph.Type().Name() == "Graph" {
-				if ctr, ok := vGraph.Addr().Interface().(netController); ok {
-					ctr.run()
-				}
-			} else {
-				panic("flow.RunNet(): argument is not a valid network subclass")
-			}
-		} else {
-			panic("flow.RunNet(): argument is not a pointer to struct")
-		}
+		net.run()
 
 		// Call user finish function if exists
 		if finable, ok := i.(Finalizable); ok {
 			finable.Finish()
 		}
+
+		// Close the wait channel
+		close(net.done)
 	}()
 }
