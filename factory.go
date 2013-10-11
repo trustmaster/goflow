@@ -35,9 +35,9 @@ func Unregister(componentName string) bool {
 }
 
 // Factory creates a new instance of a component registered under a specific name.
-func Factory(componentName string, initialPacket interface{}) interface{} {
+func Factory(componentName string, constructorArgs interface{}) interface{} {
 	if constructor, exists := ComponentRegistry[componentName]; exists {
-		return constructor(initialPacket)
+		return constructor(constructorArgs)
 	} else {
 		panic("Uknown component name: " + componentName)
 	}
