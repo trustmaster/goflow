@@ -26,12 +26,12 @@ func init() {
 	Register("echoer", newEchoer)
 }
 
-var initTestFlag int
-var finTestFlag chan bool
-
 // A graph to test network features
 type testNet struct {
 	Graph
+
+	InitTestFlag int
+	FinTestFlag  chan bool
 }
 
 func newTestNet(t *testing.T) *testNet {
@@ -54,18 +54,20 @@ func newTestNet(t *testing.T) *testNet {
 	// Ports
 	n.MapInPort("In", "e1", "In")
 	n.MapOutPort("Out", "e2", "Out")
+	// Exported state
+	n.FinTestFlag = make(chan bool)
 	return n
 }
 
 // Test for a network initializer
 func (n *testNet) Init() {
-	initTestFlag = 123
+	n.InitTestFlag = 123
 }
 
 // Test for a network finalizer
 func (n *testNet) Finish() {
-	initTestFlag = 456
-	finTestFlag <- true
+	n.InitTestFlag = 456
+	n.FinTestFlag <- true
 }
 
 // Tests a simple connection between two components in the net
@@ -79,9 +81,6 @@ func TestConnection(t *testing.T) {
 	net.SetInPort("In", in)
 	net.SetOutPort("Out", out)
 
-	// Finalization is captured by this channel
-	finTestFlag = make(chan bool)
-
 	// Run the test network
 	RunNet(net)
 
@@ -90,7 +89,7 @@ func TestConnection(t *testing.T) {
 	if i != 12 {
 		t.Errorf("%d != %d", i, 12)
 	}
-	in <- initTestFlag
+	in <- net.InitTestFlag
 	i = <-out
 	if i != 123 {
 		t.Errorf("After Init: %d != %d", i, 123)
@@ -98,10 +97,11 @@ func TestConnection(t *testing.T) {
 
 	close(in)
 	// Wait for finalization signal
-	<-finTestFlag
-	if initTestFlag != 456 {
-		t.Errorf("Finish: %d != %d", initTestFlag, 456)
+	<-net.FinTestFlag
+	if net.InitTestFlag != 456 {
+		t.Errorf("Finish: %d != %d", net.InitTestFlag, 456)
 	}
+	<-net.Wait()
 }
 
 // Structure to test 2-level composition
@@ -246,6 +246,7 @@ func TestMultiOutChannel(t *testing.T) {
 	}
 
 	close(in)
+	<-n.Wait()
 }
 
 // A struct to test IIPs support
