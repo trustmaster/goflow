@@ -12,7 +12,7 @@ The main properties of the proposed model are:
 
 ## Getting started ##
 
-Current version of the library requires at least Go weekly.2012-01-27 and aims at compatibility with upcoming Go 1 release. If you don't have the Go compiler installed, read the official [Go install guide](http://golang.org/doc/install.html) or if you use Ubuntu read [Ubuntu Go Wiki](https://wiki.ubuntu.com/Go).
+Current version of the library requires a latest stable Go release. If you don't have the Go compiler installed, read the official [Go install guide](http://golang.org/doc/install).
 
 Use go tool to install the package in your packages tree:
 
