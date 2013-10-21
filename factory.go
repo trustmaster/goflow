@@ -6,7 +6,7 @@ const DefaultRegistryCapacity = 64
 // ComponentConstructor is a function that can be registered in the ComponentRegistry
 // so that it is used when creating new processes of a specific component using
 // Factory function at run-time.
-type ComponentConstructor func(interface{}) interface{}
+type ComponentConstructor func() interface{}
 
 // ComponentRegistry is used to register components and spawn processes given just
 // a string component name.
@@ -35,9 +35,9 @@ func Unregister(componentName string) bool {
 }
 
 // Factory creates a new instance of a component registered under a specific name.
-func Factory(componentName string, constructorArgs interface{}) interface{} {
+func Factory(componentName string) interface{} {
 	if constructor, exists := ComponentRegistry[componentName]; exists {
-		return constructor(constructorArgs)
+		return constructor()
 	} else {
 		panic("Uknown component name: " + componentName)
 	}

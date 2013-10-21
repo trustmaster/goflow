@@ -19,7 +19,7 @@ func (d *doubler) OnIn(i int) {
 }
 
 // A constructor that can be used by component registry/factory
-func newDoubler(iip interface{}) interface{} {
+func newDoubler() interface{} {
 	return new(doubler)
 }
 
@@ -69,7 +69,7 @@ func newLocker() *locker {
 }
 
 // A constructor that can be used by component registry/factory
-func newLockerConstructor(iip interface{}) interface{} {
+func newLockerConstructor() interface{} {
 	return newLocker()
 }
 
@@ -138,7 +138,7 @@ func newSyncLocker() *syncLocker {
 }
 
 // A constructor that can be used by component registry/factory
-func newSyncLockerConstructor(iip interface{}) interface{} {
+func newSyncLockerConstructor() interface{} {
 	return newSyncLocker()
 }
 
@@ -223,7 +223,7 @@ func TestInitFinish(t *testing.T) {
 	i := new(initfin)
 	i.Net = new(Graph)
 	i.Net.InitGraphState()
-	i.Net.WaitGrp.Add(1)
+	i.Net.waitGrp.Add(1)
 	in := make(chan int)
 	out := make(chan int)
 	i.In = in
@@ -237,7 +237,7 @@ func TestInitFinish(t *testing.T) {
 	}
 	// Shut the component down and wait for Finish() code
 	close(in)
-	i.Net.WaitGrp.Wait()
+	i.Net.waitGrp.Wait()
 	if testInitFinFlag != 456 {
 		t.Errorf("%d != %d", testInitFinFlag, 456)
 	}
@@ -262,13 +262,13 @@ func TestClose(t *testing.T) {
 	c := new(closeTest)
 	c.Net = new(Graph)
 	c.Net.InitGraphState()
-	c.Net.WaitGrp.Add(1)
+	c.Net.waitGrp.Add(1)
 	in := make(chan int)
 	c.In = in
 	RunProc(c)
 	in <- 1
 	close(in)
-	c.Net.WaitGrp.Wait()
+	c.Net.waitGrp.Wait()
 	if closeTestFlag != 789 {
 		t.Errorf("%d != %d", closeTestFlag, 789)
 	}
@@ -298,13 +298,13 @@ func TestShutdown(t *testing.T) {
 	s := new(shutdownTest)
 	s.Net = new(Graph)
 	s.Net.InitGraphState()
-	s.Net.WaitGrp.Add(1)
+	s.Net.waitGrp.Add(1)
 	in := make(chan int)
 	s.In = in
 	RunProc(s)
 	in <- 1
 	close(in)
-	s.Net.WaitGrp.Wait()
+	s.Net.waitGrp.Wait()
 	if shutdownTestFlag != 789 {
 		t.Errorf("%d != %d", shutdownTestFlag, 789)
 	}

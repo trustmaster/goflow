@@ -7,7 +7,7 @@ import (
 // Tests run-time process creating with flow.Factory
 func TestFactory(t *testing.T) {
 	procs := make(map[string]interface{})
-	procs["e1"] = Factory("echoer", nil)
+	procs["e1"] = Factory("echoer")
 	in, out := make(chan int), make(chan int)
 	e1 := procs["e1"].(*echoer)
 	e1.In = in
@@ -33,8 +33,8 @@ func TestFactoryConnection(t *testing.T) {
 	net := new(dummyNet)
 	net.InitGraphState()
 
-	net.AddNew("echoer", "e1", nil)
-	net.AddNew("echoer", "e2", nil)
+	net.AddNew("echoer", "e1")
+	net.AddNew("echoer", "e2")
 
 	net.Connect("e1", "Out", "e2", "In")
 

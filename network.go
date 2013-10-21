@@ -14,10 +14,38 @@ var DefaultNetworkCapacity = 32
 // Default network output or input ports number
 var DefaultNetworkPortsNum = 16
 
+// port stores full port information within the network.
+type port struct {
+	// Process name in the network
+	proc string
+	// Port name of the process
+	port string
+	// Actual channel attached
+	channel reflect.Value
+}
+
 // portName stores full port name within the network.
 type portName struct {
-	proc string // Process name in the network
-	port string // Port name of the process
+	// Process name in the network
+	proc string
+	// Port name of the process
+	port string
+}
+
+// connection stores information about a connection within the net.
+type connection struct {
+	src     portName
+	tgt     portName
+	channel reflect.Value
+	buffer  int
+}
+
+// iip stands for Initial Information Packet representation
+// within the network.
+type iip struct {
+	data interface{}
+	proc string // Target process name
+	port string // Target port name
 }
 
 // portMapper interface is used to obtain subnet's ports.
@@ -39,26 +67,35 @@ type netController interface {
 // Graph represents a graph of processes connected with packet channels.
 type Graph struct {
 	// Wait is used for graceful network termination.
-	WaitGrp *sync.WaitGroup
+	waitGrp *sync.WaitGroup
 	// Net is a pointer to parent network.
 	Net *Graph
 	// procs contains the processes of the network.
 	procs map[string]interface{}
 	// inPorts maps network incoming ports to component ports.
-	inPorts map[string]portName
+	inPorts map[string]port
 	// outPorts maps network outgoing ports to component ports.
-	outPorts map[string]portName
+	outPorts map[string]port
+	// connections contains graph edges and channels.
+	connections []connection
+	// iips contains initial IPs attached to the network
+	iips []iip
 	// done is used to let the outside world know when the net has finished its job
 	done chan struct{}
+	// ready is used to let the outside world know when the net is ready to accept input
+	ready chan struct{}
 }
 
 // InitGraphState method initializes graph fields and allocates memory.
 func (n *Graph) InitGraphState() {
-	n.WaitGrp = new(sync.WaitGroup)
+	n.waitGrp = new(sync.WaitGroup)
 	n.procs = make(map[string]interface{}, DefaultNetworkCapacity)
-	n.inPorts = make(map[string]portName, DefaultNetworkPortsNum)
-	n.outPorts = make(map[string]portName, DefaultNetworkPortsNum)
+	n.inPorts = make(map[string]port, DefaultNetworkPortsNum)
+	n.outPorts = make(map[string]port, DefaultNetworkPortsNum)
+	n.connections = make([]connection, 0, DefaultNetworkCapacity)
+	n.iips = make([]iip, 0, DefaultNetworkPortsNum)
 	n.done = make(chan struct{})
+	n.ready = make(chan struct{})
 }
 
 // Add adds a new process with a given name to the network.
@@ -95,9 +132,18 @@ func (n *Graph) Add(c interface{}, name string) bool {
 }
 
 // AddNew creates a new process instance using component factory and adds it to the network.
-func (n *Graph) AddNew(componentName string, processName string, initialPacket interface{}) bool {
-	proc := Factory(componentName, initialPacket)
+func (n *Graph) AddNew(componentName string, processName string) bool {
+	proc := Factory(componentName)
 	return n.Add(proc, processName)
+}
+
+// AddIIP adds an Initial Information packet to the network
+func (n *Graph) AddIIP(data interface{}, processName, portName string) bool {
+	if _, exists := n.procs[processName]; exists {
+		n.iips = append(n.iips, iip{data: data, proc: processName, port: portName})
+		return true
+	}
+	return false
 }
 
 // Connect connects a sender to a receiver and creates a channel between them using DefaultBufferSize.
@@ -143,7 +189,13 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 
 	// Get the actual ports and link them to the channel
 	// Check if sender is a net
-	if snet := sv.FieldByName("Graph"); snet.IsValid() {
+	var snet reflect.Value
+	if sv.Type().Name() == "Graph" {
+		snet = sv
+	} else {
+		snet = sv.FieldByName("Graph")
+	}
+	if snet.IsValid() {
 		// Sender is a net
 		if pm, isPm := snet.Addr().Interface().(portMapper); isPm {
 			sport = pm.getOutPort(senderPort)
@@ -186,7 +238,13 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 	var rport reflect.Value
 
 	// Check if receiver is a net
-	if rnet := rv.FieldByName("Graph"); rnet.IsValid() {
+	var rnet reflect.Value
+	if rv.Type().Name() == "Graph" {
+		rnet = rv
+	} else {
+		rnet = rv.FieldByName("Graph")
+	}
+	if rnet.IsValid() {
 		if pm, isPm := rnet.Addr().Interface().(portMapper); isPm {
 			rport = pm.getInPort(receiverPort)
 		}
@@ -198,7 +256,7 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 	// Validate receiver port
 	rtport := rport.Type()
 	if rtport.Kind() != reflect.Chan || rtport.ChanDir()&reflect.RecvDir == 0 {
-		panic(receiverName + "." + receiverPort + " is not a valid output channel")
+		panic(receiverName + "." + receiverPort + " is not a valid input channel")
 		return false
 	}
 
@@ -208,6 +266,15 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 	} else {
 		panic(receiverName + "." + receiverPort + " is not settable")
 	}
+
+	// Add connection info
+	n.connections = append(n.connections, connection{
+		src: portName{proc: senderName,
+			port: senderPort},
+		tgt: portName{proc: receiverName,
+			port: receiverPort},
+		channel: channel,
+		buffer:  bufferSize})
 
 	return true
 }
@@ -227,20 +294,7 @@ func (n *Graph) getInPort(name string) reflect.Value {
 	if !ok {
 		panic("flow.Graph.getInPort(): Invalid inport name: " + name)
 	}
-	// We assume that pName contains a valid reference to a proc/port
-	p := reflect.ValueOf(n.procs[pName.proc])
-	var ret reflect.Value
-	if p.Elem().FieldByName("Graph").IsValid() {
-		// Is a subnet
-		if sub, ok2 := p.Elem().FieldByName("Graph").Addr().Interface().(portMapper); ok2 {
-			ret = sub.getInPort(pName.port)
-		} else {
-			panic("flow.Graph.getInPort(): Couldn't get portMapper")
-		}
-	} else {
-		ret = p.Elem().FieldByName(pName.port)
-	}
-	return ret
+	return pName.channel
 }
 
 // getOutPort returns the outport with given name as reflect.Value channel.
@@ -249,25 +303,12 @@ func (n *Graph) getOutPort(name string) reflect.Value {
 	if !ok {
 		panic("flow.Graph.getOutPort(): Invalid outport name: " + name)
 	}
-	// We assume that pName contains a valid reference to a proc/port
-	p := reflect.ValueOf(n.procs[pName.proc])
-	var ret reflect.Value
-	if p.Elem().FieldByName("Graph").IsValid() {
-		// Is a subnet
-		if sub, ok2 := p.Elem().FieldByName("Graph").Addr().Interface().(portMapper); ok2 {
-			ret = sub.getOutPort(pName.port)
-		} else {
-			panic("flow.Graph.getOutPort(): Couldn't get portMapper")
-		}
-	} else {
-		ret = p.Elem().FieldByName(pName.port)
-	}
-	return ret
+	return pName.channel
 }
 
 // getWait returns net's wait group.
 func (n *Graph) getWait() *sync.WaitGroup {
-	return n.WaitGrp
+	return n.waitGrp
 }
 
 // hasInPort checks if the net has an inport with given name.
@@ -287,14 +328,17 @@ func (n *Graph) hasOutPort(name string) bool {
 func (n *Graph) MapInPort(name, procName, procPort string) bool {
 	ret := false
 	// Check if target component and port exists
+	var channel reflect.Value
 	if p, procFound := n.procs[procName]; procFound {
 		if i, isNet := p.(portMapper); isNet {
 			// Is a subnet
 			ret = i.hasInPort(procPort)
+			channel = i.getInPort(procPort)
 		} else {
 			// Is a proc
 			f := reflect.ValueOf(p).Elem().FieldByName(procPort)
 			ret = f.IsValid() && f.Kind() == reflect.Chan && (f.Type().ChanDir()&reflect.RecvDir) != 0
+			channel = f
 		}
 		if !ret {
 			panic("flow.Graph.MapInPort(): No such inport: " + procName + "." + procPort)
@@ -303,7 +347,7 @@ func (n *Graph) MapInPort(name, procName, procPort string) bool {
 		panic("flow.Graph.MapInPort(): No such process: " + procName)
 	}
 	if ret {
-		n.inPorts[name] = portName{proc: procName, port: procPort}
+		n.inPorts[name] = port{proc: procName, port: procPort, channel: channel}
 	}
 	return ret
 }
@@ -313,14 +357,17 @@ func (n *Graph) MapInPort(name, procName, procPort string) bool {
 func (n *Graph) MapOutPort(name, procName, procPort string) bool {
 	ret := false
 	// Check if target component and port exists
+	var channel reflect.Value
 	if p, procFound := n.procs[procName]; procFound {
 		if i, isNet := p.(portMapper); isNet {
 			// Is a subnet
 			ret = i.hasOutPort(procPort)
+			channel = i.getOutPort(procPort)
 		} else {
 			// Is a proc
 			f := reflect.ValueOf(p).Elem().FieldByName(procPort)
 			ret = f.IsValid() && f.Kind() == reflect.Chan && (f.Type().ChanDir()&reflect.SendDir) != 0
+			channel = f
 		}
 		if !ret {
 			panic("flow.Graph.MapOutPort(): No such outport: " + procName + "." + procPort)
@@ -329,7 +376,7 @@ func (n *Graph) MapOutPort(name, procName, procPort string) bool {
 		panic("flow.Graph.MapOutPort(): No such process: " + procName)
 	}
 	if ret {
-		n.outPorts[name] = portName{proc: procName, port: procPort}
+		n.outPorts[name] = port{proc: procName, port: procPort, channel: channel}
 	}
 	return ret
 }
@@ -337,7 +384,7 @@ func (n *Graph) MapOutPort(name, procName, procPort string) bool {
 // run runs the network and waits for all processes to finish.
 func (n *Graph) run() {
 	// Add processes to the waitgroup before starting them
-	n.WaitGrp.Add(len(n.procs))
+	n.waitGrp.Add(len(n.procs))
 	for _, v := range n.procs {
 		// Check if it is a net or proc
 		r := reflect.ValueOf(v).Elem()
@@ -347,13 +394,103 @@ func (n *Graph) run() {
 			RunProc(v)
 		}
 	}
+
+	// Send initial IPs
+	for _, ip := range n.iips {
+		// Get the reciever port
+		var rport reflect.Value
+		found := false
+
+		// Try to find it among network inports
+		for _, inPort := range n.inPorts {
+			if inPort.proc == ip.proc && inPort.port == ip.port {
+				rport = inPort.channel
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			// Try to find among connections
+			for _, conn := range n.connections {
+				if conn.tgt.proc == ip.proc && conn.tgt.port == ip.port {
+					rport = conn.channel
+					found = true
+					break
+				}
+			}
+		}
+
+		if !found {
+			// Try to find a proc and attach a new channel to it
+			for procName, proc := range n.procs {
+				if procName == ip.proc {
+					// Check if receiver is a net
+					rv := reflect.ValueOf(proc).Elem()
+					var rnet reflect.Value
+					if rv.Type().Name() == "Graph" {
+						rnet = rv
+					} else {
+						rnet = rv.FieldByName("Graph")
+					}
+					if rnet.IsValid() {
+						if pm, isPm := rnet.Addr().Interface().(portMapper); isPm {
+							rport = pm.getInPort(ip.port)
+						}
+					} else {
+						// Receiver is a proc
+						rport = rv.FieldByName(ip.port)
+					}
+
+					// Validate receiver port
+					rtport := rport.Type()
+					if rtport.Kind() != reflect.Chan || rtport.ChanDir()&reflect.RecvDir == 0 {
+						panic(ip.proc + "." + ip.port + " is not a valid input channel")
+					}
+					var channel reflect.Value
+
+					// Make a channel of an appropriate type
+					chanType := reflect.ChanOf(reflect.BothDir, rtport.Elem())
+					channel = reflect.MakeChan(chanType, DefaultBufferSize)
+					// Set the channel
+					if rport.CanSet() {
+						rport.Set(channel)
+					} else {
+						panic(ip.proc + "." + ip.port + " is not settable")
+					}
+
+					// Use the new channel to send the IIP
+					rport = channel
+					found = true
+					break
+				}
+			}
+		}
+
+		if found {
+			// Send data to the port
+			rport.Send(reflect.ValueOf(ip.data))
+		} else {
+			panic("IIP target not found: " + ip.proc + "." + ip.port)
+		}
+	}
+
+	// Let the outside world know that the network is ready
+	close(n.ready)
+
 	// Wait for all processes to terminate
-	n.WaitGrp.Wait()
+	n.waitGrp.Wait()
 	// Check if there is a parent net
 	if n.Net != nil {
 		// Notify parent of finish
-		n.Net.WaitGrp.Done()
+		n.Net.waitGrp.Done()
 	}
+}
+
+// Ready returns a channel that can be used to suspend the caller
+// goroutine until the network is ready to accept input packets
+func (n *Graph) Ready() <-chan struct{} {
+	return n.ready
 }
 
 // Wait returns a channel that can be used to suspend the caller
@@ -373,6 +510,11 @@ func (n *Graph) SetInPort(name string, channel interface{}) bool {
 		p.Set(reflect.ValueOf(channel))
 		res = true
 	}
+	// Save it in inPorts to be used with IIPs if needed
+	if p, ok := n.inPorts[name]; ok {
+		p.channel = reflect.ValueOf(channel)
+		n.inPorts[name] = p
+	}
 	return res
 }
 
@@ -386,6 +528,11 @@ func (n *Graph) SetOutPort(name string, channel interface{}) bool {
 	if p.CanSet() {
 		p.Set(reflect.ValueOf(channel))
 		res = true
+	}
+	// Save it in outPorts to be used later
+	if p, ok := n.outPorts[name]; ok {
+		p.channel = reflect.ValueOf(channel)
+		n.outPorts[name] = p
 	}
 	return res
 }

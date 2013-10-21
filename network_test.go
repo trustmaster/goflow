@@ -18,7 +18,7 @@ func (e *echoer) OnIn(i int) {
 }
 
 // A constructor that can be used by component registry/factory
-func newEchoer(iip interface{}) interface{} {
+func newEchoer() interface{} {
 	return new(echoer)
 }
 
@@ -55,15 +55,6 @@ func newTestNet(t *testing.T) *testNet {
 	n.MapInPort("In", "e1", "In")
 	n.MapOutPort("Out", "e2", "Out")
 	return n
-}
-
-// A constructor that can be used by component registry/factory
-func newTestNetConstructor(iip interface{}) interface{} {
-	return newTestNet(iip.(*struct{ t *testing.T }).t)
-}
-
-func init() {
-	Register("testNet", newTestNetConstructor)
 }
 
 // Test for a network initializer
@@ -151,15 +142,6 @@ func newCompositeTest(t *testing.T) *compositeTest {
 	return n
 }
 
-// A constructor that can be used by component registry/factory
-func newCompositeTestConstructor(iip interface{}) interface{} {
-	return newCompositeTest(iip.(*struct{ t *testing.T }).t)
-}
-
-func init() {
-	Register("compositeTest", newCompositeTestConstructor)
-}
-
 // Tests a composite with processes and subnets
 func TestComposite(t *testing.T) {
 	// Make the network
@@ -180,6 +162,7 @@ func TestComposite(t *testing.T) {
 	}
 
 	close(in)
+	<-net.Wait()
 }
 
 type rr struct {
@@ -263,4 +246,75 @@ func TestMultiOutChannel(t *testing.T) {
 	}
 
 	close(in)
+}
+
+// A struct to test IIPs support
+type iipNet struct {
+	Graph
+}
+
+// Creates a new test network with an IIP
+func newIipNet() *iipNet {
+	n := new(iipNet)
+	n.InitGraphState()
+
+	n.Add(new(echoer), "e1")
+
+	n.AddIIP(interface{}(123), "e1", "In")
+
+	n.MapInPort("In", "e1", "In")
+	n.MapOutPort("Out", "e1", "Out")
+
+	return n
+}
+
+// Tests IIP support in network
+func TestIIP(t *testing.T) {
+	net := newIipNet()
+	in := make(chan int)
+	out := make(chan int)
+	net.SetInPort("In", in)
+	net.SetOutPort("Out", out)
+
+	RunNet(net)
+
+	h := <-out
+	if h != 123 {
+		t.Errorf("%d != 123", h)
+	}
+
+	close(in)
+	<-net.Wait()
+}
+
+// A simple syncrhonous summator for 2 arguments
+type sum2 struct {
+	Arg1      <-chan int
+	Arg2      <-chan int
+	Sum       chan<- int
+	StateLock *sync.Mutex
+	buf1      []int
+	buf2      []int
+}
+
+// If available, pops arguments from the stack
+// and sends the sum to the output
+func (s *sum2) trySum() {
+	if len(s.buf1) > 0 && len(s.buf2) > 0 {
+		a1 := s.buf1[0]
+		s.buf1 = s.buf1[1:]
+		a2 := s.buf2[0]
+		s.buf2 = s.buf2[1:]
+		s.Sum <- (a1 + a2)
+	}
+}
+
+func (s *sum2) OnArg1(a int) {
+	s.buf1 = append(s.buf1, a)
+	s.trySum()
+}
+
+func (s *sum2) OnArg2(a int) {
+	s.buf2 = append(s.buf2, a)
+	s.trySum()
 }
