@@ -70,7 +70,6 @@ func (p *Printer) OnLine(line string) {
 // Our greeting network
 type GreetingApp struct {
 	flow.Graph               // graph "superclass" embedded
-	done       chan struct{} // completion semaphore
 }
 
 // Graph constructor and structure definition
@@ -84,18 +83,7 @@ func NewGreetingApp() *GreetingApp {
 	n.Connect("greeter", "Res", "printer", "Line")
 	// Our net has 1 inport mapped to greeter.Name
 	n.MapInPort("In", "greeter", "Name")
-	n.done = make(chan struct{})
 	return n
-}
-
-// Use this handler to let the main() know when the network terminates
-func (a *GreetingApp) Finish() {
-	close(a.done)
-}
-
-// Wait returns a chan indicating the completion status of the network
-func (a *GreetingApp) Wait() <-chan struct{} {
-	return a.done
 }
 
 func main() {
@@ -112,14 +100,14 @@ func main() {
 	in <- "Hanna"
 	// Close the input to shut the network down
 	close(in)
-	// Wait until it's done
+	// Wait until the app has done its job
 	<-net.Wait()
 }
 ```
 
 Looks a bit heavy for such a simple task but FBP is aimed at a bit more complex things than just printing on screen. So in more complex an realistic examples the infractructure pays the price.
 
-You probably have one question left even after reading the comments in code: why do we need to wait for the finish signal? This is because flow-based world is asynchronous and while you expect things to happen in the same sequence as they are in main(), during runtime they don't necessarily follow the same order and the application might terminate before the network has done its job. To avoid this confusion we added a `done` semaphore to the network and a `Wait()` method that provides read-only access to it. A read on `Wait()` channel unlocks the main thread when the network finishes its job and closes the semaphore.
+You probably have one question left even after reading the comments in code: why do we need to wait for the finish signal? This is because flow-based world is asynchronous and while you expect things to happen in the same sequence as they are in main(), during runtime they don't necessarily follow the same order and the application might terminate before the network has done its job. To avoid this confusion we listen for a signal on network's `Wait()` channel which is closed when the network finishes its job.
 
 ## Terminology ##
 
