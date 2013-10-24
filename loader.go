@@ -2,7 +2,6 @@ package flow
 
 import (
 	"encoding/json"
-	// "fmt"
 	"io/ioutil"
 	"reflect"
 	"strings"
@@ -10,6 +9,9 @@ import (
 
 // Internal representation of NoFlo JSON format
 type graphDescription struct {
+	Properties struct {
+		Name string
+	}
 	Processes map[string]struct {
 		Component string
 		Sync      bool `json:",omitempty"`
@@ -43,57 +45,66 @@ func ParseJSON(js []byte) *Graph {
 	}
 	// fmt.Printf("%+v\n", descr)
 
-	// Create a new Graph
-	net := new(Graph)
-	net.InitGraphState()
+	constructor := func() interface{} {
+		// Create a new Graph
+		net := new(Graph)
+		net.InitGraphState()
 
-	// Add processes to the network
-	for procName, procValue := range descr.Processes {
-		net.AddNew(procValue.Component, procName)
-		// Support for Sync/Async process switch
-		if procValue.Sync {
-			proc := net.Get(procName).(*Component)
-			proc.Mode = ComponentModeSync
+		// Add processes to the network
+		for procName, procValue := range descr.Processes {
+			net.AddNew(procValue.Component, procName)
+			// Support for Sync/Async process switch
+			if procValue.Sync {
+				proc := net.Get(procName).(*Component)
+				proc.Mode = ComponentModeSync
+			}
 		}
+
+		// Add connections
+		for _, conn := range descr.Connections {
+			// Check if it is an IIP or actual connection
+			if conn.Data == nil {
+				// Add a connection
+				net.ConnectBuf(conn.Src.Process, conn.Src.Port, conn.Tgt.Process, conn.Tgt.Port, conn.Buffer)
+			} else {
+				// Add an IIP
+				net.AddIIP(conn.Data, conn.Tgt.Process, conn.Tgt.Port)
+			}
+		}
+
+		// Add port exports
+		for _, export := range descr.Exports {
+			// Split private into proc.port
+			procName := export.Private[:strings.Index(export.Private, ".")]
+			procPort := export.Private[strings.Index(export.Private, ".")+1:]
+			// Try to detect port direction using reflection
+			procType := reflect.TypeOf(net.Get(procName)).Elem()
+			field, fieldFound := procType.FieldByName(procPort)
+			if !fieldFound {
+				panic("Private port '" + export.Private + "' not found")
+			}
+			if field.Type.Kind() == reflect.Chan && (field.Type.ChanDir()&reflect.RecvDir) != 0 {
+				// It's an inport
+				net.MapInPort(export.Public, procName, procPort)
+			} else if field.Type.Kind() == reflect.Chan && (field.Type.ChanDir()&reflect.SendDir) != 0 {
+				// It's an outport
+				net.MapOutPort(export.Public, procName, procPort)
+			} else {
+				// It's not a proper port
+				panic("Private port '" + export.Private + "' is not a valid channel")
+			}
+			// TODO add support for subgraphs
+		}
+
+		return net
 	}
 
-	// Add connections
-	for _, conn := range descr.Connections {
-		// Check if it is an IIP or actual connection
-		if conn.Data == nil {
-			// Add a connection
-			net.ConnectBuf(conn.Src.Process, conn.Src.Port, conn.Tgt.Process, conn.Tgt.Port, conn.Buffer)
-		} else {
-			// Add an IIP
-			net.AddIIP(conn.Data, conn.Tgt.Process, conn.Tgt.Port)
-		}
+	// Register a component to be reused
+	if descr.Properties.Name != "" {
+		Register(descr.Properties.Name, constructor)
 	}
 
-	// Add port exports
-	for _, export := range descr.Exports {
-		// Split private into proc.port
-		procName := export.Private[:strings.Index(export.Private, ".")]
-		procPort := export.Private[strings.Index(export.Private, ".")+1:]
-		// Try to detect port direction using reflection
-		procType := reflect.TypeOf(net.Get(procName)).Elem()
-		field, fieldFound := procType.FieldByName(procPort)
-		if !fieldFound {
-			panic("Private port '" + export.Private + "' not found")
-		}
-		if field.Type.Kind() == reflect.Chan && (field.Type.ChanDir()&reflect.RecvDir) != 0 {
-			// It's an inport
-			net.MapInPort(export.Public, procName, procPort)
-		} else if field.Type.Kind() == reflect.Chan && (field.Type.ChanDir()&reflect.SendDir) != 0 {
-			// It's an outport
-			net.MapOutPort(export.Public, procName, procPort)
-		} else {
-			// It's not a proper port
-			panic("Private port '" + export.Private + "' is not a valid channel")
-		}
-		// TODO add support for subgraphs
-	}
-
-	return net
+	return constructor().(*Graph)
 }
 
 // LoadJSON loads a JSON graph definition file into

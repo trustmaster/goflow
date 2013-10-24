@@ -80,6 +80,9 @@ func (s *summarizer) Finish() {
 }
 
 var runtimeNetworkJSON = `{
+	"properties": {
+		"name": "runtimeNetwork"
+	},
 	"processes": {
 		"starter": {
 			"component": "starter"
