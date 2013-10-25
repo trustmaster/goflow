@@ -80,6 +80,10 @@ func RunProc(c interface{}) bool {
 	vCom := v.FieldByName("Component")
 	isComponent := vCom.IsValid() && vCom.Type().Name() == "Component"
 
+	if !isComponent {
+		panic("Argument of flow.Run() is not a flow.Component")
+	}
+
 	// Get the component mode
 	componentMode := DefaultComponentMode
 	if isComponent {
