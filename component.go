@@ -130,7 +130,7 @@ func RunProc(c interface{}) bool {
 						if hasRecv {
 							// Call the receival handler for this channel
 							handlersDone.Add(1)
-							if componentMode == ComponentModeAsync {
+							if componentMode == ComponentModeAsync || componentMode == ComponentModeUndefined && DefaultComponentMode == ComponentModeAsync {
 								go func() {
 									if hasLock {
 										locker.Lock()
