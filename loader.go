@@ -14,7 +14,9 @@ type graphDescription struct {
 	}
 	Processes map[string]struct {
 		Component string
-		Sync      bool `json:",omitempty"`
+		Metadata  struct {
+			Sync bool `json:",omitempty"`
+		} `json:",omitempty"`
 	}
 	Connections []struct {
 		Data interface{} `json:",omitempty"`
@@ -26,7 +28,9 @@ type graphDescription struct {
 			Process string
 			Port    string
 		}
-		Buffer int `json:",omitempty"`
+		Metadata struct {
+			Buffer int `json:",omitempty"`
+		} `json:",omitempty"`
 	}
 	Exports []struct {
 		Private string
@@ -54,7 +58,7 @@ func ParseJSON(js []byte) *Graph {
 		for procName, procValue := range descr.Processes {
 			net.AddNew(procValue.Component, procName)
 			// Support for Sync/Async process switch
-			if procValue.Sync {
+			if procValue.Metadata.Sync {
 				proc := net.Get(procName).(*Component)
 				proc.Mode = ComponentModeSync
 			}
@@ -65,7 +69,7 @@ func ParseJSON(js []byte) *Graph {
 			// Check if it is an IIP or actual connection
 			if conn.Data == nil {
 				// Add a connection
-				net.ConnectBuf(conn.Src.Process, conn.Src.Port, conn.Tgt.Process, conn.Tgt.Port, conn.Buffer)
+				net.ConnectBuf(conn.Src.Process, conn.Src.Port, conn.Tgt.Process, conn.Tgt.Port, conn.Metadata.Buffer)
 			} else {
 				// Add an IIP
 				net.AddIIP(conn.Data, conn.Tgt.Process, conn.Tgt.Port)
