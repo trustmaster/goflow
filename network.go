@@ -131,6 +131,14 @@ func (n *Graph) Add(c interface{}, name string) bool {
 	return true
 }
 
+// AddGraph adds a new blank graph instance to a network. That instance can
+// be modified then at run-time.
+func (n *Graph) AddGraph(name string) bool {
+	net := new(Graph)
+	net.InitGraphState()
+	return n.Add(net, name)
+}
+
 // AddNew creates a new process instance using component factory and adds it to the network.
 func (n *Graph) AddNew(componentName string, processName string) bool {
 	proc := Factory(componentName)
