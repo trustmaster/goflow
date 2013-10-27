@@ -143,8 +143,14 @@ func RunProc(c interface{}) bool {
 									handlersDone.Done()
 								}()
 							} else {
+								if hasLock {
+									locker.Lock()
+								}
 								valArr := [1]reflect.Value{val}
 								onRecv.Call(valArr[:])
+								if hasLock {
+									locker.Unlock()
+								}
 								handlersDone.Done()
 							}
 						}
