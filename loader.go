@@ -15,7 +15,8 @@ type graphDescription struct {
 	Processes map[string]struct {
 		Component string
 		Metadata  struct {
-			Sync bool `json:",omitempty"`
+			Sync     bool  `json:",omitempty"`
+			PoolSize int64 `json:",omitempty"`
 		} `json:",omitempty"`
 	}
 	Connections []struct {
@@ -57,8 +58,12 @@ func ParseJSON(js []byte) *Graph {
 		// Add processes to the network
 		for procName, procValue := range descr.Processes {
 			net.AddNew(procValue.Component, procName)
-			// Support for Sync/Async process switch
-			if procValue.Metadata.Sync {
+			// Process mode detection
+			if procValue.Metadata.PoolSize > 0 {
+				proc := net.Get(procName).(*Component)
+				proc.Mode = ComponentModePool
+				proc.PoolSize = uint8(procValue.Metadata.PoolSize)
+			} else if procValue.Metadata.Sync {
 				proc := net.Get(procName).(*Component)
 				proc.Mode = ComponentModeSync
 			}
