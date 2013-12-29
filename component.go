@@ -13,6 +13,8 @@ const (
 	ComponentModeAsync
 	// ComponentModeSync stands for synchronous functioning mode.
 	ComponentModeSync
+	// ComponentModePool stands for async functioning with a fixed pool.
+	ComponentModePool
 )
 
 // DefaultComponentMode is the preselected functioning mode of all components being run.
@@ -23,8 +25,11 @@ var DefaultComponentMode = ComponentModeAsync
 type Component struct {
 	// Net is a pointer to network to inform it when the process is started and over
 	// or to change its structure at run time.
-	Net  *Graph
+	Net *Graph
+	// Mode is component's functioning mode.
 	Mode int8
+	// PoolSize is used to define pool size when using ComponentModePool.
+	PoolSize uint8
 }
 
 // Initalizable is the interface implemented by components/graphs with custom initialization code.
@@ -40,6 +45,12 @@ type Finalizable interface {
 // Shutdowner is the interface implemented by components overriding default Shutdown() behavior.
 type Shutdowner interface {
 	Shutdown()
+}
+
+// postHandler is used to bind handlers to a port
+type portHandler struct {
+	onRecv  reflect.Value
+	onClose reflect.Value
 }
 
 // RunProc runs event handling loop on component ports.
@@ -86,14 +97,21 @@ func RunProc(c interface{}) bool {
 
 	// Get the component mode
 	componentMode := DefaultComponentMode
+	var poolSize uint8 = 0
 	if isComponent {
 		if vComMode := vCom.FieldByName("Mode"); vComMode.IsValid() {
 			componentMode = int(vComMode.Int())
 		}
+		if vComPoolSize := vCom.FieldByName("PoolSize"); vComPoolSize.IsValid() {
+			poolSize = uint8(vComPoolSize.Uint())
+		}
 	}
 
-	// Bind channel event handlers
-	// Iterate over struct fields
+	// Create a slice of select cases and port handlers
+	cases := make([]reflect.SelectCase, 0, t.NumField())
+	handlers := make([]portHandler, 0, t.NumField())
+
+	// Iterate over struct fields and bind handlers
 	for i := 0; i < t.NumField(); i++ {
 		fv := v.Field(i)
 		ff := t.Field(i)
@@ -101,64 +119,94 @@ func RunProc(c interface{}) bool {
 		// Detect control channels
 		if fv.IsValid() && fv.Kind() == reflect.Chan && !fv.IsNil() && (ft.ChanDir()&reflect.RecvDir) != 0 {
 			// Bind handlers for an input channel
-			onClose := vp.MethodByName("On" + ff.Name + "Close")
-			hasClose := onClose.IsValid()
-			onRecv := vp.MethodByName("On" + ff.Name)
-			hasRecv := onRecv.IsValid()
-			if hasClose || hasRecv {
+			cases = append(cases, reflect.SelectCase{Dir: reflect.SelectRecv, Chan: fv})
+			h := portHandler{onRecv: vp.MethodByName("On" + ff.Name), onClose: vp.MethodByName("On" + ff.Name + "Close")}
+			handlers = append(handlers, h)
+			if h.onClose.IsValid() || h.onRecv.IsValid() {
 				// Add the input to the wait group
 				inputsClose.Add(1)
-				// Listen on an input channel
-				go func() {
-					for {
-						val, ok := fv.Recv()
-						if !ok {
-							// The channel closed
-							if hasClose {
-								// Lock the state and call OnClose handler
-								if hasLock {
-									locker.Lock()
-								}
-								onClose.Call([]reflect.Value{})
-								if hasLock {
-									locker.Unlock()
-								}
-							}
-							inputsClose.Done()
-							return
-						}
-						if hasRecv {
-							// Call the receival handler for this channel
-							handlersDone.Add(1)
-							if componentMode == ComponentModeAsync || componentMode == ComponentModeUndefined && DefaultComponentMode == ComponentModeAsync {
-								go func() {
-									if hasLock {
-										locker.Lock()
-									}
-									valArr := [1]reflect.Value{val}
-									onRecv.Call(valArr[:])
-									if hasLock {
-										locker.Unlock()
-									}
-									handlersDone.Done()
-								}()
-							} else {
-								if hasLock {
-									locker.Lock()
-								}
-								valArr := [1]reflect.Value{val}
-								onRecv.Call(valArr[:])
-								if hasLock {
-									locker.Unlock()
-								}
-								handlersDone.Done()
-							}
-						}
-					}
-				}()
 			}
 		}
 	}
+
+	// Prepare handler closures
+	recvHandler := func(onRecv, value reflect.Value) {
+		if hasLock {
+			locker.Lock()
+		}
+		valArr := [1]reflect.Value{value}
+		onRecv.Call(valArr[:])
+		if hasLock {
+			locker.Unlock()
+		}
+		handlersDone.Done()
+	}
+	closeHandler := func(onClose reflect.Value) {
+		if onClose.IsValid() {
+			// Lock the state and call OnClose handler
+			if hasLock {
+				locker.Lock()
+			}
+			onClose.Call([]reflect.Value{})
+			if hasLock {
+				locker.Unlock()
+			}
+		}
+		inputsClose.Done()
+	}
+
+	// Run the port handlers depending on component mode
+	if componentMode == ComponentModePool && poolSize > 0 {
+		// Pool mode, prefork limited goroutine pool for all inputs
+		var poolIndex uint8
+		poolWait := new(sync.WaitGroup)
+		once := new(sync.Once)
+		for poolIndex = 0; poolIndex < poolSize; poolIndex++ {
+			poolWait.Add(1)
+			go func() {
+				for {
+					chosen, recv, recvOK := reflect.Select(cases)
+					if !recvOK {
+						// Port has been closed
+						poolWait.Done()
+						once.Do(func() {
+							// Wait for other workers
+							poolWait.Wait()
+							// Close output down
+							closeHandler(handlers[chosen].onClose)
+						})
+						return
+					}
+					if handlers[chosen].onRecv.IsValid() {
+						handlersDone.Add(1)
+						recvHandler(handlers[chosen].onRecv, recv)
+					}
+				}
+			}()
+		}
+	} else {
+		go func() {
+			for {
+				chosen, recv, recvOK := reflect.Select(cases)
+				if !recvOK {
+					// Port has been closed
+					closeHandler(handlers[chosen].onClose)
+					return
+				}
+				if handlers[chosen].onRecv.IsValid() {
+					handlersDone.Add(1)
+					if componentMode == ComponentModeAsync || componentMode == ComponentModeUndefined && DefaultComponentMode == ComponentModeAsync {
+						// Async mode
+						go recvHandler(handlers[chosen].onRecv, recv)
+					} else {
+						// Sync mode
+						recvHandler(handlers[chosen].onRecv, recv)
+					}
+				}
+			}
+		}()
+	}
+
 	go func() {
 		// Wait for all inputs to be closed
 		inputsClose.Wait()

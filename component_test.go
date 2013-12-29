@@ -309,3 +309,25 @@ func TestShutdown(t *testing.T) {
 		t.Errorf("%d != %d", shutdownTestFlag, 789)
 	}
 }
+
+func TestPoolMode(t *testing.T) {
+	d := new(doubler)
+	d.Component.Mode = ComponentModePool
+	d.Component.PoolSize = 4
+	in := make(chan int, 20)
+	out := make(chan int, 20)
+	d.In = in
+	d.Out = out
+	RunProc(d)
+	for i := 0; i < 10; i++ {
+		in <- i
+	}
+	for i := 0; i < 10; i++ {
+		i2 := <-out
+		if i2 < 0 {
+			t.Errorf("%d < 0", i2)
+		}
+	}
+	// Shutdown the component
+	close(in)
+}
