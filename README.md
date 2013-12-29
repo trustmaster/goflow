@@ -132,7 +132,7 @@ More terms can be found in [flowbased terms](http://flowbased.org/terms) and [FB
     3. [State](https://github.com/trustmaster/goflow/wiki/Components#state)
     4. [Concurrency](https://github.com/trustmaster/goflow/wiki/Components#concurrency)
     5. [Internal state and Thread-safety](https://github.com/trustmaster/goflow/wiki/Components#internal-state-and-thread-safety)
-2 [Graphs](https://github.com/trustmaster/goflow/wiki/Graphs)
+2. [Graphs](https://github.com/trustmaster/goflow/wiki/Graphs)
     1. [Structure definition](https://github.com/trustmaster/goflow/wiki/Graphs#structure-definition)
     2. [Behavior](https://github.com/trustmaster/goflow/wiki/Graphs#behavior)
 
