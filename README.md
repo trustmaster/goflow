@@ -1,6 +1,6 @@
-# GoFlow - Flow-based programming library for Go (golang) #
+# GoFlow - Dataflow and Flow-based programming library for Go (golang)
 
-This is quite a minimalistic implementation of [Flow-based programming](http://en.wikipedia.org/wiki/Flow-based_programming) in Go programming language that aims at designing applications as graphs of components which react to data that flows through the graph.
+This is quite a minimalistic implementation of [Flow-based programming](http://en.wikipedia.org/wiki/Flow-based_programming) and several other concurrent models in Go programming language that aims at designing applications as graphs of components which react to data that flows through the graph.
 
 The main properties of the proposed model are:
 
@@ -10,7 +10,7 @@ The main properties of the proposed model are:
 * Asynchronous - there is no determined order in which events happen.
 * Isolated - sharing is done by communication, state is not shared.
 
-## Getting started ##
+## Getting started
 
 Current version of the library requires a latest stable Go release. If you don't have the Go compiler installed, read the official [Go install guide](http://golang.org/doc/install).
 
@@ -26,7 +26,7 @@ Then you can use it in import section of your Go programs:
 import "github.com/trustmaster/goflow"
 ```
 
-## Basic Example ##
+## Basic Example
 
 Below there is a listing of a simple program running a network of two processes.
 
@@ -109,7 +109,7 @@ Looks a bit heavy for such a simple task but FBP is aimed at a bit more complex 
 
 You probably have one question left even after reading the comments in code: why do we need to wait for the finish signal? This is because flow-based world is asynchronous and while you expect things to happen in the same sequence as they are in main(), during runtime they don't necessarily follow the same order and the application might terminate before the network has done its job. To avoid this confusion we listen for a signal on network's `Wait()` channel which is closed when the network finishes its job.
 
-## Terminology ##
+## Terminology
 
 Here are some Flow-based programming terms used in GoFlow:
 
@@ -122,9 +122,21 @@ Here are some Flow-based programming terms used in GoFlow:
 
 More terms can be found in [flowbased terms](http://flowbased.org/terms) and [FBP wiki](http://www.jpaulmorrison.com/cgi-bin/wiki.pl?action=index).
 
-## Further reading ##
+## Documentation
 
-For more information please visit [project wiki](https://github.com/trustmaster/goflow/wiki).
+### Contents
+
+1. [Components](https://github.com/trustmaster/goflow/wiki/Components)
+    1. [Ports, Events and Handlers](https://github.com/trustmaster/goflow/wiki/Components#ports-events-and-handlers)
+    2. [Processes and their lifetime](https://github.com/trustmaster/goflow/wiki/Components#processes-and-their-lifetime)
+    3. [State](https://github.com/trustmaster/goflow/wiki/Components#state)
+    4. [Concurrency](https://github.com/trustmaster/goflow/wiki/Components#concurrency)
+    5. [Internal state and Thread-safety](https://github.com/trustmaster/goflow/wiki/Components#internal-state-and-thread-safety)
+2 [Graphs](https://github.com/trustmaster/goflow/wiki/Graphs)
+    1. [Structure definition](https://github.com/trustmaster/goflow/wiki/Graphs#structure-definition)
+    2. [Behavior](https://github.com/trustmaster/goflow/wiki/Graphs#behavior)
+
+### Package docs
 
 Documentation for the flow package can be accessed using standard godoc tool, e.g.
 
@@ -132,11 +144,11 @@ Documentation for the flow package can be accessed using standard godoc tool, e.
 godoc github.com/trustmaster/goflow
 ```
 
-## More examples ##
+## More examples
 
 * [GoChat](https://github.com/trustmaster/gochat), a simple chat in Go using this library
 
-## Links ##
+## Links
 
 Here are related projects and resources:
 
@@ -146,9 +158,9 @@ Here are related projects and resources:
 * [Pypes](http://www.pypes.org/), flow-based Python ETL
 * [Go](http://golang.org/), the Go programming language
 
-## TODO ##
+## TODO
 
-* A tool to convert visual diagrams into Go code
+* Integration with NoFlo-UI
 * Distributed networks via TCP/IP and UDP
 * Better run-time restructuring and evolution
 * Reflection and monitoring of networks
