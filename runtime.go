@@ -2,6 +2,7 @@ package flow
 
 import (
 	"code.google.com/p/go.net/websocket"
+	"github.com/nu7hatch/gouuid"
 	"log"
 	"net"
 	"net/http"
@@ -22,28 +23,48 @@ type protocolHandler func(*websocket.Conn, interface{})
 
 // Runtime is a NoFlo-compatible runtime implementing the FBP protocol
 type Runtime struct {
+	id       string
 	handlers map[string]protocolHandler
 	ready    chan struct{}
 	done     chan struct{}
 }
 
+// runtimeInfo message contains response to runtime.getruntime request
+type runtimeInfo struct {
+	Type         string
+	Version      string
+	Capabilities []string
+	Id           string
+}
+
 func (r *Runtime) runtimeGetRuntime(ws *websocket.Conn, payload interface{}) {
-	websocket.JSON.Send(ws, struct {
-		Type         string
-		Version      string
-		Capabilities []string
-	}{"goflow",
+	websocket.JSON.Send(ws, runtimeInfo{"goflow",
 		"0.4",
-		[]string{"protocol:runtime", "protocol:graph", "protocol:component"},
+		[]string{"protocol:runtime",
+			"protocol:graph",
+			"protocol:component",
+			"protocol:network",
+			"component:getsource"},
+		r.id,
 	})
 }
 
 // Register command handlers
 func (r *Runtime) Init() {
+	uv4, err := uuid.NewV4()
+	if err != nil {
+		log.Println(err.Error())
+	}
+	r.id = uv4.String()
 	r.done = make(chan struct{})
 	r.ready = make(chan struct{})
 	r.handlers = make(map[string]protocolHandler)
 	r.handlers["runtime.getruntime"] = r.runtimeGetRuntime
+}
+
+// Id returns runtime's UUID v4
+func (r *Runtime) Id() string {
+	return r.id
 }
 
 // Ready returns a channel which is closed when the runtime is ready to work

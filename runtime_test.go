@@ -32,11 +32,7 @@ func TestRuntimeGetRuntime(t *testing.T) {
 	if err = websocket.JSON.Send(ws, &Message{"runtime", "getruntime", nil}); err != nil {
 		t.Error(err.Error())
 	}
-	var res struct {
-		Type         string
-		Version      string
-		Capabilities []string
-	}
+	var res runtimeInfo
 	if err = websocket.JSON.Receive(ws, &res); err != nil {
 		t.Error(err.Error())
 	}
@@ -46,7 +42,10 @@ func TestRuntimeGetRuntime(t *testing.T) {
 	if res.Version != "0.4" {
 		t.Errorf("Invalid protocol version: %s\n", res.Version)
 	}
-	if len(res.Capabilities) != 3 {
+	if len(res.Capabilities) != 5 {
 		t.Errorf("Invalid number of supported capabilities: %v\n", res.Capabilities)
+	}
+	if res.Id == "" {
+		t.Error("Runtime Id is empty")
 	}
 }
