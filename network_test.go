@@ -290,12 +290,30 @@ func TestIIP(t *testing.T) {
 
 // A simple syncrhonous summator for 2 arguments
 type sum2 struct {
-	Arg1      <-chan int
-	Arg2      <-chan int
-	Sum       chan<- int
+	Component
+
+	Arg1 <-chan int
+	Arg2 <-chan int
+	Sum  chan<- int
+
 	StateLock *sync.Mutex
-	buf1      []int
-	buf2      []int
+
+	buf1 []int
+	buf2 []int
+}
+
+func newSum2() *sum2 {
+	s := new(sum2)
+	s.StateLock = new(sync.Mutex)
+	s.buf1 = make([]int, 0, 100)
+	s.buf2 = make([]int, 0, 100)
+	return s
+}
+
+func init() {
+	Register("sum2", func() interface{} {
+		return newSum2()
+	})
 }
 
 // If available, pops arguments from the stack
@@ -319,3 +337,52 @@ func (s *sum2) OnArg2(a int) {
 	s.buf2 = append(s.buf2, a)
 	s.trySum()
 }
+
+// type forked struct {
+// 	Graph
+// }
+
+// func newForked() *forked {
+// 	n := new(forked)
+// 	n.InitGraphState()
+
+// 	n.Add(new(echoer), "e1")
+// 	n.Add(new(echoer), "e2")
+// 	n.Add(newSum2(), "sum")
+
+// 	n.Connect("e1", "Out", "sum", "Arg1")
+// 	n.Connect("e2", "Out", "sum", "Arg2")
+
+// 	n.MapInPort("In1", "e1", "In")
+// 	n.MapInPort("In2", "e2", "In")
+// 	n.MapOutPort("Out", "sum", "Sum")
+
+// 	return n
+// }
+
+// func TestForkedNet(t *testing.T) {
+// 	net := newForked()
+
+// 	in1 := make(chan int)
+// 	in2 := make(chan int)
+// 	out := make(chan int)
+// 	net.SetInPort("In1", in1)
+// 	net.SetInPort("In2", in2)
+// 	net.SetOutPort("Out", out)
+
+// 	RunNet(net)
+
+// 	in1 <- 2
+// 	in2 <- 3
+
+// 	i := <-out
+
+// 	if i != 5 {
+// 		t.Errorf("%d != 5\n", i)
+// 	}
+
+// 	close(in1)
+// 	close(in2)
+
+// 	<-net.Wait()
+// }
