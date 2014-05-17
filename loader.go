@@ -125,3 +125,14 @@ func LoadJSON(filename string) *Graph {
 	}
 	return ParseJSON(js)
 }
+
+// RegisterJSON registers an external JSON graph definition as a component
+// that can be instantiated at run-time using component Factory.
+// It returns true on success or false if component name is already taken.
+func RegisterJSON(componentName, filePath string) bool {
+	var constructor ComponentConstructor
+	constructor = func() interface{} {
+		return LoadJSON(filePath)
+	}
+	return Register(componentName, constructor)
+}
