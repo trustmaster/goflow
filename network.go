@@ -98,6 +98,24 @@ func (n *Graph) InitGraphState() {
 	n.ready = make(chan struct{})
 }
 
+// Canvas is a generic graph that is manipulated at run-time only
+type Canvas struct {
+	Graph
+}
+
+// NewGraph creates a new canvas graph that can be modified at run-time.
+// Implements ComponentConstructor interace, so can it be used with Factory.
+func NewGraph() interface{} {
+	net := new(Canvas)
+	net.InitGraphState()
+	return net
+}
+
+// Register an empty graph component in the registry
+func init() {
+	Register("Graph", NewGraph)
+}
+
 // Add adds a new process with a given name to the network.
 // It returns true on success or panics and returns false on error.
 func (n *Graph) Add(c interface{}, name string) bool {
@@ -145,11 +163,72 @@ func (n *Graph) AddNew(componentName string, processName string) bool {
 	return n.Add(proc, processName)
 }
 
+// Remove deletes a process from the graph. First it stops the process if running.
+// Then it disconnects it from other processes and removes the connections from
+// the graph. Then it drops the process itself.
+func (n *Graph) Remove(processName string) bool {
+	if _, exists := n.procs[processName]; !exists {
+		return false
+	}
+	// TODO implement and test
+	delete(n.procs, processName)
+	return true
+}
+
+// Rename changes a process name in all connections, external ports, IIPs and the
+// graph itself.
+func (n *Graph) Rename(processName, newName string) bool {
+	if _, exists := n.procs[processName]; !exists {
+		return false
+	}
+	if _, busy := n.procs[newName]; busy {
+		// New name is already taken
+		return false
+	}
+	for i, conn := range n.connections {
+		if conn.src.proc == processName {
+			n.connections[i].src.proc = newName
+		}
+		if conn.tgt.proc == processName {
+			n.connections[i].tgt.proc = newName
+		}
+	}
+	for key, port := range n.inPorts {
+		if port.proc == processName {
+			tmp := n.inPorts[key]
+			tmp.proc = newName
+			n.inPorts[key] = tmp
+		}
+	}
+	for key, port := range n.outPorts {
+		if port.proc == processName {
+			tmp := n.outPorts[key]
+			tmp.proc = newName
+			n.outPorts[key] = tmp
+		}
+	}
+	n.procs[newName] = n.procs[processName]
+	delete(n.procs, processName)
+	return true
+}
+
 // AddIIP adds an Initial Information packet to the network
 func (n *Graph) AddIIP(data interface{}, processName, portName string) bool {
 	if _, exists := n.procs[processName]; exists {
 		n.iips = append(n.iips, iip{data: data, proc: processName, port: portName})
 		return true
+	}
+	return false
+}
+
+// RemoveIIP detaches an IIP from specific process and port
+func (n *Graph) RemoveIIP(processName, portName string) bool {
+	for i, p := range n.iips {
+		if p.proc == processName && p.port == portName {
+			// Remove item from the slice
+			n.iips[len(n.iips)-1], n.iips[i], n.iips = iip{}, n.iips[len(n.iips)-1], n.iips[:len(n.iips)-1]
+			return true
+		}
 	}
 	return false
 }
@@ -284,6 +363,12 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 		channel: channel,
 		buffer:  bufferSize})
 
+	return true
+}
+
+// Disconnect removes a connection between sender's outport and receiver's inport.
+func (n *Graph) Disconnect(senderName, senderPort, receiverName, receiverPort string) bool {
+	// TODO implement and test
 	return true
 }
 
@@ -526,6 +611,26 @@ func (n *Graph) SetInPort(name string, channel interface{}) bool {
 	return res
 }
 
+// RenameInPort changes graph's inport name
+func (n *Graph) RenameInPort(oldName, newName string) bool {
+	if _, exists := n.inPorts[oldName]; !exists {
+		return false
+	}
+	n.inPorts[newName] = n.inPorts[oldName]
+	delete(n.inPorts, oldName)
+	return true
+}
+
+// UnsetInPort removes an external inport from the graph
+func (n *Graph) UnsetInPort(name string) bool {
+	if _, exists := n.inPorts[name]; !exists {
+		return false
+	}
+	// TODO disconnect if connected
+	delete(n.inPorts, name)
+	return true
+}
+
 // SetOutPort assigns a channel to a network's outport to talk to the outer world.
 // It returns true on success or false if the outport cannot be set.
 func (n *Graph) SetOutPort(name string, channel interface{}) bool {
@@ -543,6 +648,26 @@ func (n *Graph) SetOutPort(name string, channel interface{}) bool {
 		n.outPorts[name] = p
 	}
 	return res
+}
+
+// RenameOutPort changes graph's outport name
+func (n *Graph) RenameOutPort(oldName, newName string) bool {
+	if _, exists := n.outPorts[oldName]; !exists {
+		return false
+	}
+	n.outPorts[newName] = n.outPorts[oldName]
+	delete(n.outPorts, oldName)
+	return true
+}
+
+// UnsetOutPort removes an external outport from the graph
+func (n *Graph) UnsetOutPort(name string) bool {
+	if _, exists := n.outPorts[name]; !exists {
+		return false
+	}
+	// TODO disconnect if connected
+	delete(n.outPorts, name)
+	return true
 }
 
 // RunNet runs the network by starting all of its processes.
