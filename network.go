@@ -580,6 +580,23 @@ func (n *Graph) run() {
 	}
 }
 
+// Stop terminates the network without closing any connections
+func (n *Graph) Stop() {
+	for _, v := range n.procs {
+		// Check if it is a net or proc
+		r := reflect.ValueOf(v).Elem()
+		if r.FieldByName("Graph").IsValid() {
+			subnet, ok := r.FieldByName("Graph").Addr().Interface().(*Graph)
+			if !ok {
+				panic("Couldn't get graph interface")
+			}
+			subnet.Stop()
+		} else {
+			StopProc(v)
+		}
+	}
+}
+
 // Ready returns a channel that can be used to suspend the caller
 // goroutine until the network is ready to accept input packets
 func (n *Graph) Ready() <-chan struct{} {

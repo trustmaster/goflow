@@ -338,6 +338,58 @@ func (s *sum2) OnArg2(a int) {
 	s.trySum()
 }
 
+// A network to test manual Stop() calls
+type stopMeNet struct {
+	Graph
+
+	Fin chan int
+}
+
+func newStopMeNet() *stopMeNet {
+	s := new(stopMeNet)
+	s.InitGraphState()
+	s.Fin = make(chan int)
+
+	s.AddNew("doubler", "d1")
+	s.AddNew("doubler", "d2")
+	s.Connect("d1", "Out", "d2", "In")
+
+	s.MapInPort("In", "d1", "In")
+	s.MapOutPort("Out", "d2", "Out")
+	return s
+}
+
+func (s *stopMeNet) Finish() {
+	s.Fin <- 909
+}
+
+// Test manual network stopping method
+func TestStopNet(t *testing.T) {
+	s := newStopMeNet()
+	in := make(chan int, 20)
+	out := make(chan int, 20)
+	s.SetInPort("In", in)
+	s.SetOutPort("Out", out)
+
+	RunNet(s)
+	for i := 0; i < 10; i++ {
+		in <- i
+	}
+	for i := 0; i < 10; i++ {
+		i2 := <-out
+		if i2 < 0 {
+			t.Errorf("%d < 0", i2)
+		}
+	}
+	// Stop without closing chans
+	s.Stop()
+	// Wait for finish signal
+	fin := <-s.Fin
+	if fin != 909 {
+		t.Errorf("Invalid final signal: %d", fin)
+	}
+}
+
 // type forked struct {
 // 	Graph
 // }
