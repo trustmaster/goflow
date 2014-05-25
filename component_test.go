@@ -331,3 +331,65 @@ func TestPoolMode(t *testing.T) {
 	// Shutdown the component
 	close(in)
 }
+
+// A component to test manual termination
+type stopMe struct {
+	Component
+	In  <-chan int
+	Out chan<- int
+}
+
+func (s *stopMe) OnIn(i int) {
+	s.Out <- i * 2
+}
+
+func (s *stopMe) Finish() {
+	s.Out <- 909
+}
+
+// Tests manual termination via StopProc()
+func TestStopProc(t *testing.T) {
+	s := new(stopMe)
+	in := make(chan int, 20)
+	out := make(chan int, 20)
+	s.In = in
+	s.Out = out
+	// Test normal mode first
+	RunProc(s)
+	for i := 0; i < 10; i++ {
+		in <- i
+	}
+	for i := 0; i < 10; i++ {
+		i2 := <-out
+		if i2 < 0 {
+			t.Errorf("%d < 0", i2)
+		}
+	}
+	// Stop without closing chans
+	StopProc(s)
+	// Wait for finish signal
+	fin := <-out
+	if fin != 909 {
+		t.Errorf("Invalid final signal: %d", fin)
+	}
+	// Run again in Pool mode
+	s.Component.Mode = ComponentModePool
+	s.Component.PoolSize = 4
+	RunProc(s)
+	for i := 0; i < 10; i++ {
+		in <- i
+	}
+	for i := 0; i < 10; i++ {
+		i2 := <-out
+		if i2 < 0 {
+			t.Errorf("%d < 0", i2)
+		}
+	}
+	// Stop without closing chans
+	StopProc(s)
+	// Wait for finish signal
+	fin = <-out
+	if fin != 909 {
+		t.Errorf("Invalid final signal: %d", fin)
+	}
+}

@@ -23,6 +23,8 @@ var DefaultComponentMode = ComponentModeAsync
 // Component is a generic flow component that has to be contained in concrete components.
 // It stores network-specific information.
 type Component struct {
+	// Is running flag indicates that the process is currently running.
+	IsRunning bool
 	// Net is a pointer to network to inform it when the process is started and over
 	// or to change its structure at run time.
 	Net *Graph
@@ -30,6 +32,9 @@ type Component struct {
 	Mode int8
 	// PoolSize is used to define pool size when using ComponentModePool.
 	PoolSize uint8
+	// Term chan is used to terminate the process immediately without closing
+	// any channels.
+	Term chan struct{}
 }
 
 // Initalizable is the interface implemented by components/graphs with custom initialization code.
@@ -98,20 +103,24 @@ func RunProc(c interface{}) bool {
 	// Get the component mode
 	componentMode := DefaultComponentMode
 	var poolSize uint8 = 0
-	if isComponent {
-		if vComMode := vCom.FieldByName("Mode"); vComMode.IsValid() {
-			componentMode = int(vComMode.Int())
-		}
-		if vComPoolSize := vCom.FieldByName("PoolSize"); vComPoolSize.IsValid() {
-			poolSize = uint8(vComPoolSize.Uint())
-		}
+	if vComMode := vCom.FieldByName("Mode"); vComMode.IsValid() {
+		componentMode = int(vComMode.Int())
+	}
+	if vComPoolSize := vCom.FieldByName("PoolSize"); vComPoolSize.IsValid() {
+		poolSize = uint8(vComPoolSize.Uint())
 	}
 
 	// Create a slice of select cases and port handlers
 	cases := make([]reflect.SelectCase, 0, t.NumField())
 	handlers := make([]portHandler, 0, t.NumField())
 
+	// Make and listen on termination channel
+	vCom.FieldByName("Term").Set(reflect.MakeChan(vCom.FieldByName("Term").Type(), 0))
+	cases = append(cases, reflect.SelectCase{Dir: reflect.SelectRecv, Chan: vCom.FieldByName("Term")})
+	handlers = append(handlers, portHandler{})
+
 	// Iterate over struct fields and bind handlers
+	inputCount := 0
 	for i := 0; i < t.NumField(); i++ {
 		fv := v.Field(i)
 		ff := t.Field(i)
@@ -125,8 +134,13 @@ func RunProc(c interface{}) bool {
 			if h.onClose.IsValid() || h.onRecv.IsValid() {
 				// Add the input to the wait group
 				inputsClose.Add(1)
+				inputCount++
 			}
 		}
+	}
+
+	if inputCount == 0 {
+		panic("Components with no input ports are not supported")
 	}
 
 	// Prepare handler closures
@@ -154,6 +168,50 @@ func RunProc(c interface{}) bool {
 		}
 		inputsClose.Done()
 	}
+	terminate := func() {
+		if !vCom.FieldByName("IsRunning").Bool() {
+			return
+		}
+		vCom.FieldByName("IsRunning").SetBool(false)
+		for i := 0; i < inputCount; i++ {
+			inputsClose.Done()
+		}
+	}
+	// closePorts closes all output channels of a process.
+	closePorts := func() {
+		// Iterate over struct fields
+		for i := 0; i < t.NumField(); i++ {
+			fv := v.Field(i)
+			ft := fv.Type()
+			// Detect and close send-only channels
+			if fv.IsValid() {
+				if fv.Kind() == reflect.Chan && (ft.ChanDir()&reflect.SendDir) != 0 && (ft.ChanDir()&reflect.RecvDir) == 0 {
+					fv.Close()
+				} else if fv.Kind() == reflect.Slice && ft.Elem().Kind() == reflect.Chan {
+					ll := fv.Len()
+					for i := 0; i < ll; i += 1 {
+						fv.Index(i).Close()
+					}
+				}
+			}
+		}
+	}
+	// shutdown represents a standard process shutdown procedure.
+	shutdown := func() {
+		if s, ok := c.(Shutdowner); ok {
+			// Custom shutdown behavior
+			s.Shutdown()
+		} else {
+			// Call user finish function if exists
+			if finable, ok := c.(Finalizable); ok {
+				finable.Finish()
+			}
+			// Close all output ports if the process is still running
+			if vCom.FieldByName("IsRunning").Bool() {
+				closePorts()
+			}
+		}
+	}
 
 	// Run the port handlers depending on component mode
 	if componentMode == ComponentModePool && poolSize > 0 {
@@ -167,14 +225,19 @@ func RunProc(c interface{}) bool {
 				for {
 					chosen, recv, recvOK := reflect.Select(cases)
 					if !recvOK {
-						// Port has been closed
 						poolWait.Done()
-						once.Do(func() {
-							// Wait for other workers
-							poolWait.Wait()
-							// Close output down
-							closeHandler(handlers[chosen].onClose)
-						})
+						if chosen == 0 {
+							// Term signal
+							terminate()
+						} else {
+							// Port has been closed
+							once.Do(func() {
+								// Wait for other workers
+								poolWait.Wait()
+								// Close output down
+								closeHandler(handlers[chosen].onClose)
+							})
+						}
 						return
 					}
 					if handlers[chosen].onRecv.IsValid() {
@@ -189,8 +252,13 @@ func RunProc(c interface{}) bool {
 			for {
 				chosen, recv, recvOK := reflect.Select(cases)
 				if !recvOK {
-					// Port has been closed
-					closeHandler(handlers[chosen].onClose)
+					if chosen == 0 {
+						// Term signal
+						terminate()
+					} else {
+						// Port has been closed
+						closeHandler(handlers[chosen].onClose)
+					}
 					return
 				}
 				if handlers[chosen].onRecv.IsValid() {
@@ -207,6 +275,9 @@ func RunProc(c interface{}) bool {
 		}()
 	}
 
+	// Indicate the process as running
+	vCom.FieldByName("IsRunning").SetBool(true)
+
 	go func() {
 		// Wait for all inputs to be closed
 		inputsClose.Wait()
@@ -214,54 +285,42 @@ func RunProc(c interface{}) bool {
 		handlersDone.Wait()
 
 		// Call shutdown handler (user or default)
-		shutdownProc(c)
+		shutdown()
 
 		// Get the embedded flow.Component and check if it belongs to a network
-		if isComponent {
-			if vNet := vCom.FieldByName("Net"); vNet.IsValid() && !vNet.IsNil() {
-				if vNetCtr, hasNet := vNet.Interface().(netController); hasNet {
-					// Remove the instance from the network's WaitGroup
-					vNetCtr.getWait().Done()
-				}
+		if vNet := vCom.FieldByName("Net"); vNet.IsValid() && !vNet.IsNil() {
+			if vNetCtr, hasNet := vNet.Interface().(netController); hasNet {
+				// Remove the instance from the network's WaitGroup
+				vNetCtr.getWait().Done()
 			}
 		}
 	}()
 	return true
 }
 
-// closePorts closes all output channels of a process.
-func closePorts(c interface{}) {
-	v := reflect.ValueOf(c).Elem()
-	t := v.Type()
-	// Iterate over struct fields
-	for i := 0; i < t.NumField(); i++ {
-		fv := v.Field(i)
-		ft := fv.Type()
-		// Detect and close send-only channels
-		if fv.IsValid() {
-			if fv.Kind() == reflect.Chan && (ft.ChanDir()&reflect.SendDir) != 0 && (ft.ChanDir()&reflect.RecvDir) == 0 {
-				fv.Close()
-			} else if fv.Kind() == reflect.Slice && ft.Elem().Kind() == reflect.Chan {
-				ll := fv.Len()
-				for i := 0; i < ll; i += 1 {
-					fv.Index(i).Close()
-				}
-			}
-		}
+// StopProc terminates the process if it is running.
+// It doesn't close any in or out ports of the process, so it can be
+// replaced without side effects.
+func StopProc(c interface{}) bool {
+	// Check if passed interface is a valid pointer to struct
+	v := reflect.ValueOf(c)
+	if v.Kind() != reflect.Ptr || v.IsNil() {
+		panic("Argument of TermProc() is not a valid pointer")
+		return false
 	}
-}
-
-// shutdownProc represents a standard process shutdown procedure.
-func shutdownProc(c interface{}) {
-	if s, ok := c.(Shutdowner); ok {
-		// Custom shutdown behavior
-		s.Shutdown()
-	} else {
-		// Call user finish function if exists
-		if finable, ok := c.(Finalizable); ok {
-			finable.Finish()
-		}
-		// Close all output ports
-		closePorts(c)
+	vp := v
+	v = v.Elem()
+	if v.Kind() != reflect.Struct {
+		panic("Argument of TermProc() is not a valid pointer to structure. Got type: " + vp.Type().Name())
+		return false
 	}
+	// Get the embedded flow.Component
+	vCom := v.FieldByName("Component")
+	isComponent := vCom.IsValid() && vCom.Type().Name() == "Component"
+	if !isComponent {
+		panic("Argument of TermProc() is not a flow.Component")
+	}
+	// Send the termination signal
+	vCom.FieldByName("Term").Close()
+	return true
 }
