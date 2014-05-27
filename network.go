@@ -84,6 +84,8 @@ type Graph struct {
 	done chan struct{}
 	// ready is used to let the outside world know when the net is ready to accept input
 	ready chan struct{}
+	// isRunning indicates that the network is currently running
+	isRunning bool
 }
 
 // InitGraphState method initializes graph fields and allocates memory.
@@ -366,10 +368,45 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 	return true
 }
 
+// Unsets an port of a given process
+func unsetProcPort(proc interface{}, portName string, isOut bool) bool {
+	v := reflect.ValueOf(proc)
+	var ch reflect.Value
+	if v.Elem().FieldByName("Graph").IsValid() {
+		if subnet, ok := v.Elem().FieldByName("Graph").Addr().Interface().(*Graph); ok {
+			if isOut {
+				ch = subnet.getOutPort(portName)
+			} else {
+				ch = subnet.getInPort(portName)
+			}
+		} else {
+			return false
+		}
+	} else {
+		ch = v.Elem().FieldByName(portName)
+	}
+	if !ch.IsValid() {
+		return false
+	}
+	ch.Set(reflect.Zero(ch.Type()))
+	return true
+}
+
 // Disconnect removes a connection between sender's outport and receiver's inport.
 func (n *Graph) Disconnect(senderName, senderPort, receiverName, receiverPort string) bool {
-	// TODO implement and test
-	return true
+	var sender, receiver interface{}
+	var ok bool
+	sender, ok = n.procs[senderName]
+	if !ok {
+		return false
+	}
+	receiver, ok = n.procs[receiverName]
+	if !ok {
+		return false
+	}
+	res := unsetProcPort(sender, senderPort, true)
+	res = res && unsetProcPort(receiver, receiverPort, false)
+	return res
 }
 
 // Get returns a node contained in the network by its name.
@@ -445,6 +482,15 @@ func (n *Graph) MapInPort(name, procName, procPort string) bool {
 	return ret
 }
 
+// UnmapInPort removes an existing inport mapping
+func (n *Graph) UnmapInPort(name string) bool {
+	if _, exists := n.inPorts[name]; !exists {
+		return false
+	}
+	delete(n.inPorts, name)
+	return true
+}
+
 // MapOutPort adds an outport to the net and maps it to a contained proc's port.
 // It returns true on success or panics and returns false on error.
 func (n *Graph) MapOutPort(name, procName, procPort string) bool {
@@ -474,6 +520,15 @@ func (n *Graph) MapOutPort(name, procName, procPort string) bool {
 	return ret
 }
 
+// UnmapOutPort removes an existing outport mapping
+func (n *Graph) UnmapOutPort(name string) bool {
+	if _, exists := n.outPorts[name]; !exists {
+		return false
+	}
+	delete(n.outPorts, name)
+	return true
+}
+
 // run runs the network and waits for all processes to finish.
 func (n *Graph) run() {
 	// Add processes to the waitgroup before starting them
@@ -487,6 +542,7 @@ func (n *Graph) run() {
 			RunProc(v)
 		}
 	}
+	n.isRunning = true
 
 	// Send initial IPs
 	for _, ip := range n.iips {
@@ -573,6 +629,7 @@ func (n *Graph) run() {
 
 	// Wait for all processes to terminate
 	n.waitGrp.Wait()
+	n.isRunning = false
 	// Check if there is a parent net
 	if n.Net != nil {
 		// Notify parent of finish
@@ -582,6 +639,9 @@ func (n *Graph) run() {
 
 // Stop terminates the network without closing any connections
 func (n *Graph) Stop() {
+	if !n.isRunning {
+		return
+	}
 	for _, v := range n.procs {
 		// Check if it is a net or proc
 		r := reflect.ValueOf(v).Elem()
@@ -595,6 +655,28 @@ func (n *Graph) Stop() {
 			StopProc(v)
 		}
 	}
+}
+
+// StopProc stops a specific process in the net
+func (n *Graph) StopProc(procName string) bool {
+	if !n.isRunning {
+		return false
+	}
+	proc, ok := n.procs[procName]
+	if !ok {
+		return false
+	}
+	v := reflect.ValueOf(proc).Elem()
+	if v.FieldByName("Graph").IsValid() {
+		subnet, ok := v.FieldByName("Graph").Addr().Interface().(*Graph)
+		if !ok {
+			panic("Couldn't get graph interface")
+		}
+		subnet.Stop()
+	} else {
+		StopProc(proc)
+	}
+	return true
 }
 
 // Ready returns a channel that can be used to suspend the caller
@@ -640,10 +722,13 @@ func (n *Graph) RenameInPort(oldName, newName string) bool {
 
 // UnsetInPort removes an external inport from the graph
 func (n *Graph) UnsetInPort(name string) bool {
-	if _, exists := n.inPorts[name]; !exists {
+	port, exists := n.inPorts[name]
+	if !exists {
 		return false
 	}
-	// TODO disconnect if connected
+	if proc, ok := n.procs[port.proc]; ok {
+		unsetProcPort(proc, port.port, false)
+	}
 	delete(n.inPorts, name)
 	return true
 }
@@ -679,10 +764,13 @@ func (n *Graph) RenameOutPort(oldName, newName string) bool {
 
 // UnsetOutPort removes an external outport from the graph
 func (n *Graph) UnsetOutPort(name string) bool {
-	if _, exists := n.outPorts[name]; !exists {
+	port, exists := n.outPorts[name]
+	if !exists {
 		return false
 	}
-	// TODO disconnect if connected
+	if proc, ok := n.procs[port.proc]; ok {
+		unsetProcPort(proc, port.proc, true)
+	}
 	delete(n.outPorts, name)
 	return true
 }
