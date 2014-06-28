@@ -307,14 +307,29 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 			sport.Set(reflect.Append(sport, channel))
 		}
 	} else if stport.Kind() == reflect.Chan && stport.ChanDir()&reflect.SendDir != 0 {
-		// Make a channel of an appropriate type
-		chanType := reflect.ChanOf(reflect.BothDir, stport.Elem())
-		channel = reflect.MakeChan(chanType, bufferSize)
-		// Set the channel
-		if sport.CanSet() {
-			sport.Set(channel)
-		} else {
-			panic(senderName + "." + senderPort + " is not settable")
+		// Check if channel was already instantiated, if so, use it. Thus we can connect serveral endpoints and golang will pseudo-randomly chooses a receiver
+		// Also, this avoids crashes on <-net.Wait()
+		if !sport.IsNil() {
+			//go does not allow cast of unidir chan to bidir chan (for good reason)
+			//but luckily we saved it, so we look it up
+			for _, mycon := range n.connections {
+				if mycon.src.port == senderPort && mycon.src.proc == senderName {
+					channel = mycon.channel
+					break
+				}
+			}
+		}
+		// either sport was nil or we did not find a previous channel instance
+		if !channel.IsValid() {
+			// Make a channel of an appropriate type
+			chanType := reflect.ChanOf(reflect.BothDir, stport.Elem())
+			channel = reflect.MakeChan(chanType, bufferSize)
+			// Set the channel
+			if sport.CanSet() {
+				sport.Set(channel)
+			} else {
+				panic(senderName + "." + senderPort + " is not settable")
+			}
 		}
 	}
 
