@@ -294,6 +294,32 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 		sport = sv.FieldByName(senderPort)
 	}
 
+	// Get the reciever port
+	var rport reflect.Value
+
+	// Check if receiver is a net
+	var rnet reflect.Value
+	if rv.Type().Name() == "Graph" {
+		rnet = rv
+	} else {
+		rnet = rv.FieldByName("Graph")
+	}
+	if rnet.IsValid() {
+		if pm, isPm := rnet.Addr().Interface().(portMapper); isPm {
+			rport = pm.getInPort(receiverPort)
+		}
+	} else {
+		// Receiver is a proc
+		rport = rv.FieldByName(receiverPort)
+	}
+
+	// Validate receiver port
+	rtport := rport.Type()
+	if rtport.Kind() != reflect.Chan || rtport.ChanDir()&reflect.RecvDir == 0 {
+		panic(receiverName + "." + receiverPort + " is not a valid input channel")
+		return false
+	}
+
 	// Validate sender port
 	stport := sport.Type()
 	var channel reflect.Value
@@ -335,32 +361,6 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 
 	if channel.IsNil() {
 		panic(senderName + "." + senderPort + " is not a valid output channel")
-		return false
-	}
-
-	// Get the reciever port
-	var rport reflect.Value
-
-	// Check if receiver is a net
-	var rnet reflect.Value
-	if rv.Type().Name() == "Graph" {
-		rnet = rv
-	} else {
-		rnet = rv.FieldByName("Graph")
-	}
-	if rnet.IsValid() {
-		if pm, isPm := rnet.Addr().Interface().(portMapper); isPm {
-			rport = pm.getInPort(receiverPort)
-		}
-	} else {
-		// Receiver is a proc
-		rport = rv.FieldByName(receiverPort)
-	}
-
-	// Validate receiver port
-	rtport := rport.Type()
-	if rtport.Kind() != reflect.Chan || rtport.ChanDir()&reflect.RecvDir == 0 {
-		panic(receiverName + "." + receiverPort + " is not a valid input channel")
 		return false
 	}
 
