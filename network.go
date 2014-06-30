@@ -78,6 +78,8 @@ type Graph struct {
 	outPorts map[string]port
 	// connections contains graph edges and channels.
 	connections []connection
+	// sendChanRefCount tracks how many sendports use the same channel
+	sendChanRefCount map[uintptr]uint
 	// iips contains initial IPs attached to the network
 	iips []iip
 	// done is used to let the outside world know when the net has finished its job
@@ -95,6 +97,7 @@ func (n *Graph) InitGraphState() {
 	n.inPorts = make(map[string]port, DefaultNetworkPortsNum)
 	n.outPorts = make(map[string]port, DefaultNetworkPortsNum)
 	n.connections = make([]connection, 0, DefaultNetworkCapacity)
+	n.sendChanRefCount = make(map[uintptr]uint, DefaultNetworkCapacity)
 	n.iips = make([]iip, 0, DefaultNetworkPortsNum)
 	n.done = make(chan struct{})
 	n.ready = make(chan struct{})
@@ -116,6 +119,27 @@ func NewGraph() interface{} {
 // Register an empty graph component in the registry
 func init() {
 	Register("Graph", NewGraph)
+}
+
+// Increments SendChanRefCount
+func (n *Graph) IncSendChanRefCount(c reflect.Value) {
+	ptr := c.Pointer()
+	cnt := n.sendChanRefCount[ptr]
+	cnt += 1
+	n.sendChanRefCount[ptr] = cnt
+}
+
+// Decrements SendChanRefCount
+// It returns true if the RefCount has reached 0
+func (n *Graph) DecSendChanRefCount(c reflect.Value) bool {
+	ptr := c.Pointer()
+	cnt := n.sendChanRefCount[ptr]
+	if cnt == 0 {
+		return true //yes you may try to close a nonexistant channel, see what happens...
+	}
+	cnt -= 1
+	n.sendChanRefCount[ptr] = cnt
+	return cnt == 0
 }
 
 // Add adds a new process with a given name to the network.
@@ -323,14 +347,25 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 	// Validate sender port
 	stport := sport.Type()
 	var channel reflect.Value
+	if !rport.IsNil() {
+		for _, mycon := range n.connections {
+			if mycon.tgt.port == receiverPort && mycon.tgt.proc == receiverName {
+				channel = mycon.channel
+				break
+			}
+		}
+	}
 	if stport.Kind() == reflect.Slice {
 
 		if sport.Type().Elem().Kind() == reflect.Chan && sport.Type().Elem().ChanDir()&reflect.SendDir != 0 {
 
-			// Need to create a new channel and add it to the array
-			chanType := reflect.ChanOf(reflect.BothDir, sport.Type().Elem().Elem())
-			channel = reflect.MakeChan(chanType, bufferSize)
+			if !channel.IsValid() {
+				// Need to create a new channel and add it to the array
+				chanType := reflect.ChanOf(reflect.BothDir, sport.Type().Elem().Elem())
+				channel = reflect.MakeChan(chanType, bufferSize)
+			}
 			sport.Set(reflect.Append(sport, channel))
+			n.IncSendChanRefCount(channel)
 		}
 	} else if stport.Kind() == reflect.Chan && stport.ChanDir()&reflect.SendDir != 0 {
 		// Check if channel was already instantiated, if so, use it. Thus we can connect serveral endpoints and golang will pseudo-randomly chooses a receiver
@@ -338,6 +373,9 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 		if !sport.IsNil() {
 			//go does not allow cast of unidir chan to bidir chan (for good reason)
 			//but luckily we saved it, so we look it up
+			if channel.IsValid() && sport.Addr() != rport.Addr() {
+				panic("Trying to connect an already connected source to an already connected target")
+			}
 			for _, mycon := range n.connections {
 				if mycon.src.port == senderPort && mycon.src.proc == senderName {
 					channel = mycon.channel
@@ -350,12 +388,6 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 			// Make a channel of an appropriate type
 			chanType := reflect.ChanOf(reflect.BothDir, stport.Elem())
 			channel = reflect.MakeChan(chanType, bufferSize)
-			// Set the channel
-			if sport.CanSet() {
-				sport.Set(channel)
-			} else {
-				panic(senderName + "." + senderPort + " is not settable")
-			}
 		}
 	}
 
@@ -364,11 +396,21 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 		return false
 	}
 
-	// Set the channel
-	if rport.CanSet() {
-		rport.Set(channel)
-	} else {
+	// Check if ?port.Set() would cause panic and if so ... panic
+	if !sport.CanSet() {
+		panic(senderName + "." + senderPort + " is not settable")
+	}
+	if !rport.CanSet() {
 		panic(receiverName + "." + receiverPort + " is not settable")
+	}
+	// Set the channels
+	if sport.IsNil() {
+		//note that if sport is a slice, this does not run, instead see code above (== reflect.Slice)
+		sport.Set(channel)
+		n.IncSendChanRefCount(channel)
+	}
+	if rport.IsNil() {
+		rport.Set(channel)
 	}
 
 	// Add connection info
