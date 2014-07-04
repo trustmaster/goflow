@@ -438,3 +438,176 @@ func TestStopNet(t *testing.T) {
 
 // 	<-net.Wait()
 // }
+
+// A graph to 1-to-N connections
+type oneToNNet struct {
+	Graph
+}
+
+func newOneToNNet(t *testing.T) *oneToNNet {
+	// Initialization
+	n := new(oneToNNet)
+	n.InitGraphState()
+	// Components
+	e1 := new(echoer)
+	e2 := new(echoer)
+	e3 := new(echoer)
+	// Structure
+	if !n.Add(e1, "e1") {
+		t.Errorf("Couldn't add e1")
+	}
+	if !n.Add(e2, "e2") {
+		t.Errorf("Couldn't add e2")
+	}
+	if !n.Add(e3, "e3") {
+		t.Errorf("Couldn't add e3")
+	}
+	if !n.Connect("e1", "Out", "e2", "In") {
+		t.Errorf("net.Connect() returned false")
+	}
+	if !n.Connect("e1", "Out", "e3", "In") {
+		t.Errorf("net.Connect() returned false")
+	}
+	// Ports
+	n.MapInPort("In", "e1", "In")
+	n.MapOutPort("Out2", "e2", "Out")
+	n.MapOutPort("Out3", "e3", "Out")
+	// Exported state
+	return n
+}
+
+// Tests if 1-to-n connection work as they should in go
+// i.e. we sond to multipe receivers and check if go pseudorandimly chooses receivers
+func TestOneToNConnections(t *testing.T) {
+	// Make the network of 2 components
+	net := newOneToNNet(t)
+	// in and out serve as network's in and out
+	in := make(chan int)
+	out2 := make(chan int)
+	out3 := make(chan int)
+	net.SetInPort("In", in)
+	net.SetOutPort("Out2", out2)
+	net.SetOutPort("Out3", out3)
+
+	// Run the test network
+	RunNet(net)
+
+	var out2cnt, out3cnt uint
+	for testnum := 12; testnum < 16; testnum++ {
+		in <- testnum
+		select {
+		case i := <-out2:
+			out2cnt++
+			if i != testnum {
+				t.Errorf("%d != %d", i, testnum)
+			}
+		case i := <-out3:
+			out3cnt++
+			if i != testnum {
+				t.Errorf("%d != %d", i, testnum)
+			}
+		}
+	}
+	if out2cnt == 0 {
+		t.Errorf("nothing was received on channel out2")
+	}
+	if out3cnt == 0 {
+		t.Errorf("nothing was received on channel out3")
+	}
+	close(in)
+	// Wait for finalization signal
+	<-net.Wait()
+}
+
+// A graph to test N-to-1 connections
+type nToOneNet struct {
+	Graph
+}
+
+func newNToOneNet(t *testing.T) *nToOneNet {
+	// Initialization
+	n := new(nToOneNet)
+	n.InitGraphState()
+	// Components
+	e1 := new(echoer)
+	e2 := new(echoer)
+	e3 := new(echoer)
+	e4 := new(echoer)
+	// Structure
+	if !n.Add(e1, "e1") {
+		t.Errorf("Couldn't add e1")
+	}
+	if !n.Add(e2, "e2") {
+		t.Errorf("Couldn't add e2")
+	}
+	if !n.Add(e3, "e3") {
+		t.Errorf("Couldn't add e3")
+	}
+	if !n.Add(e4, "e4") {
+		t.Errorf("Couldn't add e3")
+	}
+	if !n.Connect("e1", "Out", "e4", "In") {
+		t.Errorf("net.Connect() returned false")
+	}
+	if !n.Connect("e2", "Out", "e4", "In") {
+		t.Errorf("net.Connect() returned false")
+	}
+	if !n.Connect("e3", "Out", "e4", "In") {
+		t.Errorf("net.Connect() returned false")
+	}
+	// Ports
+	n.MapInPort("In1", "e1", "In")
+	n.MapInPort("In2", "e2", "In")
+	n.MapInPort("In3", "e3", "In")
+	n.MapOutPort("Out", "e4", "Out")
+	// Exported state
+	return n
+}
+
+// Tests if 1-to-n connection work as they should in go
+// i.e. we sond to multipe receivers and check if go pseudorandimly chooses receivers
+func TestNToOneConnections(t *testing.T) {
+	// Make the network of 2 components
+	net := newNToOneNet(t)
+	// in and out serve as network's in and out
+	in1 := make(chan int)
+	in2 := make(chan int)
+	in3 := make(chan int)
+	out := make(chan int)
+	net.SetInPort("In1", in1)
+	net.SetInPort("In2", in2)
+	net.SetInPort("In3", in3)
+	net.SetOutPort("Out", out)
+
+	// Run the test network
+	RunNet(net)
+
+	testnum := 12
+	in1 <- testnum
+	i := <-out
+	if i != testnum {
+		t.Errorf("%d != %d", i, testnum)
+	}
+
+	testnum = 24
+	in2 <- testnum
+	i = <-out
+	if i != testnum {
+		t.Errorf("%d != %d", i, testnum)
+	}
+
+	testnum = 36
+	in3 <- testnum
+	i = <-out
+	if i != testnum {
+		t.Errorf("%d != %d", i, testnum)
+	}
+
+	close(in1)
+	close(in2)
+	close(in3)
+	//if we did not crash after closing, refounting worked
+
+	// Wait for finalization signal
+	<-net.Wait()
+}

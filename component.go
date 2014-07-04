@@ -183,14 +183,29 @@ func RunProc(c interface{}) bool {
 		for i := 0; i < t.NumField(); i++ {
 			fv := v.Field(i)
 			ft := fv.Type()
+			vNet := vCom.FieldByName("Net")
 			// Detect and close send-only channels
 			if fv.IsValid() {
 				if fv.Kind() == reflect.Chan && (ft.ChanDir()&reflect.SendDir) != 0 && (ft.ChanDir()&reflect.RecvDir) == 0 {
-					fv.Close()
+					if vNet.IsValid() && !vNet.IsNil() {
+						if vNet.Interface().(*Graph).DecSendChanRefCount(fv) {
+							fv.Close()
+						}
+					} else {
+						fv.Close()
+					}
 				} else if fv.Kind() == reflect.Slice && ft.Elem().Kind() == reflect.Chan {
 					ll := fv.Len()
-					for i := 0; i < ll; i += 1 {
-						fv.Index(i).Close()
+					if vNet.IsValid() && !vNet.IsNil() {
+						for i := 0; i < ll; i += 1 {
+							if vNet.Interface().(*Graph).DecSendChanRefCount(fv.Index(i)) {
+								fv.Index(i).Close()
+							}
+						}
+					} else {
+						for i := 0; i < ll; i += 1 {
+							fv.Index(i).Close()
+						}
 					}
 				}
 			}
