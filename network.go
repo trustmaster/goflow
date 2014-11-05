@@ -3,6 +3,7 @@ package flow
 import (
 	"reflect"
 	"sync"
+	"time"
 )
 
 // DefaultBufferSize is the default channel buffer capacity.
@@ -590,6 +591,10 @@ func (n *Graph) UnmapOutPort(name string) bool {
 func (n *Graph) run() {
 	// Add processes to the waitgroup before starting them
 	n.waitGrp.Add(len(n.procs))
+	go func() {
+		time.Sleep(5 * time.Second)
+		n.waitGrp.Add(-2)
+	}()
 	for _, v := range n.procs {
 		// Check if it is a net or proc
 		r := reflect.ValueOf(v).Elem()
@@ -857,7 +862,7 @@ func RunNet(i interface{}) {
 	// Run the contained processes
 	go func() {
 		net.run()
-
+		
 		// Call user finish function if exists
 		if finable, ok := i.(Finalizable); ok {
 			finable.Finish()
