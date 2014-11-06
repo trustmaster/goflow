@@ -58,9 +58,15 @@ type portHandler struct {
 	onClose reflect.Value
 }
 
+// inputCounter keeps track of total additions and decrements have occured
+// on inputsClose
+
+var inputCounter = 0
+
+
 // RunProc runs event handling loop on component ports.
 // It returns true on success or panics with error message and returns false on error.
-func RunProc(c interface{}) bool {
+func RunProc(c interface{}, nump int) bool {
 	// Check if passed interface is a valid pointer to struct
 	v := reflect.ValueOf(c)
 	if v.Kind() != reflect.Ptr || v.IsNil() {
@@ -135,6 +141,7 @@ func RunProc(c interface{}) bool {
 				// Add the input to the wait group
 				inputsClose.Add(1)
 				inputCount++
+				inputCounter++
 			}
 		}
 	}
@@ -167,6 +174,14 @@ func RunProc(c interface{}) bool {
 			}
 		}
 		inputsClose.Done()
+				go func() {
+					//failsafe
+					if inputCounter == t.NumField() - 1 {
+						for i := 0; i < t.NumField() - nump - 1 ; i++ {
+						inputsClose.Done()
+						}
+					}
+				}()
 	}
 	terminate := func() {
 		if !vCom.FieldByName("IsRunning").Bool() {
