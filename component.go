@@ -173,15 +173,10 @@ func RunProc(c interface{}, nump int) bool {
 				locker.Unlock()
 			}
 		}
-		inputsClose.Done()
-				go func() {
-					//failsafe
-					if inputCounter == t.NumField() - 1 {
-						for i := 0; i < t.NumField() - nump - 1 ; i++ {
-						inputsClose.Done()
-						}
-					}
-				}()
+		for i := 0; i < inputCount; i++ {
+			inputsClose.Done()
+			inputCount--
+		}
 	}
 	terminate := func() {
 		if !vCom.FieldByName("IsRunning").Bool() {
