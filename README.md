@@ -144,6 +144,82 @@ Documentation for the flow package can be accessed using standard godoc tool, e.
 godoc github.com/trustmaster/goflow
 ```
 
+## Runtime registration example
+```go
+package main
+
+import (
+    "fmt"
+	"log"
+	"github.com/nu7hatch/gouuid"
+    "encoding/json"
+    "strings"
+    "github.com/parnurzeal/gorequest"
+)
+
+// Runtime_details stores data needed to register a runtime.
+// Variable names must be capitalized for two reasons: 1. Visibility outside of package.
+// 2. Flowhub requires "type" as a passed parameter, but "type" is a reserved word in Go.
+// This struct is json-ified using json.Marshal and made lowercase using strings.ToLower
+type Runtime_details struct {
+	Type string
+    Protocol string
+    Address string
+	Id string
+	Label string
+    Port string
+	User string
+}
+
+// Initialize Runtime_details with user-provided parameters.  Runtime ID is automatically
+// generated with uuid.
+func (r *Runtime_details) runtimeInitializeRuntime(runtime_type string , protocol string , user_id string , label string , ip string , port string){
+	uv4, err := uuid.NewV4()
+	if err != nil {
+		log.Println(err.Error())
+	}
+	s := []string{ip, port}
+    
+	r.Type = runtime_type
+    r.Protocol = protocol
+    r.Address = strings.Join(s,"")
+	r.Id = uv4.String()
+	r.Label = label
+    r.Port = port
+    r.User = user_id
+}
+
+func main() {
+    
+    newRuntime := new(Runtime_details)
+    newRuntimeP := &newRuntime
+    newRuntimeP.runtimeInitializeRuntime("fbp-go-example", "websocket", "<user id here>", "go runtime test", "ws://localhost:", "3569")
+    
+    newRuntimeJSON, err := json.Marshal(newRuntime)
+	if err != nil {
+		log.Println(err.Error())
+	}
+    
+    stringifiedNewRuntimeJSON := string(newRuntimeJSON[:])
+    stringifiedNewRuntimeJSON = strings.ToLower(stringifiedNewRuntimeJSON)
+    fmt.Println("stringifiedNewRuntimeJSON:", stringifiedNewRuntimeJSON)
+    
+	s := []string{"http://api.flowhub.io/runtimes/", newRuntime.Id}
+    url := strings.Join(s,"")
+    fmt.Println("url: ",url)
+    
+    request := gorequest.New()
+    resp, body, errs := request.Put(url).
+    Set("Content-Type", "application/json").
+    Send(stringifiedNewRuntimeJSON).
+    End()
+    
+    fmt.Println("resp", resp)
+    fmt.Println("body", body)
+    fmt.Println("errs", errs)
+    
+}
+```
 ## More examples
 
 * [GoChat](https://github.com/trustmaster/gochat), a simple chat in Go using this library
