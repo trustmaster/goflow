@@ -4,6 +4,8 @@ package flow
 import (
 	"reflect"
 	"sync"
+    "fmt"
+	"code.google.com/p/go.net/websocket"
 )
 
 const (
@@ -348,4 +350,87 @@ func StopProc(c interface{}) bool {
 	// Send the termination signal
 	vCom.FieldByName("Term").Close()
 	return true
+}
+
+type components struct {
+    Component []componentInfo      `json:""`
+}
+
+type componentInfo struct {
+    Name            string      `json:"name"`
+    Description     string      `json:"description"`
+    Icon            string      `json:"icon"`
+    Subgraph        string      `json:"subgraph"`
+    Inports         []portz      `json:"inPorts"`
+    Outports        []portz      `json:"outPorts"`
+}
+
+type portz struct {
+    Id          string      `json:"id"`
+    Type        string      `json:"type"`
+    Description string      `json:"description"`
+    Addressable string      `json:"addressable"`
+    Required    string      `json:"required"`
+    Values      interface{} `json:"values"`
+    Default     string      `json:"default"`
+}
+
+func (r *Runtime) componentList(ws *websocket.Conn, payload interface{}) {
+    fmt.Println("handle component.list")
+    websocket.JSON.Send(ws, wsSend{"component", "component", componentInfo{"DummyzComponent",
+        "Description for component",
+        "",
+        "",
+		[]portz{{"portA",
+            "boolean",
+            "a boolean port",
+            "False",
+            "True",
+            "",
+            "",},
+            {"portB",
+            "any",
+            "",
+            "",
+            "",
+            "",
+            "",},
+        },
+		[]portz{{"out1",
+            "string",
+            "",
+            "",
+            "",
+            "",
+            "",},
+        },
+	}},)
+    websocket.JSON.Send(ws, wsSend{"component", "component", componentInfo{"DummyzComponent2",
+        "Description for component",
+        "",
+        "",
+		[]portz{{"portA",
+            "boolean",
+            "a boolean port",
+            "False",
+            "True",
+            "",
+            "",},
+            {"portB",
+            "any",
+            "",
+            "",
+            "",
+            "",
+            "",},
+        },
+		[]portz{{"out1",
+            "string",
+            "",
+            "",
+            "",
+            "",
+            "",},
+        },
+	}},)
 }

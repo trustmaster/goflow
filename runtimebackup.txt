@@ -34,28 +34,21 @@ type Runtime struct {
 type wsSend struct {
     Command string `json:"command"`
     Protocol string `json:"protocol"`
-    Payload interface{} `json:"payload"`
+    Payload runtimeInfo `json:"payload"`
 }
 
 // runtimeInfo message contains response to runtime.getruntime request
 type runtimeInfo struct {
-	Version      string `json:"version"`
 	Type         string `json:"type"`
+	Version      string `json:"version"`
 	Capabilities []string `json:"capabilities"`
 	//Id           string `json:"id"`
 }
 
-// runtimeInfo message contains response to runtime.getruntime request
-type networkInfo struct {
-	Graph       string `json:"graph"`
-	Running     bool `json:"running"`
-	Info        bool `json:"info"`
-}
-
 func (r *Runtime) runtimeGetRuntime(ws *websocket.Conn, payload interface{}) {
     fmt.Println("handle runtime.getruntime")
-    websocket.JSON.Send(ws, wsSend{"runtime", "runtime", runtimeInfo{"0.4",
-        "fbp-go-example",
+    websocket.JSON.Send(ws, wsSend{"runtime", "runtime", runtimeInfo{"goflow",
+		"0.4",
 		[]string{//"protocol:runtime",
 			//"protocol:graph",
 			"protocol:component",
@@ -68,9 +61,19 @@ func (r *Runtime) runtimeGetRuntime(ws *websocket.Conn, payload interface{}) {
 
 func (r *Runtime) networkGetStatus(ws *websocket.Conn, payload interface{}) {
     fmt.Println("handle network.getstatus")
-    websocket.JSON.Send(ws, wsSend{"network", "status", networkInfo{"main",
-        true,
-		true,
+}
+
+func (r *Runtime) componentList(ws *websocket.Conn, payload interface{}) {
+    fmt.Println("handle runtime.getruntime")
+    websocket.JSON.Send(ws, wsSend{"runtime", "runtime", runtimeInfo{"goflow",
+		"0.4",
+		[]string{//"protocol:runtime",
+			//"protocol:graph",
+			"protocol:component",
+			//"protocol:network",
+			//"component:getsource"
+            },
+		//r.id,
 	}})
 }
 
@@ -105,38 +108,31 @@ func (r *Runtime) Stop() {
 }
 
 func (r *Runtime) Handle(ws *websocket.Conn) {
-    fmt.Println("Handling")
-	defer func() {
+	/*defer func() {
 		err := ws.Close()
-        fmt.Println("Closed Connection")
 		if err != nil {
 			log.Println(err.Error())
 		}
-	}()
-    //defer ws.Close();
-    for {
-        var msg Message
-        if err := websocket.JSON.Receive(ws, &msg); err != nil {
-            log.Println(err.Error())
-            return
-        }
-        handler, exists := r.handlers[msg.Protocol+"."+msg.Command]
-        fmt.Println(msg.Protocol+"."+msg.Command)
-        if !exists {
-            log.Printf("Unknown command: %s.%s\n", msg.Protocol, msg.Command)
-            return
-        }
-        handler(ws, msg.Payload)
-        fmt.Println("Handle Done")
-    }
+	}()*/
+	var msg Message
+	if err := websocket.JSON.Receive(ws, &msg); err != nil {
+		log.Println(err.Error())
+		return
+	}
+	handler, exists := r.handlers[msg.Protocol+"."+msg.Command]
+    fmt.Println(msg.Protocol+"."+msg.Command)
+	if !exists {
+		log.Printf("Unknown command: %s.%s\n", msg.Protocol, msg.Command)
+		return
+	}
+	handler(ws, msg.Payload)
+    fmt.Println("Handle Done")
 }
 
 func (r *Runtime) Listen(address string) {
+    fmt.Println("handling thing")
 	http.Handle("/", websocket.Handler(r.Handle))
-    if err := http.ListenAndServe(address, nil); err != nil {
-        log.Fatal("ListenAndServe:", err)
-    }
-    fmt.Println("End")
+    http.ListenAndServe(address, nil)
     /*fmt.Println("listening thing")
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
