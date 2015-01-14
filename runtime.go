@@ -23,10 +23,20 @@ type protocolHandler func(*websocket.Conn, interface{})
 
 // Runtime is a NoFlo-compatible runtime implementing the FBP protocol
 type Runtime struct {
-	id       string
+	// Unique runtime ID for use with Flowhub
+	id string
+	// Protocol command handlers
 	handlers map[string]protocolHandler
-	ready    chan struct{}
-	done     chan struct{}
+	// Graphs created at runtime and exposed as components
+	graphs map[string]*Graph
+	// Main graph ID
+	mainId string
+	// Main graph
+	main *Graph
+	// Websocket server onReady signal
+	ready chan struct{}
+	// Websocket server onShutdown signal
+	done chan struct{}
 }
 
 // runtimeInfo message contains response to runtime.getruntime request

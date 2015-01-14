@@ -637,6 +637,29 @@ func (n *Graph) run() {
 	}
 }
 
+// RunProc starts a proc added to a net at run time
+func (n *Graph) RunProc(procName string) bool {
+	if !n.isRunning {
+		return false
+	}
+	proc, ok := n.procs[procName]
+	if !ok {
+		return false
+	}
+	v := reflect.ValueOf(proc).Elem()
+	n.waitGrp.Add(1)
+	if v.FieldByName("Graph").IsValid() {
+		RunNet(proc)
+		return true
+	} else {
+		ok = RunProc(proc)
+		if !ok {
+			n.waitGrp.Done()
+		}
+		return ok
+	}
+}
+
 // Stop terminates the network without closing any connections
 func (n *Graph) Stop() {
 	if !n.isRunning {
@@ -674,7 +697,7 @@ func (n *Graph) StopProc(procName string) bool {
 		}
 		subnet.Stop()
 	} else {
-		StopProc(proc)
+		return StopProc(proc)
 	}
 	return true
 }
