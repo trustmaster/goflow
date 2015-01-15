@@ -109,6 +109,26 @@ Looks a bit heavy for such a simple task but FBP is aimed at a bit more complex 
 
 You probably have one question left even after reading the comments in code: why do we need to wait for the finish signal? This is because flow-based world is asynchronous and while you expect things to happen in the same sequence as they are in main(), during runtime they don't necessarily follow the same order and the application might terminate before the network has done its job. To avoid this confusion we listen for a signal on network's `Wait()` channel which is closed when the network finishes its job.
 
+## Basic Server for Flowhub
+```go
+package main
+
+import (
+    "github.com/Synthace/goflow"
+    "fmt"
+)
+
+//Call everything from main function
+func main() {
+    port := ":3569"
+    fmt.Println(port)
+    runtime := new(flow.Runtime)
+    runtime.Init()
+    fmt.Println(runtime)
+    runtime.Listen(port)
+}
+```
+
 ## Terminology
 
 Here are some Flow-based programming terms used in GoFlow:
