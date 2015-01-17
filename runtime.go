@@ -8,17 +8,6 @@ import (
 	"net/http"
 )
 
-// Message represents a single FBP protocol message
-type Message struct {
-	// Protocol is NoFlo protocol identifier:
-	// "runtime", "component", "graph" or "network"
-	Protocol string
-	// Command is a command to be executed within the protocol
-	Command string
-	// Payload is JSON-encoded body of the message
-	Payload interface{}
-}
-
 type protocolHandler func(*websocket.Conn, interface{})
 
 // Runtime is a NoFlo-compatible runtime implementing the FBP protocol
@@ -39,14 +28,6 @@ type Runtime struct {
 	done chan struct{}
 }
 
-// runtimeInfo message contains response to runtime.getruntime request
-type runtimeInfo struct {
-	Type         string
-	Version      string
-	Capabilities []string
-	Id           string
-}
-
 func (r *Runtime) runtimeGetRuntime(ws *websocket.Conn, payload interface{}) {
 	websocket.JSON.Send(ws, runtimeInfo{"goflow",
 		"0.4",
@@ -57,6 +38,106 @@ func (r *Runtime) runtimeGetRuntime(ws *websocket.Conn, payload interface{}) {
 			"component:getsource"},
 		r.id,
 	})
+}
+
+func (r *Runtime) graphClear(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(clearGraph)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) graphAddNode(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(addNode)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) graphRemoveNode(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(removeNode)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) graphRenameNode(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(renameNode)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) graphChangeNode(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(changeNode)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) graphAddEdge(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(addEdge)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) graphRemoveEdge(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(removeEdge)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) graphChangeEdge(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(changeEdge)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) graphAddInitial(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(addInitial)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) graphRemoveInitial(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(removeInitial)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) graphAddInPort(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(addPort)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) graphRemoveInPort(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(removePort)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) graphRenameInPort(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(renamePort)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) graphAddOutPort(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(addPort)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) graphRemoveOutPort(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(removePort)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) graphRenameOutPort(ws *websocket.Conn, payload interface{}) {
+	msg := payload.(renamePort)
+	// TODO
+	websocket.JSON.Send(ws, msg)
+}
+
+func (r *Runtime) componentList(ws *websocket.Conn, payload interface{}) {
+	// TODO
 }
 
 // Register command handlers
@@ -70,6 +151,23 @@ func (r *Runtime) Init() {
 	r.ready = make(chan struct{})
 	r.handlers = make(map[string]protocolHandler)
 	r.handlers["runtime.getruntime"] = r.runtimeGetRuntime
+	r.handlers["graph.clear"] = r.graphClear
+	r.handlers["graph.addnode"] = r.graphAddNode
+	r.handlers["graph.removenode"] = r.graphRemoveNode
+	r.handlers["graph.renamenode"] = r.graphRenameNode
+	r.handlers["graph.changenode"] = r.graphChangeNode
+	r.handlers["graph.addedge"] = r.graphAddEdge
+	r.handlers["graph.removedge"] = r.graphRemoveEdge
+	r.handlers["graph.changeedge"] = r.graphChangeEdge
+	r.handlers["graph.addinitial"] = r.graphAddInitial
+	r.handlers["graph.removeinitial"] = r.graphRemoveInitial
+	r.handlers["graph.addinport"] = r.graphAddInPort
+	r.handlers["graph.removeinport"] = r.graphRemoveInPort
+	r.handlers["graph.renameinport"] = r.graphRenameInPort
+	r.handlers["graph.addoutport"] = r.graphAddOutPort
+	r.handlers["graph.removeoutport"] = r.graphRemoveOutPort
+	r.handlers["graph.renameoutport"] = r.graphRenameOutPort
+	r.handlers["component.list"] = r.componentList
 }
 
 // Id returns runtime's UUID v4
