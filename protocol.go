@@ -22,11 +22,11 @@ type runtimeInfo struct {
 // clearGraph message is sent by client to create a new empty graph
 type clearGraph struct {
 	Id          string
-	Name        string `json:",omitempty"`
-	Library     string `json:",omitempty"`
+	Name        string `json:",omitempty"` // ignored
+	Library     string `json:",omitempty"` // ignored
 	Main        bool   `json:",omitempty"`
-	Icon        string `json:",omitempty"`
-	Description string `json:",omitempty"`
+	Icon        string `json:",omitempty"` // ignored
+	Description string `json:",omitempty"` // ignored
 }
 
 // addNode message is sent by client to add a node to a graph
@@ -34,7 +34,7 @@ type addNode struct {
 	Id        string
 	Component string
 	Graph     string
-	Metadata  map[string]interface{} `json:",omitempty"`
+	Metadata  map[string]interface{} `json:",omitempty"` // ignored
 }
 
 // removeNode is a client message to remove a node from a graph
@@ -52,7 +52,7 @@ type renameNode struct {
 
 // changeNode is a client message to change the metadata
 // associated to a node in the graph
-type changeNode struct {
+type changeNode struct { // ignored
 	Id       string
 	Graph    string
 	Metadata map[string]interface{}
@@ -63,15 +63,15 @@ type addEdge struct {
 	Src struct {
 		Node  string
 		Port  string
-		Index int `json:",omitempty"`
+		Index int `json:",omitempty"` // ignored
 	}
 	Tgt struct {
 		Node  string
 		Port  string
-		Index int `json:",omitempty"`
+		Index int `json:",omitempty"` // ignored
 	}
 	Graph    string
-	Metadata map[string]interface{} `json:",omitempty"`
+	Metadata map[string]interface{} `json:",omitempty"` // ignored
 }
 
 // removeEdge is a client message to delete a connection from a graph
@@ -88,7 +88,7 @@ type removeEdge struct {
 }
 
 // changeEdge is a client message to change connection metadata
-type changeEdge struct {
+type changeEdge struct { // ignored
 	Src struct {
 		Node  string
 		Port  string
@@ -111,10 +111,10 @@ type addInitial struct {
 	Tgt struct {
 		Node  string
 		Port  string
-		Index int `json:",omitempty"`
+		Index int `json:",omitempty"` // ignored
 	}
 	Graph    string
-	Metadata map[string]interface{} `json:",omitempty"`
+	Metadata map[string]interface{} `json:",omitempty"` // ignored
 }
 
 // removeInitial is a client message to remove an IIP from a graph
@@ -122,7 +122,7 @@ type removeInitial struct {
 	Tgt struct {
 		Node  string
 		Port  string
-		Index int `json:",omitempty"`
+		Index int `json:",omitempty"` // ignored
 	}
 	Graph string
 }
@@ -133,7 +133,7 @@ type addPort struct {
 	Node     string
 	Port     string
 	Graph    string
-	Metadata map[string]interface{} `json:",omitempty"`
+	Metadata map[string]interface{} `json:",omitempty"` // ignored
 }
 
 // removePort is a client message to remove an exported inport/outport from the graph

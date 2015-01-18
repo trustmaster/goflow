@@ -196,7 +196,7 @@ func (n *Graph) Remove(processName string) bool {
 	if _, exists := n.procs[processName]; !exists {
 		return false
 	}
-	// TODO implement and test
+	// TODO disconnect before removal
 	delete(n.procs, processName)
 	return true
 }
