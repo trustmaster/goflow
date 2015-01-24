@@ -148,3 +148,24 @@ type renamePort struct {
 	To    string
 	Graph string
 }
+
+// portInfo represents a port to a runtime client
+type portInfo struct {
+	Id          string
+	Type        string
+	Description string
+	Addressable bool // ignored
+	Required    bool
+	Values      []interface{} // ignored
+	Default     interface{}   // ignored
+}
+
+// componentInfo represents a component to a protocol client
+type componentInfo struct {
+	Name        string
+	Description string
+	Icon        string
+	Subgraph    bool
+	InPorts     []portInfo
+	OutPorts    []portInfo
+}

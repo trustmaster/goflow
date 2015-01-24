@@ -12,6 +12,21 @@ type ComponentConstructor func() interface{}
 // a string component name.
 var ComponentRegistry = make(map[string]ComponentConstructor, DefaultRegistryCapacity)
 
+// ComponentDescription is component metadata for IDE
+type ComponentDescription struct {
+	Description string
+	Icon        string
+	Metadata    map[string]interface{}
+}
+
+// ComponentDescriptions contains component metadata used by IDE
+var ComponentDescriptions = make(map[string]ComponentDescription, DefaultRegistryCapacity)
+
+// Describe sets a component description and metadata to be used in IDE
+func Describe(componentName string, description ComponentDescription) {
+	ComponentDescriptions[componentName] = description
+}
+
 // Register registers a component so that it can be instantiated at run-time using component Factory.
 // It returns true on success or false if component name is already taken.
 func Register(componentName string, constructor ComponentConstructor) bool {
