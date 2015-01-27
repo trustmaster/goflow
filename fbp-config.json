@@ -1,0 +1,7 @@
+{
+  "name": "protogoflo",
+  "command": "go run flowhub_server.go",
+  "host": "localhost",
+  "port": 3569,
+  "collection": "core"
+}

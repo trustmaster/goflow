@@ -56,21 +56,13 @@ func (r *Runtime) runtimeGetRuntime(ws *websocket.Conn, payload interface{}) {
     fmt.Println("handle runtime.getruntime")
     websocket.JSON.Send(ws, wsSend{"runtime", "runtime", runtimeInfo{"0.4",
         "fbp-go-example",
-		[]string{//"protocol:runtime",
+		[]string{"protocol:runtime",
 			//"protocol:graph",
 			"protocol:component",
 			//"protocol:network",
-			//"component:getsource"
+			//"component:getsource",
             },
 		//r.id,
-	}})
-}
-
-func (r *Runtime) networkGetStatus(ws *websocket.Conn, payload interface{}) {
-    fmt.Println("handle network.getstatus")
-    websocket.JSON.Send(ws, wsSend{"network", "status", networkInfo{"main",
-        true,
-		true,
 	}})
 }
 
@@ -87,6 +79,15 @@ func (r *Runtime) Init() {
 	r.handlers["runtime.getruntime"] = r.runtimeGetRuntime
 	r.handlers["network.getstatus"] = r.networkGetStatus
 	r.handlers["component.list"] = r.componentList
+	r.handlers["graph.addnode"] = r.graphAddnode //start here
+	r.handlers["graph.addinitial"] = r.graphAddinitial
+	r.handlers["graph.changenode"] = r.graphChangenode
+	r.handlers["graph.addedge"] = r.graphAddedge
+	r.handlers["graph.changeedge"] = r.graphChangeedge
+	r.handlers["graph.removeedge"] = r.graphRemoveedge
+	r.handlers["graph.removeinitial"] = r.graphRemoveinitial
+	r.handlers["graph.removenode"] = r.graphRemovenode
+	r.handlers["network.start"] = r.networkStart
 }
 
 // Id returns runtime's UUID v4
@@ -120,6 +121,7 @@ func (r *Runtime) Handle(ws *websocket.Conn) {
             log.Println(err.Error())
             return
         }
+        fmt.Println(msg)
         handler, exists := r.handlers[msg.Protocol+"."+msg.Command]
         fmt.Println(msg.Protocol+"."+msg.Command)
         if !exists {

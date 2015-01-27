@@ -1,0 +1,166 @@
+# PE Grammar for PE Grammars
+#
+# Modified by J. Lemke, extraordinaire.
+#
+# Adapted from [1] by Ian Piumarta <first-name at last-name point com>.
+#
+# Best viewed using 140 columns monospaced with tabs every 8.
+#
+# [1] Bryan Ford.  "Parsing Expression Grammars: A Recognition-Based Syntactic
+#     Foundation."  Symposium on Principles of Programming Languages,
+#     January 14--16, 2004, Venice, Italy.
+
+package flow
+
+# parser declaration
+
+type Peg Peg {
+ Runtime
+ Graph
+}
+
+# Hierarchical syntax
+Grammar		<- Spacing 'package' MustSpacing Identifier      { p.AddPackage(buffer[begin:end]) }
+			   Import*
+                           'type' MustSpacing Identifier         { p.AddPeg(buffer[begin:end]) }
+                           'Peg' Spacing Action              { p.AddState(buffer[begin:end]) }
+                           Definition+ EndOfFile
+
+Import		<- 'import' Spacing ["] < [a-zA-Z_/.\-]+ > ["] Spacing { p.AddImport(buffer[begin:end]) }
+
+Definition	<- Identifier 			{ p.AddRule(buffer[begin:end]) }
+		     LeftArrow Expression 	{ p.AddExpression() } &(Identifier LeftArrow / !.)
+Expression	<- Sequence (Slash Sequence	{ p.AddAlternate() }
+			    )* (Slash           { p.AddNil(); p.AddAlternate() }
+                               )?
+                 /				{ p.AddNil() }
+Sequence	<- Prefix (Prefix		{ p.AddSequence() }
+			  )*
+Prefix		<- And Action			{ p.AddPredicate(buffer[begin:end]) }
+		 / And Suffix			{ p.AddPeekFor() }
+		 / Not Suffix			{ p.AddPeekNot() }
+		 /     Suffix
+Suffix          <- Primary (Question            { p.AddQuery() }
+                           / Star               { p.AddStar() }
+                           / Plus               { p.AddPlus() }
+                           )?
+Primary	        <- Identifier !LeftArrow        { p.AddName(buffer[begin:end]) }
+                 / Open Expression Close
+                 / Literal
+                 / Class
+                 / Dot                          { p.AddDot() }
+                 / Action                       { p.AddAction(buffer[begin:end]) }
+                 / Begin Expression End         { p.AddPush() }
+
+# Lexical syntax
+
+#PrivateIdentifier <- < [a-z_] IdentCont* > Spacing
+Identifier	<- < IdentStart IdentCont* > Spacing
+IdentStart	<- [[a-z_]]
+IdentCont	<- IdentStart / [0-9]
+Literal		<- ['] (!['] Char)? (!['] Char                { p.AddSequence() }
+                                    )* ['] Spacing
+		 / ["] (!["] DoubleChar)? (!["] DoubleChar    { p.AddSequence() }
+                                          )* ["] Spacing
+Class		<- ( '[[' ( '^' DoubleRanges              { p.AddPeekNot(); p.AddDot(); p.AddSequence() }
+                          / DoubleRanges )?
+                     ']]'
+                   / '[' ( '^' Ranges                     { p.AddPeekNot(); p.AddDot(); p.AddSequence() }
+                         / Ranges )?
+                     ']' )
+                   Spacing
+Ranges		<- !']' Range (!']' Range  { p.AddAlternate() }
+                              )*
+DoubleRanges	<- !']]' DoubleRange (!']]' DoubleRange  { p.AddAlternate() }
+                                     )*
+Range		<- Char '-' Char              { p.AddRange() }
+                 / Char
+DoubleRange	<- Char '-' Char              { p.AddDoubleRange() }
+                 / DoubleChar
+Char            <- Escape
+                 / !'\\' <.>                  { p.AddCharacter(buffer[begin:end]) }
+DoubleChar	<- Escape
+		 / <[a-zA-Z]>                 { p.AddDoubleCharacter(buffer[begin:end]) }
+                 / !'\\' <.>                  { p.AddCharacter(buffer[begin:end]) }
+Escape          <- "\\a"                      { p.AddCharacter("\a") }   # bell
+                 / "\\b"                      { p.AddCharacter("\b") }   # bs
+                 / "\\e"                      { p.AddCharacter("\x1B") } # esc
+                 / "\\f"                      { p.AddCharacter("\f") }   # ff
+                 / "\\n"                      { p.AddCharacter("\n") }   # nl
+                 / "\\r"                      { p.AddCharacter("\r") }   # cr
+                 / "\\t"                      { p.AddCharacter("\t") }   # ht
+                 / "\\v"                      { p.AddCharacter("\v") }   # vt
+                 / "\\'"		      { p.AddCharacter("'") }
+                 / '\\"'		      { p.AddCharacter("\"") }
+                 / '\\['                      { p.AddCharacter("[") }
+                 / '\\]'                      { p.AddCharacter("]") }
+                 / '\\-'                      { p.AddCharacter("-") }
+                 / '\\' "0x"<[0-9a-fA-F]+>     { p.AddHexaCharacter(buffer[begin:end]) }
+                 / '\\' <[0-3][0-7][0-7]>     { p.AddOctalCharacter(buffer[begin:end]) }
+                 / '\\' <[0-7][0-7]?>         { p.AddOctalCharacter(buffer[begin:end]) }
+                 / '\\\\'                     { p.AddCharacter("\\") }
+LeftArrow	<- '<-' Spacing
+Slash		<- '/' Spacing
+And		<- '&' Spacing
+Not		<- '!' Spacing
+Question	<- '?' Spacing
+Star		<- '*' Spacing
+Plus		<- '+' Spacing
+Open		<- '(' Spacing
+Close		<- ')' Spacing
+Dot		<- '.' Spacing
+SpaceComment	<- (Space / Comment)
+Spacing		<- SpaceComment*
+MustSpacing	<- SpaceComment+
+Comment		<- '#' (!EndOfLine .)* EndOfLine
+Space		<- ' ' / '\t' / EndOfLine
+EndOfLine	<- '\r\n' / '\n' / '\r'
+EndOfFile	<- !.
+Action		<- '{' < [^}]* > '}' Spacing
+Begin		<- '<' Spacing
+End		<- '>' Spacing
+runtimeGetruntime    <-    'runtime'Dot'getruntime'    { p.runtimeGetruntime() }
+runtimeRuntime    <-    'runtime'Dot'runtime'    { p.runtimeRuntime() }
+runtimePorts    <-    'runtime'Dot'ports'    { p.runtimePorts() }
+runtimePacket    <-    'runtime'Dot'packet'    { p.runtimePacket() }
+graphClear    <-    'graph'Dot'clear'    { p.graphClear() }
+graphAddnode    <-    'graph'Dot'addnode'    { p.graphAddnode() }
+graphRemovenode    <-    'graph'Dot'removenode'    { p.graphRemovenode() }
+graphRenamenode    <-    'graph'Dot'renamenode'    { p.graphRenamenode() }
+graphChangenode    <-    'graph'Dot'changenode'    { p.graphChangenode() }
+graphAddedge    <-    'graph'Dot'addedge'    { p.graphAddedge() }
+graphRemoveedge    <-    'graph'Dot'removeedge'    { p.graphRemoveedge() }
+graphChangeedge    <-    'graph'Dot'changeedge'    { p.graphChangeedge() }
+graphAddinitial    <-    'graph'Dot'addinitial'    { p.graphAddinitial() }
+graphRemoveinitial    <-    'graph'Dot'removeinitial'    { p.graphRemoveinitial() }
+graphAddinport    <-    'graph'Dot'addinport'    { p.graphAddinport() }
+graphRemoveinport    <-    'graph'Dot'removeinport'    { p.graphRemoveinport() }
+graphRenameinport    <-    'graph'Dot'renameinport'    { p.graphRenameinport() }
+graphAddoutport    <-    'graph'Dot'addoutport'    { p.graphAddoutport() }
+graphRemoveoutport    <-    'graph'Dot'removeoutport'    { p.graphRemoveoutport() }
+graphRenameoutport    <-    'graph'Dot'renameoutport'    { p.graphRenameoutport() }
+graphAddgroup    <-    'graph'Dot'addgroup'    { p.graphAddgroup() }
+graphRemovegroup    <-    'graph'Dot'removegroup'    { p.graphRemovegroup() }
+graphRenamegroup    <-    'graph'Dot'renamegroup'    { p.graphRenamegroup() }
+graphChangegroup    <-    'graph'Dot'changegroup'    { p.graphChangegroup() }
+componentList    <-    'component'Dot'list'    { p.componentList() }
+componentComponent    <-    'component'Dot'component'    { p.componentComponent() }
+componentGetsource    <-    'component'Dot'getsource'    { p.componentGetsource() }
+componentSource    <-    'component'Dot'source'    { p.componentSource() }
+networkStart    <-    'network'Dot'start'    { p.networkStart() }
+networkGetstatus    <-    'network'Dot'getstatus'    { p.networkGetstatus() }
+networkStop    <-    'network'Dot'stop'    { p.networkStop() }
+networkStarted    <-    'network'Dot'started'    { p.networkStarted() }
+networkStatus    <-    'network'Dot'status'    { p.networkStatus() }
+networkStopped    <-    'network'Dot'stopped'    { p.networkStopped() }
+networkDebug    <-    'network'Dot'debug'    { p.networkDebug() }
+networkIcon    <-    'network'Dot'icon'    { p.networkIcon() }
+networkOutput    <-    'network'Dot'output'    { p.networkOutput() }
+networkError    <-    'network'Dot'error'    { p.networkError() }
+networkProcesserror    <-    'network'Dot'processerror'    { p.networkProcesserror() }
+networkConnect    <-    'network'Dot'connect'    { p.networkConnect() }
+networkBegingroup    <-    'network'Dot'begingroup'    { p.networkBegingroup() }
+networkData    <-    'network'Dot'data'    { p.networkData() }
+networkEndgroup    <-    'network'Dot'endgroup'    { p.networkEndgroup() }
+networkDisconnect    <-    'network'Dot'disconnect'    { p.networkDisconnect() }
+networkEdges    <-    'network'Dot'edges'    { p.networkEdges() }
