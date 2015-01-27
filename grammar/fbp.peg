@@ -10,116 +10,21 @@
 #     Foundation."  Symposium on Principles of Programming Languages,
 #     January 14--16, 2004, Venice, Italy.
 
-package flow
+package flow2
+
+import (
+    "github.com/Synthace/goflow"
+)
 
 # parser declaration
 
-type Peg Peg {
- Runtime
- Graph
+type JLPeg Peg {
+ 
 }
 
 # Hierarchical syntax
-Grammar		<- Spacing 'package' MustSpacing Identifier      { p.AddPackage(buffer[begin:end]) }
-			   Import*
-                           'type' MustSpacing Identifier         { p.AddPeg(buffer[begin:end]) }
-                           'Peg' Spacing Action              { p.AddState(buffer[begin:end]) }
-                           Definition+ EndOfFile
 
-Import		<- 'import' Spacing ["] < [a-zA-Z_/.\-]+ > ["] Spacing { p.AddImport(buffer[begin:end]) }
-
-Definition	<- Identifier 			{ p.AddRule(buffer[begin:end]) }
-		     LeftArrow Expression 	{ p.AddExpression() } &(Identifier LeftArrow / !.)
-Expression	<- Sequence (Slash Sequence	{ p.AddAlternate() }
-			    )* (Slash           { p.AddNil(); p.AddAlternate() }
-                               )?
-                 /				{ p.AddNil() }
-Sequence	<- Prefix (Prefix		{ p.AddSequence() }
-			  )*
-Prefix		<- And Action			{ p.AddPredicate(buffer[begin:end]) }
-		 / And Suffix			{ p.AddPeekFor() }
-		 / Not Suffix			{ p.AddPeekNot() }
-		 /     Suffix
-Suffix          <- Primary (Question            { p.AddQuery() }
-                           / Star               { p.AddStar() }
-                           / Plus               { p.AddPlus() }
-                           )?
-Primary	        <- Identifier !LeftArrow        { p.AddName(buffer[begin:end]) }
-                 / Open Expression Close
-                 / Literal
-                 / Class
-                 / Dot                          { p.AddDot() }
-                 / Action                       { p.AddAction(buffer[begin:end]) }
-                 / Begin Expression End         { p.AddPush() }
-
-# Lexical syntax
-
-#PrivateIdentifier <- < [a-z_] IdentCont* > Spacing
-Identifier	<- < IdentStart IdentCont* > Spacing
-IdentStart	<- [[a-z_]]
-IdentCont	<- IdentStart / [0-9]
-Literal		<- ['] (!['] Char)? (!['] Char                { p.AddSequence() }
-                                    )* ['] Spacing
-		 / ["] (!["] DoubleChar)? (!["] DoubleChar    { p.AddSequence() }
-                                          )* ["] Spacing
-Class		<- ( '[[' ( '^' DoubleRanges              { p.AddPeekNot(); p.AddDot(); p.AddSequence() }
-                          / DoubleRanges )?
-                     ']]'
-                   / '[' ( '^' Ranges                     { p.AddPeekNot(); p.AddDot(); p.AddSequence() }
-                         / Ranges )?
-                     ']' )
-                   Spacing
-Ranges		<- !']' Range (!']' Range  { p.AddAlternate() }
-                              )*
-DoubleRanges	<- !']]' DoubleRange (!']]' DoubleRange  { p.AddAlternate() }
-                                     )*
-Range		<- Char '-' Char              { p.AddRange() }
-                 / Char
-DoubleRange	<- Char '-' Char              { p.AddDoubleRange() }
-                 / DoubleChar
-Char            <- Escape
-                 / !'\\' <.>                  { p.AddCharacter(buffer[begin:end]) }
-DoubleChar	<- Escape
-		 / <[a-zA-Z]>                 { p.AddDoubleCharacter(buffer[begin:end]) }
-                 / !'\\' <.>                  { p.AddCharacter(buffer[begin:end]) }
-Escape          <- "\\a"                      { p.AddCharacter("\a") }   # bell
-                 / "\\b"                      { p.AddCharacter("\b") }   # bs
-                 / "\\e"                      { p.AddCharacter("\x1B") } # esc
-                 / "\\f"                      { p.AddCharacter("\f") }   # ff
-                 / "\\n"                      { p.AddCharacter("\n") }   # nl
-                 / "\\r"                      { p.AddCharacter("\r") }   # cr
-                 / "\\t"                      { p.AddCharacter("\t") }   # ht
-                 / "\\v"                      { p.AddCharacter("\v") }   # vt
-                 / "\\'"		      { p.AddCharacter("'") }
-                 / '\\"'		      { p.AddCharacter("\"") }
-                 / '\\['                      { p.AddCharacter("[") }
-                 / '\\]'                      { p.AddCharacter("]") }
-                 / '\\-'                      { p.AddCharacter("-") }
-                 / '\\' "0x"<[0-9a-fA-F]+>     { p.AddHexaCharacter(buffer[begin:end]) }
-                 / '\\' <[0-3][0-7][0-7]>     { p.AddOctalCharacter(buffer[begin:end]) }
-                 / '\\' <[0-7][0-7]?>         { p.AddOctalCharacter(buffer[begin:end]) }
-                 / '\\\\'                     { p.AddCharacter("\\") }
-LeftArrow	<- '<-' Spacing
-Slash		<- '/' Spacing
-And		<- '&' Spacing
-Not		<- '!' Spacing
-Question	<- '?' Spacing
-Star		<- '*' Spacing
-Plus		<- '+' Spacing
-Open		<- '(' Spacing
-Close		<- ')' Spacing
-Dot		<- '.' Spacing
-SpaceComment	<- (Space / Comment)
-Spacing		<- SpaceComment*
-MustSpacing	<- SpaceComment+
-Comment		<- '#' (!EndOfLine .)* EndOfLine
-Space		<- ' ' / '\t' / EndOfLine
-EndOfLine	<- '\r\n' / '\n' / '\r'
-EndOfFile	<- !.
-Action		<- '{' < [^}]* > '}' Spacing
-Begin		<- '<' Spacing
-End		<- '>' Spacing
-runtimeGetruntime    <-    'runtime'Dot'getruntime'    { p.runtimeGetruntime() }
+runtimeGetruntime    <-    'runtime'Dot'getruntime'    { runtimeGetruntime() }
 runtimeRuntime    <-    'runtime'Dot'runtime'    { p.runtimeRuntime() }
 runtimePorts    <-    'runtime'Dot'ports'    { p.runtimePorts() }
 runtimePacket    <-    'runtime'Dot'packet'    { p.runtimePacket() }

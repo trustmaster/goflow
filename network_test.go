@@ -390,6 +390,72 @@ func TestStopNet(t *testing.T) {
 	}
 }
 
+// Test disconnecting nodes in the net
+func TestReconnection(t *testing.T) {
+	net := new(Canvas)
+	net.InitGraphState()
+
+	e1 := newEchoer()
+	e2 := newEchoer()
+
+	net.Add(e1, "e1")
+	net.Add(e2, "e2")
+
+	net.Connect("e1", "Out", "e2", "In")
+
+	net.MapInPort("In", "e1", "In")
+	net.MapOutPort("Out", "e2", "Out")
+
+	in, out := make(chan int), make(chan int)
+
+	net.SetInPort("In", in)
+	net.SetOutPort("Out", out)
+
+	RunNet(net)
+
+	in <- 123
+	i := <-out
+
+	if i != 123 {
+		t.Errorf("Error: %d != 123", i)
+	}
+
+	// Replace e2 with a doubler
+	if !net.StopProc("e2") {
+		t.Error("Could not stop a proc")
+	}
+	if !net.UnmapOutPort("Out") {
+		t.Error("Could not unmap an outport")
+	}
+	if !net.Disconnect("e1", "Out", "e2", "In") {
+		t.Error("Disconnect failed")
+	}
+
+	d1 := newDoubler()
+	net.Add(d1, "d1")
+	if !net.Connect("e1", "Out", "d1", "In") {
+		t.Error("Could not connect e1 to d1")
+	}
+	if !net.MapOutPort("Out", "d1", "Out") {
+		t.Error("Could not map Out to d1.Out")
+	}
+	if !net.SetOutPort("Out", out) {
+		t.Error("Could not reset networks Out port")
+	}
+	if !net.RunProc("d1") {
+		t.Error("Could not start proc d1")
+	}
+
+	in <- 2
+	i = <-out
+
+	if i != 4 {
+		t.Errorf("Error: %d != 2 * 2", i)
+	}
+
+	close(in)
+}
+
 // type forked struct {
 // 	Graph
 // }
