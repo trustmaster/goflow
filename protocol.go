@@ -13,10 +13,10 @@ type Message struct {
 
 // runtimeInfo message contains response to runtime.getruntime request
 type runtimeInfo struct {
-	Type         string
-	Version      string
-	Capabilities []string
-	Id           string
+	Type         string `json:"type"`
+	Version      string `json:"version"`
+	Capabilities []string `json:"capabilities"`
+	Id           string `json:"id"`
 }
 
 // clearGraph message is sent by client to create a new empty graph

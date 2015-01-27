@@ -35,7 +35,7 @@ type wsSend struct {
     Protocol string `json:"protocol"`
     Payload interface{} `json:"payload"`
 }
-
+/*
 // runtimeInfo message contains response to runtime.getruntime request
 type runtimeInfo struct {
 	Version      string `json:"version"`
@@ -43,7 +43,7 @@ type runtimeInfo struct {
 	Capabilities []string `json:"capabilities"`
 	//Id           string `json:"id"`
 }
-
+*/
 // runtimeInfo message contains response to runtime.getruntime request
 type networkInfo struct {
 	Graph       string `json:"graph"`
@@ -73,6 +73,13 @@ func (r *Runtime) Init() {
 			r.id,
 		})
 	}
+	r.handlers["network.getstatus"] = func(ws *websocket.Conn, payload interface{}) {
+    fmt.Println("handle network.getstatus")
+    websocket.JSON.Send(ws, wsSend{"network", "status", networkInfo{"main",
+        true,
+		true,
+	}})
+    }
 	r.handlers["graph.clear"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(clearGraph)
 		r.graphs[msg.Id] = new(Graph)

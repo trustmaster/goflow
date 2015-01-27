@@ -353,7 +353,7 @@ func StopProc(c interface{}) bool {
 type components struct {
 	Component []componentInfo `json:""`
 }
-
+/*
 type componentInfo struct {
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
@@ -361,8 +361,8 @@ type componentInfo struct {
 	Subgraph    string  `json:"subgraph"`
 	Inports     []portz `json:"inPorts"`
 	Outports    []portz `json:"outPorts"`
-}
-
+}*/
+/*
 type portz struct {
 	Id          string      `json:"id"`
 	Type        string      `json:"type"`
@@ -371,56 +371,56 @@ type portz struct {
 	Required    string      `json:"required"`
 	Values      interface{} `json:"values"`
 	Default     string      `json:"default"`
-}
+}*/
 
 func (r *Runtime) componentList(ws *websocket.Conn, payload interface{}) {
 	fmt.Println("handle component.list")
 	websocket.JSON.Send(ws, wsSend{"component", "component", componentInfo{"Greeter",
 		"Manually Entered Greeter Element for Like, Y'know, Testing or Whatever",
 		"",
-		"",
-		[]portz{{"Name",
+		false,
+		[]portInfo{{"Name",
 			"string",
 			"",
-			"",
-			"",
-			"",
+			false,
+			false,
+			nil,
 			""},
 			{"Title",
 				"string",
 				"",
-				"",
-				"",
-				"",
+                false,
+                false,
+                nil,
 				""},
 		},
-		[]portz{{"Res",
+		[]portInfo{{"Res",
 			"string",
 			"",
-			"",
-			"",
-			"",
+			false,
+			false,
+			nil,
 			""},
 		},
 	}})
 	websocket.JSON.Send(ws, wsSend{"component", "component", componentInfo{"Printer",
 		"Manually Entered Printer Element",
 		"",
-		"",
-		[]portz{{"Line",
+		false,
+		[]portInfo{{"Line",
 			"string",
 			"",
-			"",
-			"",
-			"",
+			false,
+			false,
+			nil,
 			""},
 		},
-		[]portz{{"",
+		[]portInfo{{"",
 			"",
 			"",
-			"",
-			"",
-			"",
+			false,
+			false,
+			nil,
 			""},
 		},
 	}})

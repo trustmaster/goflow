@@ -697,7 +697,7 @@ func (n *Graph) run() {
 	}
 }
 
-// RunProc starts a proc added to a net at run time
+/*// RunProc starts a proc added to a net at run time
 func (n *Graph) RunProc(procName string) bool {
 	if !n.isRunning {
 		return false
@@ -718,7 +718,7 @@ func (n *Graph) RunProc(procName string) bool {
 		}
 		return ok
 	}
-}
+}*/
 
 // Stop terminates the network without closing any connections
 func (n *Graph) Stop() {
@@ -894,7 +894,7 @@ func RunNet(i interface{}) {
 	}()
 }
 
-
+/*
 func (r *Runtime) networkGetStatus(ws *websocket.Conn, payload interface{}) {
     fmt.Println("handle network.getstatus")
     websocket.JSON.Send(ws, wsSend{"network", "status", networkInfo{"main",
@@ -902,7 +902,7 @@ func (r *Runtime) networkGetStatus(ws *websocket.Conn, payload interface{}) {
 		true,
 	}})
 }
-
+*/
 func (r *Runtime) networkStart(ws *websocket.Conn, payload interface{}) {
     fmt.Println("handle network.start")
     //placeholder
