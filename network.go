@@ -1,8 +1,10 @@
 package flow
 
 import (
+	"code.google.com/p/go.net/websocket"
 	"reflect"
 	"sync"
+    "fmt"
 )
 
 // DefaultBufferSize is the default channel buffer capacity.
@@ -867,4 +869,18 @@ func RunNet(i interface{}) {
 		// Close the wait channel
 		close(net.done)
 	}()
+}
+
+
+func (r *Runtime) networkGetStatus(ws *websocket.Conn, payload interface{}) {
+    fmt.Println("handle network.getstatus")
+    websocket.JSON.Send(ws, wsSend{"network", "status", networkInfo{"main",
+        true,
+		true,
+	}})
+}
+
+func (r *Runtime) networkStart(ws *websocket.Conn, payload interface{}) {
+    fmt.Println("handle network.start")
+    //placeholder
 }
