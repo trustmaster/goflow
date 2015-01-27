@@ -2,10 +2,10 @@
 package flow
 
 import (
+	"code.google.com/p/go.net/websocket"
+	"fmt"
 	"reflect"
 	"sync"
-    "fmt"
-	"code.google.com/p/go.net/websocket"
 )
 
 const (
@@ -64,7 +64,6 @@ type portHandler struct {
 // on inputsClose
 
 var inputCounter = 0
-
 
 // RunProc runs event handling loop on component ports.
 // It returns true on success or panics with error message and returns false on error.
@@ -175,10 +174,7 @@ func RunProc(c interface{}, nump int) bool {
 				locker.Unlock()
 			}
 		}
-		for i := 0; i < inputCount; i++ {
-			inputsClose.Done()
-			inputCount--
-		}
+		inputsClose.Done()
 	}
 	terminate := func() {
 		if !vCom.FieldByName("IsRunning").Bool() {
@@ -265,7 +261,8 @@ func RunProc(c interface{}, nump int) bool {
 								closeHandler(handlers[chosen].onClose)
 							})
 						}
-						return
+						return // TODO: Debug how to ensure enough shutdowns for inputs
+						// in the pool mode case. for now, pool mode won't work properly
 					}
 					if handlers[chosen].onRecv.IsValid() {
 						handlersDone.Add(1)
@@ -275,31 +272,33 @@ func RunProc(c interface{}, nump int) bool {
 			}()
 		}
 	} else {
-		go func() {
-			for {
-				chosen, recv, recvOK := reflect.Select(cases)
-				if !recvOK {
-					if chosen == 0 {
-						// Term signal
-						terminate()
-					} else {
-						// Port has been closed
-						closeHandler(handlers[chosen].onClose)
+		for i := 0; i < inputCount; i++ {
+			go func() {
+				for {
+					chosen, recv, recvOK := reflect.Select(cases)
+					if !recvOK {
+						if chosen == 0 {
+							// Term signal
+							terminate()
+						} else {
+							// Port has been closed
+							closeHandler(handlers[chosen].onClose)
+						}
+						return
 					}
-					return
-				}
-				if handlers[chosen].onRecv.IsValid() {
-					handlersDone.Add(1)
-					if componentMode == ComponentModeAsync || componentMode == ComponentModeUndefined && DefaultComponentMode == ComponentModeAsync {
-						// Async mode
-						go recvHandler(handlers[chosen].onRecv, recv)
-					} else {
-						// Sync mode
-						recvHandler(handlers[chosen].onRecv, recv)
+					if handlers[chosen].onRecv.IsValid() {
+						handlersDone.Add(1)
+						if componentMode == ComponentModeAsync || componentMode == ComponentModeUndefined && DefaultComponentMode == ComponentModeAsync {
+							// Async mode
+							go recvHandler(handlers[chosen].onRecv, recv)
+						} else {
+							// Sync mode
+							recvHandler(handlers[chosen].onRecv, recv)
+						}
 					}
 				}
-			}
-		}()
+			}()
+		}
 	}
 
 	// Indicate the process as running
@@ -310,7 +309,6 @@ func RunProc(c interface{}, nump int) bool {
 		inputsClose.Wait()
 		// Wait all inport handlers to finish their job
 		handlersDone.Wait()
-
 		// Call shutdown handler (user or default)
 		shutdown()
 
@@ -353,84 +351,84 @@ func StopProc(c interface{}) bool {
 }
 
 type components struct {
-    Component []componentInfo      `json:""`
+	Component []componentInfo `json:""`
 }
 
 type componentInfo struct {
-    Name            string      `json:"name"`
-    Description     string      `json:"description"`
-    Icon            string      `json:"icon"`
-    Subgraph        string      `json:"subgraph"`
-    Inports         []portz      `json:"inPorts"`
-    Outports        []portz      `json:"outPorts"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Icon        string  `json:"icon"`
+	Subgraph    string  `json:"subgraph"`
+	Inports     []portz `json:"inPorts"`
+	Outports    []portz `json:"outPorts"`
 }
 
 type portz struct {
-    Id          string      `json:"id"`
-    Type        string      `json:"type"`
-    Description string      `json:"description"`
-    Addressable string      `json:"addressable"`
-    Required    string      `json:"required"`
-    Values      interface{} `json:"values"`
-    Default     string      `json:"default"`
+	Id          string      `json:"id"`
+	Type        string      `json:"type"`
+	Description string      `json:"description"`
+	Addressable string      `json:"addressable"`
+	Required    string      `json:"required"`
+	Values      interface{} `json:"values"`
+	Default     string      `json:"default"`
 }
 
 func (r *Runtime) componentList(ws *websocket.Conn, payload interface{}) {
-    fmt.Println("handle component.list")
-    websocket.JSON.Send(ws, wsSend{"component", "component", componentInfo{"DummyzComponent",
-        "Description for component",
-        "",
-        "",
+	fmt.Println("handle component.list")
+	websocket.JSON.Send(ws, wsSend{"component", "component", componentInfo{"DummyzComponent",
+		"Description for component",
+		"",
+		"",
 		[]portz{{"portA",
-            "boolean",
-            "a boolean port",
-            "False",
-            "True",
-            "",
-            "",},
-            {"portB",
-            "any",
-            "",
-            "",
-            "",
-            "",
-            "",},
-        },
+			"boolean",
+			"a boolean port",
+			"False",
+			"True",
+			"",
+			""},
+			{"portB",
+				"any",
+				"",
+				"",
+				"",
+				"",
+				""},
+		},
 		[]portz{{"out1",
-            "string",
-            "",
-            "",
-            "",
-            "",
-            "",},
-        },
-	}},)
-    websocket.JSON.Send(ws, wsSend{"component", "component", componentInfo{"DummyzComponent2",
-        "Description for component",
-        "",
-        "",
+			"string",
+			"",
+			"",
+			"",
+			"",
+			""},
+		},
+	}})
+	websocket.JSON.Send(ws, wsSend{"component", "component", componentInfo{"DummyzComponent2",
+		"Description for component",
+		"",
+		"",
 		[]portz{{"portA",
-            "boolean",
-            "a boolean port",
-            "False",
-            "True",
-            "",
-            "",},
-            {"portB",
-            "any",
-            "",
-            "",
-            "",
-            "",
-            "",},
-        },
+			"boolean",
+			"a boolean port",
+			"False",
+			"True",
+			"",
+			""},
+			{"portB",
+				"any",
+				"",
+				"",
+				"",
+				"",
+				""},
+		},
 		[]portz{{"out1",
-            "string",
-            "",
-            "",
-            "",
-            "",
-            "",},
-        },
-	}},)
+			"string",
+			"",
+			"",
+			"",
+			"",
+			""},
+		},
+	}})
 }

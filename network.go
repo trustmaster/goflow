@@ -858,7 +858,7 @@ func RunNet(i interface{}) {
 	// Run the contained processes
 	go func() {
 		net.run()
-		
+
 		// Call user finish function if exists
 		if finable, ok := i.(Finalizable); ok {
 			finable.Finish()
