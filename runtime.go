@@ -7,6 +7,7 @@ import (
 	//"net"
 	"net/http"
     "fmt"
+    ms "github.com/mitchellh/mapstructure"
 )
 
 type protocolHandler func(*websocket.Conn, interface{})
@@ -95,7 +96,12 @@ func (r *Runtime) Init() {
 		// TODO send component.component back
 	}
 	r.handlers["graph.addnode"] = func(ws *websocket.Conn, payload interface{}) {
-		msg := payload.(addNode)
+        fmt.Println(payload)
+        var msg addNode
+        err := ms.Decode(payload, &msg)
+        if err != nil {
+            panic(err)
+        }
 		r.graphs[msg.Graph].AddNew(msg.Component, msg.Id)
 	}
 	r.handlers["graph.removenode"] = func(ws *websocket.Conn, payload interface{}) {
