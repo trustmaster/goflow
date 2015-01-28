@@ -48,9 +48,8 @@ type runtimeInfo struct {
 type networkInfo struct {
 	Graph       string `json:"graph"`
 	Running     bool `json:"running"`
-	Info        bool `json:"info"`
+	Started        bool `json:"started"`
 }
-
 
 // Register command handlers
 func (r *Runtime) Init() {
@@ -63,22 +62,26 @@ func (r *Runtime) Init() {
 	r.ready = make(chan struct{})
 	r.handlers = make(map[string]protocolHandler)
 	r.handlers["runtime.getruntime"] = func(ws *websocket.Conn, payload interface{}) {
-		websocket.JSON.Send(ws, runtimeInfo{"goflow",
-			"0.4",
-			[]string{"protocol:runtime",
-				"protocol:graph",
-				"protocol:component",
-				"protocol:network",
-				"component:getsource"},
-			r.id,
-		})
+        websocket.JSON.Send(ws, wsSend{"runtime", "runtime", runtimeInfo{"0.4",
+            "fbp-go-example",
+            []string{"protocol:runtime",
+                "protocol:graph",
+                "protocol:component",
+                "protocol:network",
+                "component:getsource",
+                },
+            r.id,
+		}})
 	}
 	r.handlers["network.getstatus"] = func(ws *websocket.Conn, payload interface{}) {
-    fmt.Println("handle network.getstatus")
-    websocket.JSON.Send(ws, wsSend{"network", "status", networkInfo{"main",
-        true,
-		true,
-	}})
+        fmt.Println("handle network.getstatus")
+        websocket.JSON.Send(ws, wsSend{"network", "status", networkInfo{"main",
+            true,
+            true,
+        }})
+    }
+	r.handlers["network.debug"] = func(ws *websocket.Conn, payload interface{}) {
+        fmt.Println("handle network.debug")
     }
 	r.handlers["graph.clear"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(clearGraph)
@@ -152,6 +155,56 @@ func (r *Runtime) Init() {
 		r.graphs[msg.Graph].RenameOutPort(msg.From, msg.To)
 	}
 	r.handlers["component.list"] = func(ws *websocket.Conn, payload interface{}) {
+    fmt.Println("handle component.list")
+    websocket.JSON.Send(ws, wsSend{"component", "component", componentInfo{"Greeter",
+        "Manually Entered Greeter Element for Like, Y'know, Testing or Whatever",
+        "",
+        false,
+		[]portInfo{{"Name",
+            "string",
+            "",
+            false,
+            false,
+            nil,
+            "",},
+            {"Title",
+            "string",
+            "",
+            false,
+            false,
+            nil,
+            "",},
+        },
+		[]portInfo{{"Res",
+            "string",
+            "",
+            false,
+            false,
+            nil,
+            "",},
+        },
+	}},)
+    websocket.JSON.Send(ws, wsSend{"component", "component", componentInfo{"Printer",
+        "Manually Entered Printer Element",
+        "",
+        false,
+		[]portInfo{{"Line",
+            "string",
+            "",
+            false,
+            false,
+            nil,
+            "",},
+        },
+		[]portInfo{{"",
+            "",
+            "",
+            false,
+            false,
+            nil,
+            "",},
+        },
+	}},)
 		// TODO
 	}
 }

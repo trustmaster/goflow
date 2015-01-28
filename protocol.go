@@ -151,21 +151,21 @@ type renamePort struct {
 
 // portInfo represents a port to a runtime client
 type portInfo struct {
-	Id          string
-	Type        string
-	Description string
-	Addressable bool // ignored
-	Required    bool
-	Values      []interface{} // ignored
-	Default     interface{}   // ignored
+	Id          string  `json:"id"`
+	Type        string  `json:"type"`
+	Description string  `json:"description"`
+	Addressable bool    `json:"addressable"` // ignored
+	Required    bool    `json:"required"`
+	Values      []interface{}   `json:"values"` // ignored
+	Default     interface{} `json:"default"`   // ignored
 }
 
 // componentInfo represents a component to a protocol client
 type componentInfo struct {
-	Name        string
-	Description string
-	Icon        string
-	Subgraph    bool
-	InPorts     []portInfo
-	OutPorts    []portInfo
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Icon        string  `json:"icon"`
+	Subgraph    bool    `json:"subgraph"`
+	InPorts     []portInfo  `json:"inPorts"`
+	OutPorts    []portInfo  `json:"outPorts"`
 }
