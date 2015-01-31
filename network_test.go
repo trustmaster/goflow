@@ -24,6 +24,9 @@ func newEchoer() interface{} {
 
 func init() {
 	Register("echoer", newEchoer)
+	Annotate("echoer", ComponentInfo{
+		Description: "Echoes its input",
+	})
 }
 
 // A graph to test network features
@@ -288,7 +291,7 @@ func TestIIP(t *testing.T) {
 	<-net.Wait()
 }
 
-// A simple syncrhonous summator for 2 arguments
+// A simple synchronous summator for 2 arguments
 type sum2 struct {
 	Component
 
@@ -313,6 +316,9 @@ func newSum2() *sum2 {
 func init() {
 	Register("sum2", func() interface{} {
 		return newSum2()
+	})
+	Annotate("sum2", ComponentInfo{
+		Description: "A synchronous summator with 2 arguments",
 	})
 }
 

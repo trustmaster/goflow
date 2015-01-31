@@ -1,5 +1,9 @@
 package flow
 
+import (
+	_ "reflect"
+)
+
 // DefaultRegistryCapacity is the capacity component registry is initialized with.
 const DefaultRegistryCapacity = 64
 
@@ -8,24 +12,18 @@ const DefaultRegistryCapacity = 64
 // Factory function at run-time.
 type ComponentConstructor func() interface{}
 
+// ComponentEntry contains runtime information about a component
+type ComponentEntry struct {
+	// Constructor is a function that creates a component instance.
+	// It is required for the factory to add components at run-time.
+	Constructor ComponentConstructor
+	// Run-time component description
+	Info ComponentInfo
+}
+
 // ComponentRegistry is used to register components and spawn processes given just
 // a string component name.
-var ComponentRegistry = make(map[string]ComponentConstructor, DefaultRegistryCapacity)
-
-// ComponentDescription is component metadata for IDE
-type ComponentDescription struct {
-	Description string
-	Icon        string
-	Metadata    map[string]interface{}
-}
-
-// ComponentDescriptions contains component metadata used by IDE
-var ComponentDescriptions = make(map[string]ComponentDescription, DefaultRegistryCapacity)
-
-// Describe sets a component description and metadata to be used in IDE
-func Describe(componentName string, description ComponentDescription) {
-	ComponentDescriptions[componentName] = description
-}
+var ComponentRegistry = make(map[string]ComponentEntry, DefaultRegistryCapacity)
 
 // Register registers a component so that it can be instantiated at run-time using component Factory.
 // It returns true on success or false if component name is already taken.
@@ -34,7 +32,21 @@ func Register(componentName string, constructor ComponentConstructor) bool {
 		// Component already registered
 		return false
 	}
-	ComponentRegistry[componentName] = constructor
+	ComponentRegistry[componentName] = ComponentEntry{
+		Constructor: constructor,
+	}
+	return true
+}
+
+// Annotate sets component information utilized by runtimes and FBP protocol
+// clients. Recommended fields are: Description and Icon. Other fields
+// are infered by the runtime itself.
+func Annotate(componentName string, info ComponentInfo) bool {
+	component, exists := ComponentRegistry[componentName]
+	if !exists {
+		return false
+	}
+	component.Info = info
 	return true
 }
 
@@ -51,9 +63,58 @@ func Unregister(componentName string) bool {
 
 // Factory creates a new instance of a component registered under a specific name.
 func Factory(componentName string) interface{} {
-	if constructor, exists := ComponentRegistry[componentName]; exists {
-		return constructor()
+	if info, exists := ComponentRegistry[componentName]; exists {
+		return info.Constructor()
 	} else {
 		panic("Uknown component name: " + componentName)
 	}
+}
+
+// UpdateComponentInfo extracts run-time information about a
+// component and its ports. It is called when an FBP protocol client
+// requests component information.
+func UpdateComponentInfo(componentName string) bool {
+	component, exists := ComponentRegistry[componentName]
+	if !exists {
+		return false
+	}
+	// A component instance is required to reflect its type and ports
+	instance := component.Constructor()
+
+	component.Info.Name = componentName
+
+	portMap, isGraph := instance.(portMapper)
+	if isGraph {
+		// Is a subgraph
+		component.Info.Subgraph = true
+		inPorts := portMap.listInPorts()
+		component.Info.InPorts = make([]PortInfo, len(inPorts))
+		for key, value := range inPorts {
+			if value.info.Id == "" {
+				value.info.Id = key
+			}
+			if value.info.Type == "" {
+				value.info.Type = value.channel.Elem().Type().Name()
+			}
+			component.Info.InPorts = append(component.Info.InPorts, value.info)
+		}
+		outPorts := portMap.listOutPorts()
+		component.Info.OutPorts = make([]PortInfo, len(outPorts))
+		for key, value := range outPorts {
+			if value.info.Id == "" {
+				value.info.Id = key
+			}
+			if value.info.Type == "" {
+				value.info.Type = value.channel.Elem().Type().Name()
+			}
+			component.Info.OutPorts = append(component.Info.OutPorts, value.info)
+		}
+	} else {
+		// Is a component
+		component.Info.Subgraph = false
+		// TODO extract component ports information using reflection
+		// v := reflect.ValueOf(instance).Elem()
+		// t := v.Type()
+	}
+	return true
 }

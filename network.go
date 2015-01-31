@@ -22,6 +22,8 @@ type port struct {
 	port string
 	// Actual channel attached
 	channel reflect.Value
+	// Runtime info
+	info PortInfo
 }
 
 // portName stores full port name within the network.
@@ -54,6 +56,8 @@ type portMapper interface {
 	getOutPort(string) reflect.Value
 	hasInPort(string) bool
 	hasOutPort(string) bool
+	listInPorts() map[string]port
+	listOutPorts() map[string]port
 	SetInPort(string, interface{}) bool
 	SetOutPort(string, interface{}) bool
 }
@@ -119,6 +123,10 @@ func NewGraph() interface{} {
 // Register an empty graph component in the registry
 func init() {
 	Register("Graph", NewGraph)
+	Annotate("Graph", ComponentInfo{
+		Description: "A clear graph",
+		Icon:        "cogs",
+	})
 }
 
 // Increments SendChanRefCount
@@ -484,6 +492,11 @@ func (n *Graph) getInPort(name string) reflect.Value {
 	return pName.channel
 }
 
+// listInPorts returns information about graph inports and their types.
+func (n *Graph) listInPorts() map[string]port {
+	return n.inPorts
+}
+
 // getOutPort returns the outport with given name as reflect.Value channel.
 func (n *Graph) getOutPort(name string) reflect.Value {
 	pName, ok := n.outPorts[name]
@@ -491,6 +504,11 @@ func (n *Graph) getOutPort(name string) reflect.Value {
 		panic("flow.Graph.getOutPort(): Invalid outport name: " + name)
 	}
 	return pName.channel
+}
+
+// listOutPorts returns information about graph outports and their types.
+func (n *Graph) listOutPorts() map[string]port {
+	return n.outPorts
 }
 
 // getWait returns net's wait group.
@@ -539,6 +557,17 @@ func (n *Graph) MapInPort(name, procName, procPort string) bool {
 	return ret
 }
 
+// AnnotateInPort sets optional run-time annotation for the port utilized by
+// runtimes and FBP protocol clients.
+func (n *Graph) AnnotateInPort(name string, info PortInfo) bool {
+	port, exists := n.inPorts[name]
+	if !exists {
+		return false
+	}
+	port.info = info
+	return true
+}
+
 // UnmapInPort removes an existing inport mapping
 func (n *Graph) UnmapInPort(name string) bool {
 	if _, exists := n.inPorts[name]; !exists {
@@ -575,6 +604,17 @@ func (n *Graph) MapOutPort(name, procName, procPort string) bool {
 		n.outPorts[name] = port{proc: procName, port: procPort, channel: channel}
 	}
 	return ret
+}
+
+// AnnotateOutPort sets optional run-time annotation for the port utilized by
+// runtimes and FBP protocol clients.
+func (n *Graph) AnnotateOutPort(name string, info PortInfo) bool {
+	port, exists := n.outPorts[name]
+	if !exists {
+		return false
+	}
+	port.info = info
+	return true
 }
 
 // UnmapOutPort removes an existing outport mapping

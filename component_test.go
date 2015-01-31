@@ -25,6 +25,9 @@ func newDoubler() interface{} {
 
 func init() {
 	Register("doubler", newDoubler)
+	Annotate("doubler", ComponentInfo{
+		Description: "Doubles its input",
+	})
 }
 
 // Tests a component with single input and single output
