@@ -1,7 +1,7 @@
 package flow
 
 import (
-	_ "reflect"
+	"reflect"
 )
 
 // DefaultRegistryCapacity is the capacity component registry is initialized with.
@@ -112,9 +112,35 @@ func UpdateComponentInfo(componentName string) bool {
 	} else {
 		// Is a component
 		component.Info.Subgraph = false
-		// TODO extract component ports information using reflection
-		// v := reflect.ValueOf(instance).Elem()
-		// t := v.Type()
+		v := reflect.ValueOf(instance).Elem()
+		t := v.Type()
+		component.Info.InPorts = make([]PortInfo, t.NumField())
+		component.Info.OutPorts = make([]PortInfo, t.NumField())
+		for i := 0; i < t.NumField(); i++ {
+			f := t.Field(i)
+			if f.Type.Kind() == reflect.Chan {
+				required := true
+				if f.Tag.Get("required") == "false" {
+					required = false
+				}
+				addressable := false
+				if f.Tag.Get("addressable") == "true" {
+					addressable = true
+				}
+				port := PortInfo{
+					Id:          f.Name,
+					Type:        f.Type.Name(),
+					Description: f.Tag.Get("description"),
+					Addressable: addressable,
+					Required:    required,
+				}
+				if (f.Type.ChanDir() & reflect.RecvDir) != 0 {
+					component.Info.InPorts = append(component.Info.InPorts, port)
+				} else if (f.Type.ChanDir() & reflect.SendDir) != 0 {
+					component.Info.OutPorts = append(component.Info.OutPorts, port)
+				}
+			}
+		}
 	}
 	return true
 }

@@ -57,8 +57,20 @@ func (r *Runtime) Init() {
 			r.mainId = msg.Id
 			r.main = r.graphs[msg.Id]
 		}
-		// TODO register as a component
-		// TODO send component.component back
+		if _, exists := ComponentRegistry[msg.Id]; !exists {
+			Register(msg.Id, func() interface{} {
+				net := new(Graph)
+				net.InitGraphState()
+				return net
+			})
+		}
+		Annotate(msg.Id, ComponentInfo{
+			Description: msg.Description,
+			Icon:        msg.Icon,
+		})
+		UpdateComponentInfo(msg.Id)
+		entry, _ := ComponentRegistry[msg.Id]
+		websocket.JSON.Send(ws, entry)
 	}
 	r.handlers["graph.addnode"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(addNode)
@@ -97,31 +109,55 @@ func (r *Runtime) Init() {
 	r.handlers["graph.addinport"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(addPort)
 		r.graphs[msg.Graph].MapInPort(msg.Public, msg.Node, msg.Port)
+		UpdateComponentInfo(msg.Graph)
+		entry, _ := ComponentRegistry[msg.Graph]
+		websocket.JSON.Send(ws, entry)
 	}
 	r.handlers["graph.removeinport"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(removePort)
 		r.graphs[msg.Graph].UnsetInPort(msg.Public)
 		r.graphs[msg.Graph].UnmapInPort(msg.Public)
+		UpdateComponentInfo(msg.Graph)
+		entry, _ := ComponentRegistry[msg.Graph]
+		websocket.JSON.Send(ws, entry)
 	}
 	r.handlers["graph.renameinport"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(renamePort)
 		r.graphs[msg.Graph].RenameInPort(msg.From, msg.To)
+		UpdateComponentInfo(msg.Graph)
+		entry, _ := ComponentRegistry[msg.Graph]
+		websocket.JSON.Send(ws, entry)
 	}
 	r.handlers["graph.addoutport"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(addPort)
 		r.graphs[msg.Graph].MapOutPort(msg.Public, msg.Node, msg.Port)
+		UpdateComponentInfo(msg.Graph)
+		entry, _ := ComponentRegistry[msg.Graph]
+		websocket.JSON.Send(ws, entry)
 	}
 	r.handlers["graph.removeoutport"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(removePort)
 		r.graphs[msg.Graph].UnsetOutPort(msg.Public)
 		r.graphs[msg.Graph].UnmapOutPort(msg.Public)
+		UpdateComponentInfo(msg.Graph)
+		entry, _ := ComponentRegistry[msg.Graph]
+		websocket.JSON.Send(ws, entry)
 	}
 	r.handlers["graph.renameoutport"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(renamePort)
 		r.graphs[msg.Graph].RenameOutPort(msg.From, msg.To)
+		UpdateComponentInfo(msg.Graph)
+		entry, _ := ComponentRegistry[msg.Graph]
+		websocket.JSON.Send(ws, entry)
 	}
 	r.handlers["component.list"] = func(ws *websocket.Conn, payload interface{}) {
-		// TODO
+		for key, entry := range ComponentRegistry {
+			if len(entry.Info.InPorts) == 0 && len(entry.Info.OutPorts) == 0 {
+				// Need to obtain ports annotation for the first time
+				UpdateComponentInfo(key)
+			}
+			websocket.JSON.Send(ws, entry)
+		}
 	}
 }
 

@@ -25,8 +25,8 @@ type clearGraph struct {
 	Name        string `json:",omitempty"` // ignored
 	Library     string `json:",omitempty"` // ignored
 	Main        bool   `json:",omitempty"`
-	Icon        string `json:",omitempty"` // ignored
-	Description string `json:",omitempty"` // ignored
+	Icon        string `json:",omitempty"`
+	Description string `json:",omitempty"`
 }
 
 // addNode message is sent by client to add a node to a graph
