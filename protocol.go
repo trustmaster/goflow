@@ -13,10 +13,10 @@ type Message struct {
 
 // runtimeInfo message contains response to runtime.getruntime request
 type runtimeInfo struct {
-	Type         string
-	Version      string
-	Capabilities []string
-	Id           string
+	Type         string   `json:"type"`
+	Version      string   `json:"version"`
+	Capabilities []string `json:"capabilities"`
+	Id           string   `json:"id"`
 }
 
 // clearGraph message is sent by client to create a new empty graph
@@ -151,21 +151,21 @@ type renamePort struct {
 
 // PortInfo represents a port to a runtime client
 type PortInfo struct {
-	Id          string
-	Type        string
-	Description string
-	Addressable bool // ignored
-	Required    bool
-	Values      []interface{} // ignored
-	Default     interface{}   // ignored
+	Id          string        `json:"id"`
+	Type        string        `json:"type"`
+	Description string        `json:"description"`
+	Addressable bool          `json:"addressable"` // ignored
+	Required    bool          `json:"required"`
+	Values      []interface{} `json:"values"`  // ignored
+	Default     interface{}   `json:"default"` // ignored
 }
 
 // ComponentInfo represents a component to a protocol client
 type ComponentInfo struct {
-	Name        string
-	Description string
-	Icon        string
-	Subgraph    bool
-	InPorts     []PortInfo
-	OutPorts    []PortInfo
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Icon        string     `json:"icon"`
+	Subgraph    bool       `json:"subgraph"`
+	InPorts     []PortInfo `json:"inPorts"`
+	OutPorts    []PortInfo `json:"outPorts"`
 }
