@@ -32,10 +32,16 @@ func TestRuntimeGetRuntime(t *testing.T) {
 	if err = websocket.JSON.Send(ws, &Message{"runtime", "getruntime", nil}); err != nil {
 		t.Error(err.Error())
 	}
-	var res runtimeInfo
-	if err = websocket.JSON.Receive(ws, &res); err != nil {
+	var msg runtimeMessage
+	if err = websocket.JSON.Receive(ws, &msg); err != nil {
 		t.Error(err.Error())
+		return
 	}
+	if msg.Protocol != "runtime" || msg.Command != "runtime" {
+		t.Errorf("Invalid protocol (%s) or command (%s)", msg.Protocol, msg.Command)
+		return
+	}
+	res := msg.Payload
 	if res.Type != "goflow" {
 		t.Errorf("Invalid protocol type: %s\n", res.Type)
 	}

@@ -39,14 +39,18 @@ func (r *Runtime) Init(name string) {
 	r.ready = make(chan struct{})
 	r.handlers = make(map[string]protocolHandler)
 	r.handlers["runtime.getruntime"] = func(ws *websocket.Conn, payload interface{}) {
-		websocket.JSON.Send(ws, runtimeInfo{name,
-			"0.4",
-			[]string{"protocol:runtime",
-				"protocol:graph",
-				"protocol:component",
-				"protocol:network",
-				"component:getsource"},
-			r.id,
+		websocket.JSON.Send(ws, runtimeMessage{
+			Protocol: "runtime",
+			Command:  "runtime",
+			Payload: runtimeInfo{Type: name,
+				Version: "0.4",
+				Capabilities: []string{"protocol:runtime",
+					"protocol:graph",
+					"protocol:component",
+					"protocol:network",
+					"component:getsource"},
+				Id: r.id,
+			},
 		})
 	}
 	r.handlers["graph.clear"] = func(ws *websocket.Conn, payload interface{}) {
@@ -70,7 +74,11 @@ func (r *Runtime) Init(name string) {
 		})
 		UpdateComponentInfo(msg.Id)
 		entry, _ := ComponentRegistry[msg.Id]
-		websocket.JSON.Send(ws, entry)
+		websocket.JSON.Send(ws, componentMessage{
+			Protocol: "component",
+			Command:  "component",
+			Payload:  entry.Info,
+		})
 	}
 	r.handlers["graph.addnode"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(addNode)
@@ -111,7 +119,11 @@ func (r *Runtime) Init(name string) {
 		r.graphs[msg.Graph].MapInPort(msg.Public, msg.Node, msg.Port)
 		UpdateComponentInfo(msg.Graph)
 		entry, _ := ComponentRegistry[msg.Graph]
-		websocket.JSON.Send(ws, entry)
+		websocket.JSON.Send(ws, componentMessage{
+			Protocol: "component",
+			Command:  "component",
+			Payload:  entry.Info,
+		})
 	}
 	r.handlers["graph.removeinport"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(removePort)
@@ -119,21 +131,33 @@ func (r *Runtime) Init(name string) {
 		r.graphs[msg.Graph].UnmapInPort(msg.Public)
 		UpdateComponentInfo(msg.Graph)
 		entry, _ := ComponentRegistry[msg.Graph]
-		websocket.JSON.Send(ws, entry)
+		websocket.JSON.Send(ws, componentMessage{
+			Protocol: "component",
+			Command:  "component",
+			Payload:  entry.Info,
+		})
 	}
 	r.handlers["graph.renameinport"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(renamePort)
 		r.graphs[msg.Graph].RenameInPort(msg.From, msg.To)
 		UpdateComponentInfo(msg.Graph)
 		entry, _ := ComponentRegistry[msg.Graph]
-		websocket.JSON.Send(ws, entry)
+		websocket.JSON.Send(ws, componentMessage{
+			Protocol: "component",
+			Command:  "component",
+			Payload:  entry.Info,
+		})
 	}
 	r.handlers["graph.addoutport"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(addPort)
 		r.graphs[msg.Graph].MapOutPort(msg.Public, msg.Node, msg.Port)
 		UpdateComponentInfo(msg.Graph)
 		entry, _ := ComponentRegistry[msg.Graph]
-		websocket.JSON.Send(ws, entry)
+		websocket.JSON.Send(ws, componentMessage{
+			Protocol: "component",
+			Command:  "component",
+			Payload:  entry.Info,
+		})
 	}
 	r.handlers["graph.removeoutport"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(removePort)
@@ -141,14 +165,22 @@ func (r *Runtime) Init(name string) {
 		r.graphs[msg.Graph].UnmapOutPort(msg.Public)
 		UpdateComponentInfo(msg.Graph)
 		entry, _ := ComponentRegistry[msg.Graph]
-		websocket.JSON.Send(ws, entry)
+		websocket.JSON.Send(ws, componentMessage{
+			Protocol: "component",
+			Command:  "component",
+			Payload:  entry.Info,
+		})
 	}
 	r.handlers["graph.renameoutport"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(renamePort)
 		r.graphs[msg.Graph].RenameOutPort(msg.From, msg.To)
 		UpdateComponentInfo(msg.Graph)
 		entry, _ := ComponentRegistry[msg.Graph]
-		websocket.JSON.Send(ws, entry)
+		websocket.JSON.Send(ws, componentMessage{
+			Protocol: "component",
+			Command:  "component",
+			Payload:  entry.Info,
+		})
 	}
 	r.handlers["component.list"] = func(ws *websocket.Conn, payload interface{}) {
 		for key, entry := range ComponentRegistry {
@@ -156,7 +188,11 @@ func (r *Runtime) Init(name string) {
 				// Need to obtain ports annotation for the first time
 				UpdateComponentInfo(key)
 			}
-			websocket.JSON.Send(ws, entry)
+			websocket.JSON.Send(ws, componentMessage{
+				Protocol: "component",
+				Command:  "component",
+				Payload:  entry.Info,
+			})
 		}
 	}
 }

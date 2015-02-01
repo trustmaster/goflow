@@ -4,11 +4,11 @@ package flow
 type Message struct {
 	// Protocol is NoFlo protocol identifier:
 	// "runtime", "component", "graph" or "network"
-	Protocol string
+	Protocol string `json:"protocol"`
 	// Command is a command to be executed within the protocol
-	Command string
+	Command string `json:"command"`
 	// Payload is JSON-encoded body of the message
-	Payload interface{}
+	Payload interface{} `json:"payload"`
 }
 
 // runtimeInfo message contains response to runtime.getruntime request
@@ -17,6 +17,12 @@ type runtimeInfo struct {
 	Version      string   `json:"version"`
 	Capabilities []string `json:"capabilities"`
 	Id           string   `json:"id"`
+}
+
+type runtimeMessage struct {
+	Protocol string      `json:"protocol"`
+	Command  string      `json:"command"`
+	Payload  runtimeInfo `json:"payload"`
 }
 
 // clearGraph message is sent by client to create a new empty graph
@@ -168,4 +174,10 @@ type ComponentInfo struct {
 	Subgraph    bool       `json:"subgraph"`
 	InPorts     []PortInfo `json:"inPorts"`
 	OutPorts    []PortInfo `json:"outPorts"`
+}
+
+type componentMessage struct {
+	Protocol string        `json:"protocol"`
+	Command  string        `json:"command"`
+	Payload  ComponentInfo `json:"payload"`
 }
