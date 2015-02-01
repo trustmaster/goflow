@@ -29,7 +29,7 @@ type Runtime struct {
 }
 
 // Register command handlers
-func (r *Runtime) Init() {
+func (r *Runtime) Init(name string) {
 	uv4, err := uuid.NewV4()
 	if err != nil {
 		log.Println(err.Error())
@@ -39,7 +39,7 @@ func (r *Runtime) Init() {
 	r.ready = make(chan struct{})
 	r.handlers = make(map[string]protocolHandler)
 	r.handlers["runtime.getruntime"] = func(ws *websocket.Conn, payload interface{}) {
-		websocket.JSON.Send(ws, runtimeInfo{"goflow",
+		websocket.JSON.Send(ws, runtimeInfo{name,
 			"0.4",
 			[]string{"protocol:runtime",
 				"protocol:graph",

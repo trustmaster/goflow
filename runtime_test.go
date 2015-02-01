@@ -13,7 +13,7 @@ var (
 func ensureRuntimeStarted() {
 	if !started {
 		r = new(Runtime)
-		r.Init()
+		r.Init("goflow")
 		go r.Listen("localhost:13014")
 		started = true
 		<-r.Ready()
