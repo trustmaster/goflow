@@ -396,3 +396,72 @@ func TestStopProc(t *testing.T) {
 		t.Errorf("Invalid final signal: %d", fin)
 	}
 }
+
+// An active Looper component in classical FBP style
+type counter struct {
+	Component
+	In    <-chan int      `description:"Packets to count"`
+	Reset <-chan struct{} `description:"Reset counter signal"`
+	Count chan<- int      `description:"Number of packets counted"`
+
+	counter int
+}
+
+func (c *counter) Loop() {
+	for {
+		select {
+		// Handle immediate terminate signal from network
+		case <-c.Component.Term:
+			return
+		case _, reset := <-c.Reset:
+			if reset {
+				c.counter = 0
+				c.Count <- c.counter
+			} else {
+				return
+			}
+		case _, input := <-c.In:
+			if input {
+				c.counter++
+				c.Count <- c.counter
+			} else {
+				return
+			}
+		}
+	}
+}
+
+func init() {
+	Register("counter", func() interface{} {
+		return new(counter)
+	})
+	Annotate("counter", ComponentInfo{
+		Description: "Counts input packets",
+	})
+}
+
+// Tests an active Looper component
+func TestLooper(t *testing.T) {
+	c := new(counter)
+	in := make(chan int, 10)
+	rs := make(chan struct{})
+	out := make(chan int, 10)
+	c.In = in
+	c.Reset = rs
+	c.Count = out
+	RunProc(c)
+	for i := 0; i < 10; i++ {
+		in <- i
+		i2 := <-out
+		if i2 != i+1 {
+			t.Errorf("%d != %d", i2, i+1)
+		}
+	}
+	rs <- struct{}{}
+	i2 := <-out
+	if i2 != 0 {
+		t.Errorf("%d != 0", i2)
+	}
+	// Shutdown the component
+	close(in)
+}

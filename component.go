@@ -52,6 +52,12 @@ type Shutdowner interface {
 	Shutdown()
 }
 
+// Looper is a long-running process which actively receives data from its ports
+// using a Loop function
+type Looper interface {
+	Loop()
+}
+
 // postHandler is used to bind handlers to a port
 type portHandler struct {
 	onRecv  reflect.Value
@@ -119,6 +125,9 @@ func RunProc(c interface{}) bool {
 	cases = append(cases, reflect.SelectCase{Dir: reflect.SelectRecv, Chan: vCom.FieldByName("Term")})
 	handlers = append(handlers, portHandler{})
 
+	// Detect active components
+	looper, isLooper := c.(Looper)
+
 	// Iterate over struct fields and bind handlers
 	inputCount := 0
 	for i := 0; i < t.NumField(); i++ {
@@ -139,7 +148,7 @@ func RunProc(c interface{}) bool {
 		}
 	}
 
-	if inputCount == 0 {
+	if inputCount == 0 && !isLooper {
 		panic("Components with no input ports are not supported")
 	}
 
@@ -237,6 +246,7 @@ func RunProc(c interface{}) bool {
 		for poolIndex = 0; poolIndex < poolSize; poolIndex++ {
 			poolWait.Add(1)
 			go func() {
+				// TODO add pool of Loopers support
 				for {
 					chosen, recv, recvOK := reflect.Select(cases)
 					if !recvOK {
@@ -264,6 +274,15 @@ func RunProc(c interface{}) bool {
 		}
 	} else {
 		go func() {
+			if isLooper {
+				defer func() {
+					terminate()
+					handlersDone.Done()
+				}()
+				handlersDone.Add(1)
+				looper.Loop()
+				return
+			}
 			for {
 				chosen, recv, recvOK := reflect.Select(cases)
 				if !recvOK {
