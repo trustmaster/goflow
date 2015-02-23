@@ -683,3 +683,34 @@ func TestNToOneConnections(t *testing.T) {
 	// Wait for finalization signal
 	<-net.Wait()
 }
+
+// Tests a network containing active component(s)
+func TestNetWithLooper(t *testing.T) {
+	net := new(Canvas)
+	net.InitGraphState()
+
+	net.AddNew("echoer", "e")
+	net.AddNew("counter", "c")
+
+	net.Connect("e", "Out", "c", "In")
+
+	net.MapInPort("In", "e", "In")
+	net.MapOutPort("Out", "c", "Count")
+
+	in, out := make(chan int), make(chan int)
+
+	net.SetInPort("In", in)
+	net.SetOutPort("Out", out)
+
+	RunNet(net)
+
+	for i := 0; i < 10; i++ {
+		in <- i
+		i2 := <-out
+		if i2 != i+1 {
+			t.Errorf("%d != %d", i2, i+1)
+		}
+	}
+	// Shutdown the network
+	close(in)
+}
