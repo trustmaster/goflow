@@ -6,8 +6,8 @@ The main properties of the proposed model are:
 
 * Concurrent - graph nodes run in parallel.
 * Structural - applications are described as components, their ports and connections between them.
-* Event-driven - system's behavior is how components react to events.
-* Asynchronous - there is no determined order in which events happen.
+* Reactive/active - system's behavior is how components react to events or how they handle their lifecycle.
+* Asynchronous/synchronous - there is no determined order in which events happen, unless you demand for such order.
 * Isolated - sharing is done by communication, state is not shared.
 
 ## Getting started
@@ -152,6 +152,7 @@ godoc github.com/trustmaster/goflow
 
 Here are related projects and resources:
 
+* [Flowbased.org](https://github.com/flowbased/flowbased.org/wiki), specifications and recommendations for FBP systems.
 * [J. Paul Morrison's Flow-Based Programming](http://www.jpaulmorrison.com/fbp/), the origin of FBP, [JavaFBP, C#FBP](http://sourceforge.net/projects/flow-based-pgmg/) and [DrawFBP](http://www.jpaulmorrison.com/fbp/#DrawFBP) diagramming tool.
 * [Knol about FBP](http://knol.google.com/k/flow-based-programming)
 * [NoFlo](http://noflojs.org/), FBP for JavaScript and Node.js
@@ -160,7 +161,6 @@ Here are related projects and resources:
 
 ## TODO
 
-* Integration with NoFlo-UI
+* Integration with NoFlo-UI/Flowhub (in progress)
 * Distributed networks via TCP/IP and UDP
-* Better run-time restructuring and evolution
 * Reflection and monitoring of networks
