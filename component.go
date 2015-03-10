@@ -273,40 +273,42 @@ func RunProc(c interface{}) bool {
 			}()
 		}
 	} else {
-		go func() {
-			if isLooper {
-				defer func() {
-					terminate()
-					handlersDone.Done()
-				}()
-				handlersDone.Add(1)
-				looper.Loop()
-				return
-			}
-			for {
-				chosen, recv, recvOK := reflect.Select(cases)
-				if !recvOK {
-					if chosen == 0 {
-						// Term signal
+		for i := 0; i < inputCount; i++ {
+			go func() {
+				if isLooper {
+					defer func() {
 						terminate()
-					} else {
-						// Port has been closed
-						closeHandler(handlers[chosen].onClose)
-					}
+						handlersDone.Done()
+					}()
+					handlersDone.Add(1)
+					looper.Loop()
 					return
 				}
-				if handlers[chosen].onRecv.IsValid() {
-					handlersDone.Add(1)
-					if componentMode == ComponentModeAsync || componentMode == ComponentModeUndefined && DefaultComponentMode == ComponentModeAsync {
-						// Async mode
-						go recvHandler(handlers[chosen].onRecv, recv)
-					} else {
-						// Sync mode
-						recvHandler(handlers[chosen].onRecv, recv)
+				for {
+					chosen, recv, recvOK := reflect.Select(cases)
+					if !recvOK {
+						if chosen == 0 {
+							// Term signal
+							terminate()
+						} else {
+							// Port has been closed
+							closeHandler(handlers[chosen].onClose)
+						}
+						return
+					}
+					if handlers[chosen].onRecv.IsValid() {
+						handlersDone.Add(1)
+						if componentMode == ComponentModeAsync || componentMode == ComponentModeUndefined && DefaultComponentMode == ComponentModeAsync {
+							// Async mode
+							go recvHandler(handlers[chosen].onRecv, recv)
+						} else {
+							// Sync mode
+							recvHandler(handlers[chosen].onRecv, recv)
+						}
 					}
 				}
-			}
-		}()
+			}()
+		}
 	}
 
 	// Indicate the process as running
