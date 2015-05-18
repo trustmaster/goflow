@@ -1,12 +1,12 @@
 package flow
 
 import (
-	"code.google.com/p/go.net/websocket"
+	"github.com/Synthace/internal/code.google.com/p/go.net/websocket"
 	//"github.com/nu7hatch/gouuid"
 	//"log"
 	//"net"
 	//"net/http"
-    //"fmt"
+	//"fmt"
 )
 
 type nodeHandler func(*websocket.Conn, interface{})

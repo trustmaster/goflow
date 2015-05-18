@@ -2,7 +2,7 @@
 package flow
 
 import (
-	"code.google.com/p/go.net/websocket"
+	"github.com/Synthace/internal/code.google.com/p/go.net/websocket"
 	"fmt"
 	"reflect"
 	"sync"
@@ -353,6 +353,7 @@ func StopProc(c interface{}) bool {
 type components struct {
 	Component []componentInfo `json:""`
 }
+
 /*
 type componentInfo struct {
 	Name        string  `json:"name"`
@@ -389,9 +390,9 @@ func (r *Runtime) componentList(ws *websocket.Conn, payload interface{}) {
 			{"Title",
 				"string",
 				"",
-                false,
-                false,
-                nil,
+				false,
+				false,
+				nil,
 				""},
 		},
 		[]portInfo{{"Res",

@@ -1,13 +1,13 @@
 package flow
 
 import (
-	"code.google.com/p/go.net/websocket"
-	"github.com/nu7hatch/gouuid"
+	"github.com/Synthace/internal/code.google.com/p/go.net/websocket"
+	"github.com/Synthace/internal/github.com/nu7hatch/gouuid"
 	"log"
 	//"net"
 	"net/http"
-    "fmt"
-    ms "github.com/mitchellh/mapstructure"
+	"fmt"
+	ms "github.com/Synthace/internal/github.com/mitchellh/mapstructure"
 )
 
 type protocolHandler func(*websocket.Conn, interface{})
@@ -32,10 +32,11 @@ type Runtime struct {
 
 //
 type wsSend struct {
-    Command string `json:"command"`
-    Protocol string `json:"protocol"`
-    Payload interface{} `json:"payload"`
+	Command  string      `json:"command"`
+	Protocol string      `json:"protocol"`
+	Payload  interface{} `json:"payload"`
 }
+
 /*
 // runtimeInfo message contains response to runtime.getruntime request
 type runtimeInfo struct {
@@ -47,9 +48,9 @@ type runtimeInfo struct {
 */
 // runtimeInfo message contains response to runtime.getruntime request
 type networkInfo struct {
-	Graph       string `json:"graph"`
-	Running     bool `json:"running"`
-	Started        bool `json:"started"`
+	Graph   string `json:"graph"`
+	Running bool   `json:"running"`
+	Started bool   `json:"started"`
 }
 
 // Register command handlers
@@ -63,27 +64,27 @@ func (r *Runtime) Init() {
 	r.ready = make(chan struct{})
 	r.handlers = make(map[string]protocolHandler)
 	r.handlers["runtime.getruntime"] = func(ws *websocket.Conn, payload interface{}) {
-        websocket.JSON.Send(ws, wsSend{"runtime", "runtime", runtimeInfo{"0.4",
-            "fbp-go-example",
-            []string{"protocol:runtime",
-                "protocol:graph",
-                "protocol:component",
-                "protocol:network",
-                "component:getsource",
-                },
-            r.id,
+		websocket.JSON.Send(ws, wsSend{"runtime", "runtime", runtimeInfo{"0.4",
+			"fbp-go-example",
+			[]string{"protocol:runtime",
+				"protocol:graph",
+				"protocol:component",
+				"protocol:network",
+				"component:getsource",
+			},
+			r.id,
 		}})
 	}
 	r.handlers["network.getstatus"] = func(ws *websocket.Conn, payload interface{}) {
-        fmt.Println("handle network.getstatus")
-        websocket.JSON.Send(ws, wsSend{"network", "status", networkInfo{"main",
-            true,
-            true,
-        }})
-    }
+		fmt.Println("handle network.getstatus")
+		websocket.JSON.Send(ws, wsSend{"network", "status", networkInfo{"main",
+			true,
+			true,
+		}})
+	}
 	r.handlers["network.debug"] = func(ws *websocket.Conn, payload interface{}) {
-        fmt.Println("handle network.debug")
-    }
+		fmt.Println("handle network.debug")
+	}
 	r.handlers["graph.clear"] = func(ws *websocket.Conn, payload interface{}) {
 		msg := payload.(clearGraph)
 		r.graphs[msg.Id] = new(Graph)
@@ -96,12 +97,12 @@ func (r *Runtime) Init() {
 		// TODO send component.component back
 	}
 	r.handlers["graph.addnode"] = func(ws *websocket.Conn, payload interface{}) {
-        fmt.Println(payload)
-        var msg addNode
-        err := ms.Decode(payload, &msg)
-        if err != nil {
-            panic(err)
-        }
+		fmt.Println(payload)
+		var msg addNode
+		err := ms.Decode(payload, &msg)
+		if err != nil {
+			panic(err)
+		}
 		r.graphs[msg.Graph].AddNew(msg.Component, msg.Id)
 	}
 	r.handlers["graph.removenode"] = func(ws *websocket.Conn, payload interface{}) {
@@ -161,61 +162,61 @@ func (r *Runtime) Init() {
 		r.graphs[msg.Graph].RenameOutPort(msg.From, msg.To)
 	}
 	r.handlers["component.list"] = func(ws *websocket.Conn, payload interface{}) {
-        fmt.Println("handle component.list")
-        websocket.JSON.Send(ws, wsSend{"component", "component", componentInfo{"Greeter",
-            "Manually Entered Greeter Element for Like, Y'know, Testing or Whatever",
-            "",
-            false,
-            []portInfo{{"Name",
-                "string",
-                "",
-                false,
-                false,
-                nil,
-                "",},
-                {"Title",
-                "string",
-                "",
-                false,
-                false,
-                nil,
-                "",},
-            },
-            []portInfo{{"Res",
-                "string",
-                "",
-                false,
-                false,
-                nil,
-                "",},
-            },
-        }},)
-        websocket.JSON.Send(ws, wsSend{"component", "component", componentInfo{"Printer",
-            "Manually Entered Printer Element",
-            "",
-            false,
-            []portInfo{{"Line",
-                "string",
-                "",
-                false,
-                false,
-                nil,
-                "",},
-            },
-            []portInfo{{"",
-                "",
-                "",
-                false,
-                false,
-                nil,
-                "",},
-            },
-        }},)
-        
-        var greeterfunc ComponentConstructor
-        greeterfunc = nil
-        Register("Greeter", greeterfunc)
-            // TODO
+		fmt.Println("handle component.list")
+		websocket.JSON.Send(ws, wsSend{"component", "component", componentInfo{"Greeter",
+			"Manually Entered Greeter Element for Like, Y'know, Testing or Whatever",
+			"",
+			false,
+			[]portInfo{{"Name",
+				"string",
+				"",
+				false,
+				false,
+				nil,
+				""},
+				{"Title",
+					"string",
+					"",
+					false,
+					false,
+					nil,
+					""},
+			},
+			[]portInfo{{"Res",
+				"string",
+				"",
+				false,
+				false,
+				nil,
+				""},
+			},
+		}})
+		websocket.JSON.Send(ws, wsSend{"component", "component", componentInfo{"Printer",
+			"Manually Entered Printer Element",
+			"",
+			false,
+			[]portInfo{{"Line",
+				"string",
+				"",
+				false,
+				false,
+				nil,
+				""},
+			},
+			[]portInfo{{"",
+				"",
+				"",
+				false,
+				false,
+				nil,
+				""},
+			},
+		}})
+
+		var greeterfunc ComponentConstructor
+		greeterfunc = nil
+		Register("Greeter", greeterfunc)
+		// TODO
 	}
 }
 
@@ -235,58 +236,58 @@ func (r *Runtime) Stop() {
 }
 
 func (r *Runtime) Handle(ws *websocket.Conn) {
-    fmt.Println("Handling")
+	fmt.Println("Handling")
 	defer func() {
 		err := ws.Close()
-        fmt.Println("Closed Connection")
+		fmt.Println("Closed Connection")
 		if err != nil {
 			log.Println(err.Error())
 		}
 	}()
-    //defer ws.Close();
-    for {
-        var msg Message
-        if err := websocket.JSON.Receive(ws, &msg); err != nil {
-            log.Println(err.Error())
-            return
-        }
-        fmt.Println(msg)
-        handler, exists := r.handlers[msg.Protocol+"."+msg.Command]
-        fmt.Println(msg.Protocol+"."+msg.Command)
-        if !exists {
-            log.Printf("Unknown command: %s.%s\n", msg.Protocol, msg.Command)
-            return
-        }
-        handler(ws, msg.Payload)
-        fmt.Println("Handle Done")
-    }
+	//defer ws.Close();
+	for {
+		var msg Message
+		if err := websocket.JSON.Receive(ws, &msg); err != nil {
+			log.Println(err.Error())
+			return
+		}
+		fmt.Println(msg)
+		handler, exists := r.handlers[msg.Protocol+"."+msg.Command]
+		fmt.Println(msg.Protocol + "." + msg.Command)
+		if !exists {
+			log.Printf("Unknown command: %s.%s\n", msg.Protocol, msg.Command)
+			return
+		}
+		handler(ws, msg.Payload)
+		fmt.Println("Handle Done")
+	}
 }
 
 func (r *Runtime) Listen(address string) {
 	http.Handle("/", websocket.Handler(r.Handle))
-    if err := http.ListenAndServe(address, nil); err != nil {
-        log.Fatal("ListenAndServe:", err)
-    }
-    fmt.Println("End")
-    /*fmt.Println("listening thing")
-	listener, err := net.Listen("tcp", address)
-	if err != nil {
-		log.Fatalln(err.Error())
+	if err := http.ListenAndServe(address, nil); err != nil {
+		log.Fatal("ListenAndServe:", err)
 	}
-    fmt.Println("done listening")
-
-	go func() {
-		err = http.Serve(listener, nil)
+	fmt.Println("End")
+	/*fmt.Println("listening thing")
+		listener, err := net.Listen("tcp", address)
 		if err != nil {
 			log.Fatalln(err.Error())
 		}
-	}()
-	close(r.ready)
-    fmt.Println("ready is closed")
+	    fmt.Println("done listening")
 
-	// Wait for termination signal
-	<-r.done
-    fmt.Println("runtime is done")
-	listener.Close()
-    fmt.Println("listener closed")*/
+		go func() {
+			err = http.Serve(listener, nil)
+			if err != nil {
+				log.Fatalln(err.Error())
+			}
+		}()
+		close(r.ready)
+	    fmt.Println("ready is closed")
+
+		// Wait for termination signal
+		<-r.done
+	    fmt.Println("runtime is done")
+		listener.Close()
+	    fmt.Println("listener closed")*/
 }

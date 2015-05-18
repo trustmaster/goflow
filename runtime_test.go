@@ -1,7 +1,7 @@
 package flow
 
 import (
-	"code.google.com/p/go.net/websocket"
+	"github.com/Synthace/internal/code.google.com/p/go.net/websocket"
 	"testing"
 )
 
