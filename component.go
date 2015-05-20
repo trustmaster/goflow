@@ -2,8 +2,8 @@
 package flow
 
 import (
-	"github.com/Synthace/internal/code.google.com/p/go.net/websocket"
 	"fmt"
+	"github.com/Synthace/internal/code.google.com/p/go.net/websocket"
 	"reflect"
 	"sync"
 )
@@ -67,7 +67,7 @@ var inputCounter = 0
 
 // RunProc runs event handling loop on component ports.
 // It returns true on success or panics with error message and returns false on error.
-func RunProc(c interface{}, nump int) bool {
+func RunProc(c interface{}) bool {
 	// Check if passed interface is a valid pointer to struct
 	v := reflect.ValueOf(c)
 	if v.Kind() != reflect.Ptr || v.IsNil() {

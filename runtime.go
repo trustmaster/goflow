@@ -5,9 +5,9 @@ import (
 	"github.com/Synthace/internal/github.com/nu7hatch/gouuid"
 	"log"
 	//"net"
-	"net/http"
 	"fmt"
 	ms "github.com/Synthace/internal/github.com/mitchellh/mapstructure"
+	"net/http"
 )
 
 type protocolHandler func(*websocket.Conn, interface{})

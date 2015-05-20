@@ -599,7 +599,7 @@ func (n *Graph) run() {
 		if r.FieldByName("Graph").IsValid() {
 			RunNet(v)
 		} else {
-			RunProc(v, nump)
+			RunProc(v)
 		}
 	}
 	n.isRunning = true
@@ -697,8 +697,10 @@ func (n *Graph) run() {
 	}
 }
 
-/*// RunProc starts a proc added to a net at run time
+// RunProc starts a proc added to a net at run time
 func (n *Graph) RunProc(procName string) bool {
+	panic("FIXME(ddn): commented out for some reason")
+
 	if !n.isRunning {
 		return false
 	}
@@ -718,7 +720,7 @@ func (n *Graph) RunProc(procName string) bool {
 		}
 		return ok
 	}
-}*/
+}
 
 // Stop terminates the network without closing any connections
 func (n *Graph) Stop() {
