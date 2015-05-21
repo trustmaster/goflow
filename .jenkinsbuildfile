@@ -1,1 +1,57 @@
 #!/bin/bash
+# Script that is run by jenkins for every commit.
+SHORTNAME=$(git rev-parse --short HEAD)
+TAG=${JOB_NAME##*/}-$BUILD_NUMBER-$SHORTNAME
+
+rm -fr reports
+mkdir -p reports
+
+docker build -q -t $TAG -f Dockerfile .
+if [ $? -ne 0 ]; then
+  exit 1
+fi
+
+CONTAINER=$(docker run -dt -v `pwd`/..:/go/src/github.com/Synthace $TAG)
+
+# (1) Build in container
+docker exec $CONTAINER go build ./...
+ERR=$?
+
+if [ $ERR -eq 0 ]; then 
+  # (2) Test in container
+  docker exec $CONTAINER bash -c "go test -v ./... | go-junit-report" > reports/test.xml
+  # $? = 0 => tests all passed
+  # $? = 1 => some test failed
+  # $? = 2 => some test did not build
+  ERR=$?
+  if [ $ERR -le 1 ]; then
+    # Only broken tests should break the build
+    ERR=0
+  fi
+
+  # (3) Test coverage
+  if [ $ERR -eq 0 ]; then
+    for p in $(docker exec $CONTAINER go list ./...); do
+      NAME=$(echo "$p" | sed 's/\//-/g')
+      docker exec $CONTAINER bash -c "gocov test $p | gocov-xml" > reports/coverage-${NAME}.xml
+    done
+    # Clean up failed tests to not confuse Cobertura plugin
+    find reports -type f -name 'coverage-*.xml' -size 0 -print0 | xargs -0 rm
+  fi
+fi
+
+docker stop $CONTAINER
+docker wait $CONTAINER
+docker ps -aq | xargs docker rm -f
+
+# Clean up docker image cache if it gets too big
+IN_USE=$(df --output=pcent / 2> /dev/null | sed '1d' | sed 's/%//' )
+# Example output:
+# $ df --output=pcent /
+# Use%
+# 31%
+if [ -n "$IN_USE" ] && [ "$IN_USE" -gt 80 ]; then
+  docker images -q | xargs docker rmi -f
+fi
+
+exit $ERR
