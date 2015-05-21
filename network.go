@@ -1,10 +1,11 @@
 package flow
 
 import (
+	"errors"
+	"fmt"
 	"github.com/Synthace/internal/code.google.com/p/go.net/websocket"
 	"reflect"
 	"sync"
-	"fmt"
 )
 
 // DefaultBufferSize is the default channel buffer capacity.
@@ -26,18 +27,18 @@ type port struct {
 	channel reflect.Value
 }
 
-// portName stores full port name within the network.
-type portName struct {
+// PortName stores full port name within the network.
+type FullPortName struct {
 	// Process name in the network
-	proc string
+	Proc string
 	// Port name of the process
-	port string
+	Port string
 }
 
 // connection stores information about a connection within the net.
 type connection struct {
-	src     portName
-	tgt     portName
+	src     FullPortName
+	tgt     FullPortName
 	channel reflect.Value
 	buffer  int
 }
@@ -214,11 +215,11 @@ func (n *Graph) Rename(processName, newName string) bool {
 		return false
 	}
 	for i, conn := range n.connections {
-		if conn.src.proc == processName {
-			n.connections[i].src.proc = newName
+		if conn.src.Proc == processName {
+			n.connections[i].src.Proc = newName
 		}
-		if conn.tgt.proc == processName {
-			n.connections[i].tgt.proc = newName
+		if conn.tgt.Proc == processName {
+			n.connections[i].tgt.Proc = newName
 		}
 	}
 	for key, port := range n.inPorts {
@@ -261,6 +262,71 @@ func (n *Graph) RemoveIIP(processName, portName string) bool {
 	return false
 }
 
+func (n *Graph) getPort(procName, portName string,
+	extractFromPM func(portMapper, string) reflect.Value) (reflect.Value, error) {
+
+	proc, found := n.procs[procName]
+	var port reflect.Value
+	if !found {
+		return port, errors.New("name '" + procName + "' not found")
+	}
+	v := reflect.ValueOf(proc).Elem()
+	if !v.CanSet() {
+		return port, errors.New(procName + " is not settable")
+	}
+	var net reflect.Value
+	if v.Type().Name() == "Graph" {
+		net = v
+	} else {
+		net = v.FieldByName("Graph")
+	}
+	if net.IsValid() {
+		// Port is a net
+		if pm, isPm := net.Addr().Interface().(portMapper); isPm {
+			port = extractFromPM(pm, portName)
+		}
+	} else {
+		// Port is a proc
+		port = v.FieldByName(portName)
+	}
+
+	return port, nil
+}
+
+func validReceiverPort(x reflect.Value) bool {
+	t := x.Type()
+	if t.Kind() == reflect.Chan && t.ChanDir()&reflect.RecvDir != 0 {
+		return true
+	}
+	return false
+}
+
+const (
+	senderInvalid = iota
+	senderSlice
+	senderChannel
+)
+
+func validSenderPort(x reflect.Value) int {
+	t := x.Type()
+	if t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Chan && t.Elem().ChanDir()&reflect.SendDir != 0 {
+		return senderSlice
+	} else if t.Kind() == reflect.Chan && t.ChanDir()&reflect.SendDir != 0 {
+		return senderChannel
+	}
+	return senderInvalid
+}
+
+func (n *Graph) findChannel(proc, port string, fn func(connection) FullPortName) reflect.Value {
+	for _, c := range n.connections {
+		x := fn(c)
+		if x.Proc == proc && x.Port == port {
+			return c.channel
+		}
+	}
+	return reflect.Value{}
+}
+
 // Connect connects a sender to a receiver and creates a channel between them using DefaultBufferSize.
 // Normally such a connection is unbuffered but you can change by setting flow.DefaultBufferSize > 0 or
 // by using ConnectBuf() function instead.
@@ -272,130 +338,60 @@ func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort strin
 // Connect connects a sender to a receiver using a channel with a buffer of a given size.
 // It returns true on success or panics and returns false if error occurs.
 func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort string, bufferSize int) bool {
-	// Ensure sender and receiver processes exist
-	sender, senderFound := n.procs[senderName]
-	receiver, receiverFound := n.procs[receiverName]
-	if !senderFound {
-		panic("Sender '" + senderName + "' not found")
-		return false
+	sport, err := n.getPort(senderName, senderPort, func(pm portMapper, n string) reflect.Value { return pm.getOutPort(n) })
+	if err != nil {
+		panic(err.Error())
 	}
-	if !receiverFound {
-		panic("Receiver '" + receiverName + "' not found")
-		return false
+	scase := validSenderPort(sport)
+	if scase == senderInvalid {
+		panic(senderName + "." + senderPort + " is not a valid output channel")
 	}
 
-	// Ensure sender and receiver are settable
-	sp := reflect.ValueOf(sender)
-	sv := sp.Elem()
-	// st := sv.Type()
-	rp := reflect.ValueOf(receiver)
-	rv := rp.Elem()
-	// rt := rv.Type()
-	if !sv.CanSet() {
-		panic(senderName + " is not settable")
-		return false
+	rport, err := n.getPort(receiverName, receiverPort, func(pm portMapper, n string) reflect.Value { return pm.getInPort(n) })
+	if err != nil {
+		panic(err.Error())
 	}
-	if !rv.CanSet() {
-		panic(receiverName + " is not settable")
-		return false
-	}
-
-	var sport reflect.Value
-
-	// Get the actual ports and link them to the channel
-	// Check if sender is a net
-	var snet reflect.Value
-	if sv.Type().Name() == "Graph" {
-		snet = sv
-	} else {
-		snet = sv.FieldByName("Graph")
-	}
-	if snet.IsValid() {
-		// Sender is a net
-		if pm, isPm := snet.Addr().Interface().(portMapper); isPm {
-			sport = pm.getOutPort(senderPort)
-		}
-	} else {
-		// Sender is a proc
-		sport = sv.FieldByName(senderPort)
-	}
-
-	// Get the reciever port
-	var rport reflect.Value
-
-	// Check if receiver is a net
-	var rnet reflect.Value
-	if rv.Type().Name() == "Graph" {
-		rnet = rv
-	} else {
-		rnet = rv.FieldByName("Graph")
-	}
-	if rnet.IsValid() {
-		if pm, isPm := rnet.Addr().Interface().(portMapper); isPm {
-			rport = pm.getInPort(receiverPort)
-		}
-	} else {
-		// Receiver is a proc
-		rport = rv.FieldByName(receiverPort)
-	}
-
-	// Validate receiver port
-	rtport := rport.Type()
-	if rtport.Kind() != reflect.Chan || rtport.ChanDir()&reflect.RecvDir == 0 {
+	if !validReceiverPort(rport) {
 		panic(receiverName + "." + receiverPort + " is not a valid input channel")
-		return false
 	}
 
-	// Validate sender port
-	stport := sport.Type()
 	var channel reflect.Value
 	if !rport.IsNil() {
-		for _, mycon := range n.connections {
-			if mycon.tgt.port == receiverPort && mycon.tgt.proc == receiverName {
-				channel = mycon.channel
-				break
-			}
-		}
+		channel = n.findChannel(receiverName, receiverPort, func(c connection) FullPortName { return c.tgt })
 	}
-	if stport.Kind() == reflect.Slice {
 
-		if sport.Type().Elem().Kind() == reflect.Chan && sport.Type().Elem().ChanDir()&reflect.SendDir != 0 {
-
-			if !channel.IsValid() {
-				// Need to create a new channel and add it to the array
-				chanType := reflect.ChanOf(reflect.BothDir, sport.Type().Elem().Elem())
-				channel = reflect.MakeChan(chanType, bufferSize)
-			}
-			sport.Set(reflect.Append(sport, channel))
-			n.IncSendChanRefCount(channel)
+	switch scase {
+	case senderSlice:
+		if !channel.IsValid() {
+			// Need to create a new channel and add it to the array
+			chanType := reflect.ChanOf(reflect.BothDir, sport.Type().Elem().Elem())
+			channel = reflect.MakeChan(chanType, bufferSize)
 		}
-	} else if stport.Kind() == reflect.Chan && stport.ChanDir()&reflect.SendDir != 0 {
-		// Check if channel was already instantiated, if so, use it. Thus we can connect serveral endpoints and golang will pseudo-randomly chooses a receiver
-		// Also, this avoids crashes on <-net.Wait()
+		sport.Set(reflect.Append(sport, channel))
+		n.IncSendChanRefCount(channel)
+	case senderChannel:
+		// Check if channel was already instantiated, if so, use it. Thus we
+		// can connect serveral endpoints and golang will pseudo-randomly
+		// chooses a receiver. Also, this avoids crashes on <-net.Wait()
 		if !sport.IsNil() {
-			//go does not allow cast of unidir chan to bidir chan (for good reason)
-			//but luckily we saved it, so we look it up
+			// go does not allow cast of unidir chan to bidir chan (for good
+			// reason) but luckily we saved it, so we look it up
 			if channel.IsValid() && sport.Addr() != rport.Addr() {
 				panic("Trying to connect an already connected source to an already connected target")
 			}
-			for _, mycon := range n.connections {
-				if mycon.src.port == senderPort && mycon.src.proc == senderName {
-					channel = mycon.channel
-					break
-				}
-			}
+			channel = n.findChannel(senderName, senderPort, func(c connection) FullPortName { return c.src })
 		}
 		// either sport was nil or we did not find a previous channel instance
 		if !channel.IsValid() {
-			// Make a channel of an appropriate type
-			chanType := reflect.ChanOf(reflect.BothDir, stport.Elem())
+			chanType := reflect.ChanOf(reflect.BothDir, sport.Type().Elem())
 			channel = reflect.MakeChan(chanType, bufferSize)
 		}
+	default:
+		panic("unreachable")
 	}
 
 	if channel.IsNil() {
 		panic(senderName + "." + senderPort + " is not a valid output channel")
-		return false
 	}
 
 	// Check if ?port.Set() would cause panic and if so ... panic
@@ -417,10 +413,10 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 
 	// Add connection info
 	n.connections = append(n.connections, connection{
-		src: portName{proc: senderName,
-			port: senderPort},
-		tgt: portName{proc: receiverName,
-			port: receiverPort},
+		src: FullPortName{Proc: senderName,
+			Port: senderPort},
+		tgt: FullPortName{Proc: receiverName,
+			Port: receiverPort},
 		channel: channel,
 		buffer:  bufferSize})
 
@@ -588,6 +584,58 @@ func (n *Graph) UnmapOutPort(name string) bool {
 	return true
 }
 
+func (n *Graph) getUnbound(cfn func(connection) FullPortName, ports map[string]port, vfn func(reflect.Value) bool) []FullPortName {
+	// TODO(ddn): probably should maintain these lookup structures on the side
+	// if we expect this to be performance critical
+	r := make([]FullPortName, 0)
+	seen := make(map[FullPortName]bool)
+	for _, c := range n.connections {
+		seen[cfn(c)] = true
+	}
+	for _, v := range ports {
+		k := FullPortName{Proc: v.proc, Port: v.port}
+		if !v.channel.IsNil() {
+			seen[k] = true
+		}
+	}
+	for name, proc := range n.procs {
+		if _, isNet := proc.(portMapper); isNet {
+			panic("not yet implemented: querying subnet for ports")
+		}
+		v := reflect.ValueOf(proc).Elem()
+		numFields := v.NumField()
+		for i := 0; i < numFields; i++ {
+			fv := v.Field(i)
+			ft := v.Type().Field(i)
+			k := FullPortName{Proc: name, Port: ft.Name}
+			if in := seen[k]; !in && vfn(fv) {
+				r = append(r, k)
+			}
+		}
+	}
+	return r
+}
+
+// GetUnboundOutPorts returns list of port names that haven't been the source
+// of Graph.Connect or the subject of MapOutPort. Assumes that all channel
+// fields or slices of channels fields are possible ports.
+func (n *Graph) GetUnboundOutPorts() []FullPortName {
+	return n.getUnbound(
+		func(c connection) FullPortName { return c.src },
+		n.outPorts,
+		func(fv reflect.Value) bool { return validSenderPort(fv) != senderInvalid })
+}
+
+// GetUnboundOutPorts returns list of port names that haven't been the target
+// of Graph.Connect or the subject of MapInPort. Assumes that all channel
+// fields or slices of channels fields are possible ports.
+func (n *Graph) GetUnboundInPorts() []FullPortName {
+	return n.getUnbound(
+		func(c connection) FullPortName { return c.tgt },
+		n.inPorts,
+		func(fv reflect.Value) bool { return validReceiverPort(fv) })
+}
+
 // run runs the network and waits for all processes to finish.
 func (n *Graph) run() {
 	// Add processes to the waitgroup before starting them
@@ -622,7 +670,7 @@ func (n *Graph) run() {
 		if !found {
 			// Try to find among connections
 			for _, conn := range n.connections {
-				if conn.tgt.proc == ip.proc && conn.tgt.port == ip.port {
+				if conn.tgt.Proc == ip.proc && conn.tgt.Port == ip.port {
 					rport = conn.channel
 					found = true
 					break

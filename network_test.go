@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 )
@@ -68,6 +69,92 @@ func (n *testNet) Init() {
 func (n *testNet) Finish() {
 	n.InitTestFlag = 456
 	n.FinTestFlag <- true
+}
+
+func TestMissingIn(t *testing.T) {
+	net := newTestNet(t)
+	out := make(chan int)
+	net.SetOutPort("Out", out)
+
+	unbound := net.GetUnboundInPorts()
+
+	if x := len(unbound); x != 1 {
+		t.Errorf("UnboundInPorts %d != 1", x)
+		return
+	}
+
+	channels := make([]chan int, 0)
+	for i, p := range unbound {
+		c := make(chan int)
+		name := fmt.Sprintf("In%d", i)
+		net.MapInPort(name, p.Proc, p.Port)
+		net.SetInPort(name, c)
+		channels = append(channels, c)
+	}
+
+	RunNet(net)
+	for _, c := range channels {
+		c <- 1
+		close(c)
+	}
+	<-out
+	<-net.FinTestFlag
+	<-net.Wait()
+}
+
+func TestMissingOut(t *testing.T) {
+	net := newTestNet(t)
+	in := make(chan int)
+	net.SetInPort("In", in)
+
+	unbound := net.GetUnboundOutPorts()
+
+	if x := len(unbound); x != 1 {
+		t.Errorf("UnboundOutPorts %d != 1", x)
+		return
+	}
+
+	channels := make([]chan int, 0)
+	for i, p := range unbound {
+		c := make(chan int)
+		name := fmt.Sprintf("Out%d", i)
+		net.MapOutPort(name, p.Proc, p.Port)
+		net.SetOutPort(name, c)
+		channels = append(channels, c)
+	}
+
+	RunNet(net)
+	in <- 1
+	for _, c := range channels {
+		<-c
+	}
+	close(in)
+	<-net.FinTestFlag
+	<-net.Wait()
+}
+
+func TestNotMissingOut(t *testing.T) {
+	net := newTestNet(t)
+	in := make(chan int)
+	out := make(chan int)
+	net.SetInPort("In", in)
+	net.SetOutPort("Out", out)
+
+	// Run the test network
+	RunNet(net)
+
+	if x := len(net.GetUnboundOutPorts()); x != 0 {
+		t.Errorf("UnboundOutPorts %d != 1", x)
+	}
+	if x := len(net.GetUnboundInPorts()); x != 0 {
+		t.Errorf("UnboundInPorts %d != 1", x)
+	}
+
+	in <- 1
+	<-out
+	close(in)
+	<-net.FinTestFlag
+	<-net.Wait()
 }
 
 // Tests a simple connection between two components in the net
