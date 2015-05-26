@@ -1,7 +1,19 @@
 #!/bin/bash
 # Script that is run by jenkins for every commit.
 SHORTNAME=$(git rev-parse --short HEAD)
-TAG=${JOB_NAME##*/}-$BUILD_NUMBER-$SHORTNAME
+if [ -z "${SHORTNAME}" ]; then
+  echo >&2 "This script must be run from git repo"
+  exit 1
+fi
+
+if [ -z "${JOB_NAME}" ]; then
+  TAG=$SHORTNAME
+else
+  TAG=${JOB_NAME##*/}-$BUILD_NUMBER-$SHORTNAME
+fi
+
+# Make sure paths are relative to repo root
+cd $(dirname $0)
 
 rm -fr reports
 mkdir -p reports
