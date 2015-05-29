@@ -76,7 +76,8 @@ def main():
     container = subprocess.check_output(["docker", "run", "-dt", "-v", volume_desc, tag]).strip()
     try:
         # (1) Build in container
-        docker_exec(container, ["make"])
+        if os.path.exists("Makefile"):
+            docker_exec(container, ["make"])
         docker_exec(container, ["go", "build", "./..."])
         # (2) Run tests
         r = docker_exec(container, ["bash", "-c", "go test -v ./... | go-junit-report"],
@@ -102,7 +103,7 @@ def main():
         # Clean up docker image cache if it gets too big
         usage = disk_usage(os.environ.get("HOME", os.curdir))
         free = usage.free * 1.0 / usage.total
-        print("Percent Free: {0} {1}".format(free, usage))
+        print("Percent Free: {0:.2f}".format(free))
         if free < .10:
             for image in subprocess.check_output(["docker", "images", "-q"]).splitlines():
                 subprocess.check_call(["docker", "rmi", "-f", image])
