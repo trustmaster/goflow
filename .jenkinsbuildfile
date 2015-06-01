@@ -33,6 +33,16 @@ def docker_exec(container, args, check_retcode=True, output_file=None):
     return retcode
 
 
+def check_call(*args, **kwargs):
+    """Like subprocess.check_call() but with an extra key-word parameter hide_output"""
+    if "hide_output" in kwargs:
+        del kwargs["hide_output"]
+        with open(os.devnull, 'w') as f:
+            subprocess.check_call(*args, stdout=f, **kwargs)
+    else:
+        subprocess.check_call(*args, **kwargs)
+
+
 def disk_usage(path):
     """
     Return disk usage statistics about the given path as a (total, used, free)
@@ -69,18 +79,19 @@ def disk_usage(path):
 
 
 def main():
+    in_jenkins = "JOB_NAME" in os.environ
     init_reports()
     tag = make_tag()
-    subprocess.check_call(["docker", "build", "-q", "-t", tag, "-f", "Dockerfile", "."])
+    check_call(["docker", "build", "-q", "-t", tag, "-f", "Dockerfile", "."], hide_output=True)
     volume_desc = '{0}:/go/src/github.com/Synthace'.format(os.path.realpath(os.path.pardir))
-    container = subprocess.check_output(["docker", "run", "-dt", "-v", volume_desc, tag]).strip()
+    mc = subprocess.check_output(["docker", "run", "-dt", "-v", volume_desc, tag]).strip()
     try:
         # (1) Build in container
         if os.path.exists("Makefile"):
-            docker_exec(container, ["make"])
-        docker_exec(container, ["go", "build", "./..."])
+            docker_exec(mc, ["make"])
+        docker_exec(mc, ["go", "build", "./..."])
         # (2) Run tests
-        r = docker_exec(container, ["bash", "-c", "go test -v ./... | go-junit-report"],
+        r = docker_exec(mc, ["bash", "-c", "go test -v ./... | go-junit-report"],
                 check_retcode=False, output_file="reports/test.xml")
         # $? = 0 => tests all passed
         # $? = 1 => some test failed
@@ -88,25 +99,28 @@ def main():
         if r > 1:
             raise Exception("Some tests did not build")
         # (3) Run coverage
-        go_packages = subprocess.check_output(["docker", "exec", container, "go", "list", "./..."]).splitlines()
+        go_packages = subprocess.check_output(["docker", "exec", mc, "go", "list", "./..."]).splitlines()
         for package in go_packages:
             outname = "reports/coverage-{0}.xml".format(package.replace("/", "-"))
-            r = docker_exec(container, ["bash", "-c", "gocov test {0} | gocov-xml".format(package)],
+            r = docker_exec(mc, ["bash", "-c", "gocov test {0} | gocov-xml".format(package)],
                     check_retcode=False, output_file=outname)
             if r:
                 os.remove(outname)
     finally:
-        subprocess.call(["docker", "stop", container])
-        subprocess.call(["docker", "wait", container])
-        for container in subprocess.check_output(["docker", "ps", "-aq"]).splitlines():
-            subprocess.check_call(["docker", "rm", "-f", container])
+        for c in [mc]:
+            check_call(["docker", "stop", c], hide_output=True)
+            check_call(["docker", "wait", c], hide_output=True)
+            check_call(["docker", "rm", c], hide_output=True)
         # Clean up docker image cache if it gets too big
-        usage = disk_usage(os.environ.get("HOME", os.curdir))
-        free = usage.free * 1.0 / usage.total
-        print("Percent Free: {0:.2f}".format(free))
-        if free < .10:
-            for image in subprocess.check_output(["docker", "images", "-q"]).splitlines():
-                subprocess.check_call(["docker", "rmi", "-f", image])
+        if in_jenkins:
+            for c in subprocess.check_output(["docker", "ps", "-aq"]).splitlines():
+                check_call(["docker", "rm", "-f", c], hide_output=True)
+            usage = disk_usage(os.environ.get("HOME", os.curdir))
+            free = usage.free * 1.0 / usage.total
+            print("Percent Free: {0:.2f}".format(free))
+            if free < .10:
+                for image in subprocess.check_output(["docker", "images", "-q"]).splitlines():
+                    check_call(["docker", "rmi", "-f", image], hide_output=True)
 
 
 if __name__ == '__main__':
