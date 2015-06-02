@@ -10,7 +10,7 @@ import collections
 
 def make_tag():
     rev = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).strip()
-    return "{0}-{1}-{2}".format(os.environ.get("JOB_NAME", "dev"), os.environ.get("BUILD_NUMBER", "0"), rev)
+    return "{0}-{1}-{2}".format(os.environ.get("JOB_NAME", "dev"), os.environ.get("BUILD_NUMBER", "0"), rev).lower()
 
 
 def init_reports():
