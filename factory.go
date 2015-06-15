@@ -54,6 +54,6 @@ func Factory(componentName string) interface{} {
 	if constructor, exists := ComponentRegistry[componentName]; exists {
 		return constructor()
 	} else {
-		panic("Uknown component name: " + componentName)
+		panic("Unknown component name: " + componentName)
 	}
 }

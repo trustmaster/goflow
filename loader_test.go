@@ -149,9 +149,9 @@ var runtimeNetworkJSON = `{
 }`
 
 func TestRuntimeNetwork(t *testing.T) {
-	net := ParseJSON([]byte(runtimeNetworkJSON))
-	if net == nil {
-		t.Error("Could not load JSON")
+	net, err := ParseJSON([]byte(runtimeNetworkJSON))
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	start := make(chan float64)

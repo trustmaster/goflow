@@ -2,8 +2,10 @@ package flow
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"reflect"
+	"runtime"
 	"strings"
 )
 
@@ -39,14 +41,33 @@ type graphDescription struct {
 	}
 }
 
+type parseJSONPair struct {
+	Graph *Graph
+	Error error
+}
+
 // ParseJSON converts a JSON network definition string into
 // a flow.Graph object that can be run or used in other networks
-func ParseJSON(js []byte) *Graph {
+func ParseJSON(js []byte) (*Graph, error) {
+	r := parseJSON(js)
+	return r.Graph, r.Error
+}
+
+func parseJSON(js []byte) (ret parseJSONPair) {
+	defer func() {
+		if r := recover(); r != nil {
+			if _, ok := r.(runtime.Error); ok {
+				panic(r)
+			}
+			ret.Error = fmt.Errorf("%s", r)
+		}
+	}()
 	// Parse JSON into Go struct
 	var descr graphDescription
 	err := json.Unmarshal(js, &descr)
 	if err != nil {
-		return nil
+		ret.Error = err
+		return
 	}
 	// fmt.Printf("%+v\n", descr)
 
@@ -90,7 +111,8 @@ func ParseJSON(js []byte) *Graph {
 			procType := reflect.TypeOf(net.Get(procName)).Elem()
 			field, fieldFound := procType.FieldByName(procPort)
 			if !fieldFound {
-				panic("Private port '" + export.Private + "' not found")
+				ret.Error = fmt.Errorf("Private port '%s' not found", export.Private)
+				return nil
 			}
 			if field.Type.Kind() == reflect.Chan && (field.Type.ChanDir()&reflect.RecvDir) != 0 {
 				// It's an inport
@@ -100,7 +122,8 @@ func ParseJSON(js []byte) *Graph {
 				net.MapOutPort(export.Public, procName, procPort)
 			} else {
 				// It's not a proper port
-				panic("Private port '" + export.Private + "' is not a valid channel")
+				ret.Error = fmt.Errorf("Private port '%s' not found", export.Private)
+				return nil
 			}
 			// TODO add support for subgraphs
 		}
@@ -113,7 +136,8 @@ func ParseJSON(js []byte) *Graph {
 		Register(descr.Properties.Name, constructor)
 	}
 
-	return constructor().(*Graph)
+	ret.Graph = constructor().(*Graph)
+	return
 }
 
 // LoadJSON loads a JSON graph definition file into
@@ -123,7 +147,12 @@ func LoadJSON(filename string) *Graph {
 	if err != nil {
 		return nil
 	}
-	return ParseJSON(js)
+	g, err := ParseJSON(js)
+	if err != nil {
+		// Hide errors per API
+		return nil
+	}
+	return g
 }
 
 // RegisterJSON registers an external JSON graph definition as a component
