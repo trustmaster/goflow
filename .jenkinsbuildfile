@@ -3,127 +3,20 @@
 
 import os
 import subprocess
-import shutil
-import collections
-
-
-
-def make_tag():
-    rev = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).strip()
-    return "{0}-{1}-{2}".format(os.environ.get("JOB_NAME", "dev"), os.environ.get("BUILD_NUMBER", "0"), rev).lower()
-
-
-def init_reports():
-    shutil.rmtree("reports", ignore_errors = True)
-    os.mkdir("reports")
-
-
-def docker_exec(container, args, check_retcode=True, output_file=None):
-    """Run 'docker exec *args' and optionally redirect output to file"""
-    cmd = ["docker", "exec", container] + args
-    if output_file:
-        with open(output_file, mode="w") as f:
-            retcode = subprocess.Popen(cmd, stdout=f).wait()
-    else:
-        retcode = subprocess.Popen(cmd).wait()
-
-    if check_retcode and retcode != 0:
-        raise subprocess.CalledProcessError(retcode, " ".join(cmd))
-
-    return retcode
-
-
-def check_call(*args, **kwargs):
-    """Like subprocess.check_call() but with an extra key-word parameter hide_output"""
-    if "hide_output" in kwargs:
-        del kwargs["hide_output"]
-        with open(os.devnull, 'w') as f:
-            subprocess.check_call(*args, stdout=f, **kwargs)
-    else:
-        subprocess.check_call(*args, **kwargs)
-
-
-def disk_usage(path):
-    """
-    Return disk usage statistics about the given path as a (total, used, free)
-    namedtuple.  Values are expressed in bytes.
-
-    From: http://code.activestate.com/recipes/577972-disk-usage/?in=user-4178764
-    """
-    _ntuple_diskusage = collections.namedtuple('usage', 'total used free')
-
-    if hasattr(os, 'statvfs'):  # POSIX
-        st = os.statvfs(path)
-        free = st.f_bavail * st.f_frsize
-        total = st.f_blocks * st.f_frsize
-        used = (st.f_blocks - st.f_bfree) * st.f_frsize
-        return _ntuple_diskusage(total, used, free)
-
-    elif os.name == 'nt':       # Windows
-        import ctypes
-        import sys
-
-        _, total, free = ctypes.c_ulonglong(), ctypes.c_ulonglong(), \
-                           ctypes.c_ulonglong()
-        if sys.version_info >= (3,) or isinstance(path, unicode):
-            fun = ctypes.windll.kernel32.GetDiskFreeSpaceExW
-        else:
-            fun = ctypes.windll.kernel32.GetDiskFreeSpaceExA
-        ret = fun(path, ctypes.byref(_), ctypes.byref(total), ctypes.byref(free))
-        if ret == 0:
-            raise ctypes.WinError()
-        used = total.value - free.value
-        return _ntuple_diskusage(total.value, used, free.value)
-    else:
-        raise NotImplementedError("platform not supported")
-
-
-def main():
-    in_jenkins = "JOB_NAME" in os.environ
-    init_reports()
-    tag = make_tag()
-    check_call(["docker", "build", "-q", "-t", tag, "-f", "Dockerfile", "."], hide_output=True)
-    volume_desc = '{0}:/go/src/github.com/Synthace'.format(os.path.realpath(os.path.pardir))
-    mc = subprocess.check_output(["docker", "run", "-dt", "-v", volume_desc, tag]).strip()
-    try:
-        # (1) Build in container
-        if os.path.exists("Makefile"):
-            docker_exec(mc, ["make"])
-        docker_exec(mc, ["go", "build", "./..."])
-        # (2) Run tests
-        r = docker_exec(mc, ["bash", "-c", "go test -v ./... | go-junit-report"],
-                check_retcode=False, output_file="reports/test.xml")
-        # $? = 0 => tests all passed
-        # $? = 1 => some test failed
-        # $? = 2 => some test did not build
-        if r > 1:
-            raise Exception("Some tests did not build")
-        # (3) Run coverage
-        go_packages = subprocess.check_output(["docker", "exec", mc, "go", "list", "./..."]).splitlines()
-        for package in go_packages:
-            outname = "reports/coverage-{0}.xml".format(package.replace("/", "-"))
-            r = docker_exec(mc, ["bash", "-c", "gocov test {0} | gocov-xml".format(package)],
-                    check_retcode=False, output_file=outname)
-            if r:
-                os.remove(outname)
-    finally:
-        for c in [mc]:
-            check_call(["docker", "stop", c], hide_output=True)
-            check_call(["docker", "wait", c], hide_output=True)
-            check_call(["docker", "rm", c], hide_output=True)
-        # Clean up docker image cache if it gets too big
-        if in_jenkins:
-            for c in subprocess.check_output(["docker", "ps", "-aq"]).splitlines():
-                check_call(["docker", "rm", "-f", c], hide_output=True)
-            usage = disk_usage(os.environ.get("HOME", os.curdir))
-            free = usage.free * 1.0 / usage.total
-            print("Percent Free: {0:.2f}".format(free))
-            if free < .10:
-                for image in subprocess.check_output(["docker", "images", "-q"]).splitlines():
-                    check_call(["docker", "rmi", "-f", image], hide_output=True)
 
 
 if __name__ == '__main__':
-    # Make sure paths are relative to repo root
-    os.chdir(os.path.realpath(os.path.dirname(__file__)))
-    main()
+    os.environ["GOPATH"] = os.path.join(os.environ["HOME"], "go")
+    deps = ["github.com/Synthace/peanut", "github.com/Synthace/internal"]
+    cmds = []
+    cmds.append("eval `ssh-agent`")
+    cmds.append("ssh-add ~/.ssh/git_key")
+    cmds.append("if ! grep -q github.com ~/.ssh/known_hosts; then ssh-keyscan github.com >> ~/.ssh/known_hosts; else true; fi")
+    for c in deps:
+        b = os.path.dirname(c)
+        cmds.append("mkdir -p $GOPATH/src/{0}".format(b))
+        cmds.append("if [[ -d $GOPATH/src/{0} ]]; then (cd $GOPATH/src/{0} && git pull); else (cd $GOPATH/src/{1} && git clone git@github.com:{2}); fi".format(c, b, c.replace("github.com", "", 1)))
+    cmds.append("go get {0}".format(deps[0]))
+    cmds.append("$GOPATH/bin/peanut test")
+    string = ' && '.join(cmds)
+    subprocess.check_call(["bash", "-c", string])

@@ -1,0 +1,5 @@
+name: goflow
+peanutversion: 0.0.1
+modules:
+    golang:
+      package: github.com/Synthace/goflow
