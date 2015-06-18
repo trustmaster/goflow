@@ -4,19 +4,14 @@
 import os
 import subprocess
 
-
 if __name__ == '__main__':
     os.environ["GOPATH"] = os.path.join(os.environ["HOME"], "go")
-    deps = ["github.com/Synthace/peanut", "github.com/Synthace/internal"]
     cmds = []
     cmds.append("eval `ssh-agent`")
     cmds.append("ssh-add ~/.ssh/git_key")
     cmds.append("if ! grep -q github.com ~/.ssh/known_hosts; then ssh-keyscan github.com >> ~/.ssh/known_hosts; else true; fi")
-    for c in deps:
-        b = os.path.dirname(c)
-        cmds.append("mkdir -p $GOPATH/src/{0}".format(b))
-        cmds.append("if [[ -d $GOPATH/src/{0} ]]; then (cd $GOPATH/src/{0} && git pull); else (cd $GOPATH/src/{1} && git clone git@github.com:{2}); fi".format(c, b, c.replace("github.com", "", 1)))
-    cmds.append("go get {0}".format(deps[0]))
+    cmds.append("git config --global url.git@github.com:Synthace.insteadOf https://github.com/Synthace")
+    cmds.append("go get -u -f github.com/Synthace/peanut")
     cmds.append("$GOPATH/bin/peanut test")
     string = ' && '.join(cmds)
     subprocess.check_call(["bash", "-c", string])
