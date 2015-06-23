@@ -473,6 +473,10 @@ func (n *Graph) Get(processName string) interface{} {
 	}
 }
 
+func (n *Graph) Processes() map[string]interface{} {
+	return n.procs
+}
+
 // getInPort returns the inport with given name as reflect.Value channel.
 func (n *Graph) getInPort(name string) reflect.Value {
 	pName, ok := n.inPorts[name]

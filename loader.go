@@ -10,7 +10,7 @@ import (
 )
 
 // Internal representation of NoFlo JSON format
-type graphDescription struct {
+type GraphDescription struct {
 	Properties struct {
 		Name string
 	}
@@ -54,6 +54,24 @@ func ParseJSON(js []byte) (*Graph, error) {
 }
 
 func parseJSON(js []byte) (ret parseJSONPair) {
+	// Parse JSON into Go struct
+	var descr GraphDescription
+	err := json.Unmarshal(js, &descr)
+	if err != nil {
+		ret.Error = err
+		return
+	}
+	return create(&descr)
+	// fmt.Printf("%+v\n", descr)
+
+}
+
+func Create(descr *GraphDescription) (*Graph, error) {
+	r := create(descr)
+	return r.Graph, r.Error
+}
+
+func create(descr *GraphDescription) (ret parseJSONPair) {
 	defer func() {
 		if r := recover(); r != nil {
 			if _, ok := r.(runtime.Error); ok {
@@ -62,14 +80,6 @@ func parseJSON(js []byte) (ret parseJSONPair) {
 			ret.Error = fmt.Errorf("%s", r)
 		}
 	}()
-	// Parse JSON into Go struct
-	var descr graphDescription
-	err := json.Unmarshal(js, &descr)
-	if err != nil {
-		ret.Error = err
-		return
-	}
-	// fmt.Printf("%+v\n", descr)
 
 	constructor := func() interface{} {
 		// Create a new Graph
