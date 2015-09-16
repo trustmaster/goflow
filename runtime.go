@@ -1,7 +1,7 @@
 package flow
 
 import (
-	"code.google.com/p/go.net/websocket"
+	"golang.org/x/net/websocket"
 	"github.com/nu7hatch/gouuid"
 	"log"
 	"net"
