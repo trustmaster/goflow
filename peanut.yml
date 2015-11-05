@@ -1,5 +1,7 @@
 name: goflow
 peanutversion: 0.0.1
+dependson:
+  - internal
 modules:
     golang:
       package: github.com/Synthace/goflow
