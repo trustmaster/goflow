@@ -7,7 +7,6 @@ import subprocess
 if __name__ == '__main__':
     os.environ["GOPATH"] = os.path.join(os.environ["HOME"], "go")
     cmds = []
-    cmds.append("eval `ssh-agent`")
     cmds.append("ssh-add ~/.ssh/git_key")
     cmds.append("if ! grep -q github.com ~/.ssh/known_hosts; then ssh-keyscan github.com >> ~/.ssh/known_hosts; else true; fi")
     cmds.append("git config --global url.git@github.com:Synthace.insteadOf https://github.com/Synthace")
