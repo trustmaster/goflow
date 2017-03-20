@@ -714,3 +714,86 @@ func TestNetWithLooper(t *testing.T) {
 	// Shutdown the network
 	close(in)
 }
+
+// Component that copies input elements into two output ports
+type doubleEchoer struct {
+	Component
+	In   <-chan int
+	Out1 chan<- int
+	Out2 chan<- int
+}
+
+func (c *doubleEchoer) OnIn(i int) {
+	c.Out1 <- i
+	c.Out2 <- i
+}
+
+// Tests a network having an internal n-to-1 structure.
+func TestNetWithNTo1Components(t *testing.T) {
+	// Initialize the network
+	net := new(oneToNNet)
+	net.InitGraphState()
+
+	// Set components and structure
+	if !net.Add(new(echoer), "aggregator") {
+		t.Fatalf("Couldn't add aggregator")
+	}
+
+	comps := []string{"e1", "e2", "e3", "e4"}
+	for i := range comps {
+		if !net.Add(new(doubleEchoer), comps[i]) {
+			t.Fatalf("Couldn't add %s", comps[i])
+		}
+
+		if !net.Connect(comps[i], "Out2", "aggregator", "In") {
+			t.Fatalf("net.Connect() returned false")
+		}
+
+		if i != 0 {
+			if !net.Connect(comps[i-1], "Out1", comps[i], "In") {
+				t.Fatalf("net.Connect() returned false")
+			}
+		}
+	}
+
+	// Ports
+	net.MapInPort("In", comps[0], "In")
+	net.MapOutPort("Out1", comps[len(comps)-1], "Out1")
+	net.MapOutPort("Out2", "aggregator", "Out")
+
+	// Test network
+	in, out1, out2 := make(chan int), make(chan int), make(chan int)
+
+	net.SetInPort("In", in)
+	net.SetOutPort("Out1", out1)
+	net.SetOutPort("Out2", out2)
+
+	RunNet(net)
+	<-net.Ready()
+
+	// Send test value and shutdown the network
+	in <- 1
+	close(in)
+
+	// Receive and verify output from the network
+	receive := func(ch <-chan int) int {
+		var c int
+		for n := range ch {
+			if n != 1 {
+				t.Errorf("Expected value: 1, received: %v", n)
+			}
+			c += 1
+		}
+		return c
+	}
+
+	outCnt1, outCnt2 := receive(out1), receive(out2)
+
+	if outCnt1 != 1 {
+		t.Errorf("Expected one element as output, received: %v", outCnt1)
+	}
+
+	if outCnt2 != 4 {
+		t.Errorf("Expected four elements as output, received: %v", outCnt2)
+	}
+}

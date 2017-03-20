@@ -237,6 +237,11 @@ func RunProc(c interface{}) bool {
 		}
 	}
 
+	// This accomodates the looper behaviour specifically.
+	// Because a looper does not rely on having a declared input handler, there is no blocking for inputsClosed.
+	// This opens a race condition for handlersDone.
+	handlersEst := make(chan bool, 1)
+
 	// Run the port handlers depending on component mode
 	if componentMode == ComponentModePool && poolSize > 0 {
 		// Pool mode, prefork limited goroutine pool for all inputs
@@ -272,6 +277,7 @@ func RunProc(c interface{}) bool {
 				}
 			}()
 		}
+		handlersEst <- true
 	} else {
 		go func() {
 			if isLooper {
@@ -280,9 +286,11 @@ func RunProc(c interface{}) bool {
 					handlersDone.Done()
 				}()
 				handlersDone.Add(1)
+				handlersEst <- true
 				looper.Loop()
 				return
 			}
+			handlersEst <- true
 			for {
 				chosen, recv, recvOK := reflect.Select(cases)
 				if !recvOK {
@@ -310,6 +318,7 @@ func RunProc(c interface{}) bool {
 	}
 
 	// Indicate the process as running
+	<-handlersEst
 	vCom.FieldByName("IsRunning").SetBool(true)
 
 	go func() {
