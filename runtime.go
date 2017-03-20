@@ -1,11 +1,11 @@
 package flow
 
 import (
-	"code.google.com/p/go.net/websocket"
+	"github.com/gorilla/websocket"
 	"github.com/nu7hatch/gouuid"
 	"log"
-	"net"
 	"net/http"
+	"encoding/json"
 )
 
 type protocolHandler func(*websocket.Conn, interface{})
@@ -26,6 +26,20 @@ type Runtime struct {
 	ready chan struct{}
 	// Websocket server onShutdown signal
 	done chan struct{}
+	// Gorilla Webscocket upgrader
+	upgrader websocket.Upgrader
+}
+
+func sendJSON(ws *websocket.Conn, msg interface{}) {
+	bytes, err := json.Marshal(msg)
+	if err != nil {
+		log.Println("JSON encoding error", err)
+		return
+	}
+	err = ws.WriteMessage(websocket.TextMessage, bytes)
+	if err != nil {
+		log.Println("Websocket write error", err)
+	}
 }
 
 // Register command handlers
@@ -39,7 +53,7 @@ func (r *Runtime) Init(name string) {
 	r.ready = make(chan struct{})
 	r.handlers = make(map[string]protocolHandler)
 	r.handlers["runtime.getruntime"] = func(ws *websocket.Conn, payload interface{}) {
-		websocket.JSON.Send(ws, runtimeMessage{
+		sendJSON(ws, runtimeMessage{
 			Protocol: "runtime",
 			Command:  "runtime",
 			Payload: runtimeInfo{Type: name,
@@ -74,7 +88,7 @@ func (r *Runtime) Init(name string) {
 		})
 		UpdateComponentInfo(msg.Id)
 		entry, _ := ComponentRegistry[msg.Id]
-		websocket.JSON.Send(ws, componentMessage{
+		sendJSON(ws, componentMessage{
 			Protocol: "component",
 			Command:  "component",
 			Payload:  entry.Info,
@@ -119,7 +133,7 @@ func (r *Runtime) Init(name string) {
 		r.graphs[msg.Graph].MapInPort(msg.Public, msg.Node, msg.Port)
 		UpdateComponentInfo(msg.Graph)
 		entry, _ := ComponentRegistry[msg.Graph]
-		websocket.JSON.Send(ws, componentMessage{
+		sendJSON(ws, componentMessage{
 			Protocol: "component",
 			Command:  "component",
 			Payload:  entry.Info,
@@ -131,7 +145,7 @@ func (r *Runtime) Init(name string) {
 		r.graphs[msg.Graph].UnmapInPort(msg.Public)
 		UpdateComponentInfo(msg.Graph)
 		entry, _ := ComponentRegistry[msg.Graph]
-		websocket.JSON.Send(ws, componentMessage{
+		sendJSON(ws, componentMessage{
 			Protocol: "component",
 			Command:  "component",
 			Payload:  entry.Info,
@@ -142,7 +156,7 @@ func (r *Runtime) Init(name string) {
 		r.graphs[msg.Graph].RenameInPort(msg.From, msg.To)
 		UpdateComponentInfo(msg.Graph)
 		entry, _ := ComponentRegistry[msg.Graph]
-		websocket.JSON.Send(ws, componentMessage{
+		sendJSON(ws, componentMessage{
 			Protocol: "component",
 			Command:  "component",
 			Payload:  entry.Info,
@@ -153,7 +167,7 @@ func (r *Runtime) Init(name string) {
 		r.graphs[msg.Graph].MapOutPort(msg.Public, msg.Node, msg.Port)
 		UpdateComponentInfo(msg.Graph)
 		entry, _ := ComponentRegistry[msg.Graph]
-		websocket.JSON.Send(ws, componentMessage{
+		sendJSON(ws, componentMessage{
 			Protocol: "component",
 			Command:  "component",
 			Payload:  entry.Info,
@@ -165,7 +179,7 @@ func (r *Runtime) Init(name string) {
 		r.graphs[msg.Graph].UnmapOutPort(msg.Public)
 		UpdateComponentInfo(msg.Graph)
 		entry, _ := ComponentRegistry[msg.Graph]
-		websocket.JSON.Send(ws, componentMessage{
+		sendJSON(ws, componentMessage{
 			Protocol: "component",
 			Command:  "component",
 			Payload:  entry.Info,
@@ -176,7 +190,7 @@ func (r *Runtime) Init(name string) {
 		r.graphs[msg.Graph].RenameOutPort(msg.From, msg.To)
 		UpdateComponentInfo(msg.Graph)
 		entry, _ := ComponentRegistry[msg.Graph]
-		websocket.JSON.Send(ws, componentMessage{
+		sendJSON(ws, componentMessage{
 			Protocol: "component",
 			Command:  "component",
 			Payload:  entry.Info,
@@ -188,7 +202,7 @@ func (r *Runtime) Init(name string) {
 				// Need to obtain ports annotation for the first time
 				UpdateComponentInfo(key)
 			}
-			websocket.JSON.Send(ws, componentMessage{
+			sendJSON(ws, componentMessage{
 				Protocol: "component",
 				Command:  "component",
 				Payload:  entry.Info,
@@ -212,42 +226,48 @@ func (r *Runtime) Stop() {
 	close(r.done)
 }
 
-func (r *Runtime) Handle(ws *websocket.Conn) {
-	defer func() {
-		err := ws.Close()
+func (r *Runtime) Handle(w http.ResponseWriter, req *http.Request) {
+	ws, err := r.upgrader.Upgrade(w, req, nil)
+	if err != nil {
+		log.Println("Websocket upgrader failed", err)
+		return
+	}
+	defer ws.Close()
+	for {
+		msgType, bytes, err := ws.ReadMessage()
 		if err != nil {
-			log.Println(err.Error())
+			log.Println("Websocket read error:", err)
+			break
 		}
-	}()
-	var msg Message
-	if err := websocket.JSON.Receive(ws, &msg); err != nil {
-		log.Println(err.Error())
-		return
+		if msgType != websocket.TextMessage {
+			log.Println("Unexpected binary message")
+			break
+		}
+		var msg Message
+		err = json.Unmarshal(bytes, &msg)
+		if err != nil {
+			log.Println("JSON decoding error:", err)
+			break
+		}
+		handler, exists := r.handlers[msg.Protocol+"."+msg.Command]
+		if !exists {
+			log.Printf("Unknown command: %s.%s\n", msg.Protocol, msg.Command)
+			break
+		}
+		handler(ws, msg.Payload)
 	}
-	handler, exists := r.handlers[msg.Protocol+"."+msg.Command]
-	if !exists {
-		log.Printf("Unknown command: %s.%s\n", msg.Protocol, msg.Command)
-		return
-	}
-	handler(ws, msg.Payload)
 }
 
 func (r *Runtime) Listen(address string) {
-	http.Handle("/", websocket.Handler(r.Handle))
-	listener, err := net.Listen("tcp", address)
-	if err != nil {
-		log.Fatalln(err.Error())
-	}
+	r.upgrader = websocket.Upgrader{}
+
+	http.Handle("/", http.HandlerFunc(r.Handle))
 
 	go func() {
-		err = http.Serve(listener, nil)
-		if err != nil {
-			log.Fatalln(err.Error())
-		}
+		log.Fatal(http.ListenAndServe(address, nil))
 	}()
 	close(r.ready)
 
 	// Wait for termination signal
 	<-r.done
-	listener.Close()
 }

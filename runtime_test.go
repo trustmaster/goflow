@@ -1,7 +1,8 @@
 package flow
 
 import (
-	"code.google.com/p/go.net/websocket"
+	"github.com/gorilla/websocket"
+	"encoding/json"
 	"testing"
 )
 
@@ -20,20 +21,35 @@ func ensureRuntimeStarted() {
 	}
 }
 
+func sendJSONE(ws *websocket.Conn, msg interface{}) error {
+	bytes, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	err = ws.WriteMessage(websocket.TextMessage, bytes)
+	return err
+}
+
 // Tests runtime information support
 func TestRuntimeGetRuntime(t *testing.T) {
 	ensureRuntimeStarted()
 	// Create a WebSocket client
-	ws, err := websocket.Dial("ws://localhost:13014/", "", "http://localhost/")
+	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:13014/", nil)
+	defer ws.Close()
 	if err != nil {
 		t.Error(err.Error())
 	}
 	// Send a runtime request and check the response
-	if err = websocket.JSON.Send(ws, &Message{"runtime", "getruntime", nil}); err != nil {
+	if err = sendJSONE(ws, &Message{"runtime", "getruntime", nil}); err != nil {
 		t.Error(err.Error())
 	}
 	var msg runtimeMessage
-	if err = websocket.JSON.Receive(ws, &msg); err != nil {
+	var bytes []byte
+	if _, bytes, err = ws.ReadMessage(); err != nil {
+		t.Error(err.Error())
+		return
+	}
+	if err = json.Unmarshal(bytes, &msg); err != nil {
 		t.Error(err.Error())
 		return
 	}
