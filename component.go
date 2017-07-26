@@ -135,7 +135,7 @@ func RunProc(c interface{}) bool {
 		ff := t.Field(i)
 		ft := fv.Type()
 		// Detect control channels
-		if fv.IsValid() && fv.Kind() == reflect.Chan && !fv.IsNil() && (ft.ChanDir()&reflect.RecvDir) != 0 {
+		if fv.IsValid() && fv.Kind() == reflect.Chan && !fv.IsNil() && fv.CanSet() && (ft.ChanDir()&reflect.RecvDir) != 0 {
 			// Bind handlers for an input channel
 			cases = append(cases, reflect.SelectCase{Dir: reflect.SelectRecv, Chan: fv})
 			h := portHandler{onRecv: vp.MethodByName("On" + ff.Name), onClose: vp.MethodByName("On" + ff.Name + "Close")}
@@ -195,6 +195,7 @@ func RunProc(c interface{}) bool {
 			vNet := vCom.FieldByName("Net")
 			// Detect and close send-only channels
 			if fv.IsValid() {
+				// TODO: likely needs to check fv.CanSet()
 				if fv.Kind() == reflect.Chan && (ft.ChanDir()&reflect.SendDir) != 0 && (ft.ChanDir()&reflect.RecvDir) == 0 {
 					if vNet.IsValid() && !vNet.IsNil() {
 						if vNet.Interface().(*Graph).DecSendChanRefCount(fv) {
