@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"log"
 	"sync"
 	"testing"
 	"time"
@@ -464,4 +465,27 @@ func TestLooper(t *testing.T) {
 	}
 	// Shutdown the component
 	close(in)
+}
+
+type unexportedChannel struct {
+	Component
+
+	In       <-chan bool
+	aChannel chan bool
+}
+
+func (c *unexportedChannel) OnIn(b bool) {
+	log.Println(b)
+}
+
+// Tests a component with an unexported channel
+func TestUnexportedChannel(t *testing.T) {
+	c := new(unexportedChannel)
+	c.aChannel = make(chan bool)
+	in := make(chan bool)
+	c.In = in
+	RunProc(c)
+	in <- true
+	close(in)
+	return
 }
