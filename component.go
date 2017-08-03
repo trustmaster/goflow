@@ -135,7 +135,7 @@ func RunProc(c interface{}) bool {
 		ff := t.Field(i)
 		ft := fv.Type()
 		// Detect control channels
-		if fv.IsValid() && fv.Kind() == reflect.Chan && !fv.IsNil() && (ft.ChanDir()&reflect.RecvDir) != 0 {
+		if fv.IsValid() && fv.Kind() == reflect.Chan && !fv.IsNil() && fv.CanSet() && (ft.ChanDir()&reflect.RecvDir) != 0 {
 			// Bind handlers for an input channel
 			cases = append(cases, reflect.SelectCase{Dir: reflect.SelectRecv, Chan: fv})
 			h := portHandler{onRecv: vp.MethodByName("On" + ff.Name), onClose: vp.MethodByName("On" + ff.Name + "Close")}
@@ -177,13 +177,27 @@ func RunProc(c interface{}) bool {
 		}
 		inputsClose.Done()
 	}
-	terminate := func() {
+	terminate := func(remaining int) {
 		if !vCom.FieldByName("IsRunning").Bool() {
 			return
 		}
 		vCom.FieldByName("IsRunning").SetBool(false)
-		for i := 0; i < inputCount; i++ {
+		for i := 0; i < remaining; i++ {
 			inputsClose.Done()
+		}
+	}
+	pop := func(index int) {
+		if len(cases) != len(handlers) {
+			panic("cases and handlers should be the same length")
+		} else if index < 0 || index >= len(cases) {
+			panic("invalid handler index")
+		}
+		if index < (len(cases)-1) && index >= 0 {
+			cases = append(cases[:index], cases[index+1:]...)
+			handlers = append(handlers[:index], handlers[index+1:]...)
+		} else if index == (len(cases) - 1) {
+			cases = cases[:index]
+			handlers = handlers[:index]
 		}
 	}
 	// closePorts closes all output channels of a process.
@@ -195,6 +209,7 @@ func RunProc(c interface{}) bool {
 			vNet := vCom.FieldByName("Net")
 			// Detect and close send-only channels
 			if fv.IsValid() {
+				// TODO: likely needs to check fv.CanSet()
 				if fv.Kind() == reflect.Chan && (ft.ChanDir()&reflect.SendDir) != 0 && (ft.ChanDir()&reflect.RecvDir) == 0 {
 					if vNet.IsValid() && !vNet.IsNil() {
 						if vNet.Interface().(*Graph).DecSendChanRefCount(fv) {
@@ -242,80 +257,78 @@ func RunProc(c interface{}) bool {
 	// This opens a race condition for handlersDone.
 	handlersEst := make(chan bool, 1)
 
-	// Run the port handlers depending on component mode
-	if componentMode == ComponentModePool && poolSize > 0 {
-		// Pool mode, prefork limited goroutine pool for all inputs
-		var poolIndex uint8
-		poolWait := new(sync.WaitGroup)
-		once := new(sync.Once)
-		for poolIndex = 0; poolIndex < poolSize; poolIndex++ {
-			poolWait.Add(1)
-			go func() {
-				// TODO add pool of Loopers support
-				for {
-					chosen, recv, recvOK := reflect.Select(cases)
-					if !recvOK {
-						poolWait.Done()
-						if chosen == 0 {
-							// Term signal
-							terminate()
-						} else {
-							// Port has been closed
-							once.Do(func() {
-								// Wait for other workers
-								poolWait.Wait()
-								// Close output down
-								closeHandler(handlers[chosen].onClose)
-							})
-						}
-						return
-					}
-					if handlers[chosen].onRecv.IsValid() {
-						handlersDone.Add(1)
-						recvHandler(handlers[chosen].onRecv, recv)
-					}
-				}
-			}()
-		}
-		handlersEst <- true
-	} else {
-		go func() {
-			if isLooper {
-				defer func() {
-					terminate()
-					handlersDone.Done()
-				}()
-				handlersDone.Add(1)
-				handlersEst <- true
-				looper.Loop()
-				return
-			}
-			handlersEst <- true
-			for {
-				chosen, recv, recvOK := reflect.Select(cases)
-				if !recvOK {
-					if chosen == 0 {
-						// Term signal
-						terminate()
-					} else {
-						// Port has been closed
-						closeHandler(handlers[chosen].onClose)
-					}
-					return
-				}
-				if handlers[chosen].onRecv.IsValid() {
-					handlersDone.Add(1)
-					if componentMode == ComponentModeAsync || componentMode == ComponentModeUndefined && DefaultComponentMode == ComponentModeAsync {
-						// Async mode
-						go recvHandler(handlers[chosen].onRecv, recv)
-					} else {
-						// Sync mode
-						recvHandler(handlers[chosen].onRecv, recv)
-					}
-				}
-			}
-		}()
+	// Set mode to default if undefined
+	if componentMode == ComponentModeUndefined {
+		componentMode = DefaultComponentMode
 	}
+
+	// Set pool size of 1 for unspecified or non-pool modes
+	if !(componentMode == ComponentModePool && poolSize > 0) {
+		poolSize = 1
+	}
+
+	// Run the port handlers depending on component mode
+	go func() {
+
+		if isLooper {
+			defer func() {
+				terminate(inputCount)
+				handlersDone.Done()
+			}()
+			handlersDone.Add(1)
+			handlersEst <- true
+			looper.Loop()
+			return
+		}
+		for len(cases) > 1 {
+			// Pool mode, prefork limited goroutine pool for all inputs
+			var poolIndex uint8
+			poolWait := new(sync.WaitGroup)
+			once := new(sync.Once)
+			for poolIndex = 0; poolIndex < poolSize; poolIndex++ {
+				poolWait.Add(1)
+				go func() {
+					// TODO add pool of Loopers support
+					for {
+						chosen, recv, recvOK := reflect.Select(cases)
+						if !recvOK {
+							// Port has been closed
+							defer poolWait.Done()
+
+							once.Do(func() {
+								if chosen == 0 {
+									// Term signal
+									terminate(len(cases) - 1)
+									// Exit main loop by shortening cases to 0
+									cases = []reflect.SelectCase{}
+								} else {
+									// Close output down
+									closeHandler(handlers[chosen].onClose)
+									pop(chosen)
+								}
+							})
+							// NOTE: This is different from sync/pool mode because the pool has to completely shut down to safely remove a select case, then has to be rebuilt.
+							return
+						} else if handlers[chosen].onRecv.IsValid() {
+							handlersDone.Add(1)
+							if componentMode == ComponentModeAsync {
+								// Async Mode
+								go recvHandler(handlers[chosen].onRecv, recv)
+							} else {
+								// Sync/Pool Mode
+								recvHandler(handlers[chosen].onRecv, recv)
+							}
+						}
+					}
+				}()
+			}
+			select {
+			case handlersEst <- true:
+			default:
+			}
+			poolWait.Wait()
+		}
+	}()
 
 	// Indicate the process as running
 	<-handlersEst
