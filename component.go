@@ -2,6 +2,7 @@
 package flow
 
 import (
+	"fmt"
 	"reflect"
 	"sync"
 )
@@ -149,7 +150,7 @@ func RunProc(c interface{}) bool {
 	}
 
 	if inputCount == 0 && !isLooper {
-		panic("Components with no input ports are not supported")
+		panic(fmt.Sprintf("Components with no input ports are not supported (%s)", reflect.TypeOf(c)))
 	}
 
 	// Prepare handler closures
