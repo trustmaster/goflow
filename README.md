@@ -49,11 +49,14 @@ type Greeter struct {
 	Res            chan<- string // output port
 }
 
-// Reaction to a new name input
-func (g *Greeter) OnName(name string) {
-	greeting := fmt.Sprintf("Hello, %s!", name)
-	// send the greeting to the output port
-	g.Res <- greeting
+// Process incoming data
+func (g *Greeter) Process() {
+	// Keep reading incoming packets
+	for name := range g.Name {
+		greeting := fmt.Sprintf("Hello, %s!", name)
+		// Send the greeting to the output port
+		g.Res <- greeting
+	}
 }
 
 // A component that prints its input on screen
@@ -63,8 +66,10 @@ type Printer struct {
 }
 
 // Prints a line when it gets it
-func (p *Printer) OnLine(line string) {
-	fmt.Println(line)
+func (p *Printer) Process() {
+	for line := range p.Line {
+		fmt.Println(line)
+	}
 }
 
 // Our greeting network
