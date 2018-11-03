@@ -1,9 +1,12 @@
+// +build ignore
+
 package flow
 
 import (
-	"github.com/gorilla/websocket"
 	"encoding/json"
 	"testing"
+
+	"github.com/gorilla/websocket"
 )
 
 var (
