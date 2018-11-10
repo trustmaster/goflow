@@ -84,6 +84,12 @@ type adder struct {
 }
 
 func (c *adder) Process() {
+	guard := NewInputGuard(2)
+	closeOuts := func() {
+		close(c.Sum)
+	}
+	defer closeOuts()
+
 	op1Buf := make([]int, 0, 10)
 	op2Buf := make([]int, 0, 10)
 	addOp := func(op int, buf, otherBuf *[]int) {
@@ -96,32 +102,19 @@ func (c *adder) Process() {
 		}
 	}
 
-	const inputCount = 2
-	closed := make([]struct{}, 0, inputCount)
-	completed := func() bool {
-		closed = append(closed, struct{}{})
-		return len(closed) >= inputCount
-	}
-
-	closeOuts := func() {
-		close(c.Sum)
-	}
-
-	defer closeOuts()
-
 	for {
 		select {
 		case op1, ok := <-c.Op1:
 			if ok {
 				addOp(op1, &op1Buf, &op2Buf)
-			} else if completed() {
+			} else if guard.Complete() {
 				return
 			}
 			
 		case op2, ok := <-c.Op2:
 			if ok {
 				addOp(op2, &op2Buf, &op1Buf)
-			} else if completed() {
+			} else if guard.Complete() {
 				return
 			}
 		}

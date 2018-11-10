@@ -20,3 +20,20 @@ func Run(c Component) Wait {
 	}()
 	return wait
 }
+
+// InputGuard counts number of closed inputs
+type InputGuard struct {
+	ports uint
+	complete uint
+}
+
+// NewInputGuard returns a guard for a given number of inputs
+func NewInputGuard(ports uint) *InputGuard {
+	return &InputGuard{ports, 0}
+}
+
+// Complete is called when a port is closed and returns true when all the ports have been closed
+func (g *InputGuard) Complete() bool {
+	g.complete++
+	return g.complete >= g.ports
+}
