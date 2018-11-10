@@ -15,10 +15,8 @@ type Wait chan struct{}
 func Run(c Component) Wait {
 	wait := make(Wait)
 	go func() {
-		defer func() {
-			wait <- Done{}
-		}()
 		c.Process()
+		wait <- Done{}
 	}()
 	return wait
 }
