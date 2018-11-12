@@ -1,5 +1,3 @@
-// +build ignore
-
 package flow
 
 // Message represents a single FBP protocol message
