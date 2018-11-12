@@ -3,18 +3,24 @@
 package flow
 
 import (
+	"fmt"
 	"reflect"
 	"sync"
 )
 
-// DefaultBufferSize is the default channel buffer capacity.
-var DefaultBufferSize = 0
+// GraphConfig sets up properties for a graph
+type GraphConfig struct {
+	Capacity   uint
+	BufferSize uint
+}
 
-// DefaultNetworkCapacity is the default capacity of network's processes/ports maps.
-var DefaultNetworkCapacity = 32
-
-// Default network output or input ports number
-var DefaultNetworkPortsNum = 16
+// defaultGraphConfig provides defaults for GraphConfig
+func defaultGraphConfig() GraphConfig {
+	return GraphConfig{
+		Capacity:   32,
+		BufferSize: 0,
+	}
+}
 
 // port stores full port information within the network.
 type port struct {
@@ -52,30 +58,12 @@ type iip struct {
 	port string // Target port name
 }
 
-// portMapper interface is used to obtain subnet's ports.
-type portMapper interface {
-	getInPort(string) reflect.Value
-	getOutPort(string) reflect.Value
-	hasInPort(string) bool
-	hasOutPort(string) bool
-	listInPorts() map[string]port
-	listOutPorts() map[string]port
-	SetInPort(string, interface{}) bool
-	SetOutPort(string, interface{}) bool
-}
-
-// netController interface is used to run a subnet.
-type netController interface {
-	getWait() *sync.WaitGroup
-	run()
-}
-
 // Graph represents a graph of processes connected with packet channels.
 type Graph struct {
+	// Configuration for the graph
+	conf GraphConfig
 	// Wait is used for graceful network termination.
 	waitGrp *sync.WaitGroup
-	// Net is a pointer to parent network.
-	Net *Graph
 	// procs contains the processes of the network.
 	procs map[string]interface{}
 	// inPorts maps network incoming ports to component ports.
@@ -91,43 +79,43 @@ type Graph struct {
 	// iips contains initial IPs attached to the network
 	iips []iip
 	// done is used to let the outside world know when the net has finished its job
-	done chan struct{}
+	done Wait
 	// ready is used to let the outside world know when the net is ready to accept input
-	ready chan struct{}
+	ready Wait
 	// isRunning indicates that the network is currently running
 	isRunning bool
 }
 
-// InitGraphState method initializes graph fields and allocates memory.
-func (n *Graph) InitGraphState() {
-	n.waitGrp = new(sync.WaitGroup)
-	n.procs = make(map[string]interface{}, DefaultNetworkCapacity)
-	n.inPorts = make(map[string]port, DefaultNetworkPortsNum)
-	n.outPorts = make(map[string]port, DefaultNetworkPortsNum)
-	n.connections = make([]connection, 0, DefaultNetworkCapacity)
-	n.sendChanRefCount = make(map[uintptr]uint, DefaultNetworkCapacity)
-	n.sendChanMutex = new(sync.Mutex)
-	n.iips = make([]iip, 0, DefaultNetworkPortsNum)
-	n.done = make(chan struct{})
-	n.ready = make(chan struct{})
+// NewGraph returns a new initialized empty graph instance
+func NewGraph(config ...GraphConfig) *Graph {
+	conf := defaultGraphConfig()
+	if len(config) == 1 {
+		conf = config[0]
+	}
+
+	return &Graph{
+		conf:             conf,
+		waitGrp:          new(sync.WaitGroup),
+		procs:            make(map[string]interface{}, conf.Capacity),
+		inPorts:          make(map[string]port, conf.Capacity),
+		outPorts:         make(map[string]port, conf.Capacity),
+		connections:      make([]connection, 0, conf.Capacity),
+		sendChanRefCount: make(map[uintptr]uint, conf.Capacity),
+		sendChanMutex:    new(sync.Mutex),
+		iips:             make([]iip, 0, DefaultNetworkPortsNum),
+		done:             make(Wait),
+		ready:            make(Wait),
+	}
 }
 
-// Canvas is a generic graph that is manipulated at run-time only
-type Canvas struct {
-	Graph
-}
-
-// NewGraph creates a new canvas graph that can be modified at run-time.
-// Implements ComponentConstructor interace, so can it be used with Factory.
-func NewGraph() interface{} {
-	net := new(Canvas)
-	net.InitGraphState()
-	return net
+// NewDefaultGraph is a ComponentConstructor for the factory
+func NewDefaultGraph() interface{} {
+	return NewGraph()
 }
 
 // Register an empty graph component in the registry
 func init() {
-	Register("Graph", NewGraph)
+	Register("Graph", NewDefaultGraph)
 	Annotate("Graph", ComponentInfo{
 		Description: "A clear graph",
 		Icon:        "cogs",
@@ -162,50 +150,28 @@ func (n *Graph) DecSendChanRefCount(c reflect.Value) bool {
 }
 
 // Add adds a new process with a given name to the network.
-// It returns true on success or panics and returns false on error.
-func (n *Graph) Add(c interface{}, name string) bool {
-	// Check if passed interface is a valid pointer to struct
-	v := reflect.ValueOf(c)
-	if v.Kind() != reflect.Ptr || v.IsNil() {
-		panic("flow.Graph.Add() argument is not a valid pointer")
-		return false
-	}
-	v = v.Elem()
-	if v.Kind() != reflect.Struct {
-		panic("flow.Graph.Add() argument is not a valid pointer to struct")
-		return false
-	}
-	// Set the link to self in the proccess so that it could use it
-	var vNet reflect.Value
-	vCom := v.FieldByName("Component")
-	if vCom.IsValid() && vCom.Type().Name() == "Component" {
-		vNet = vCom.FieldByName("Net")
-	} else {
-		vGraph := v.FieldByName("Graph")
-		if vGraph.IsValid() && vGraph.Type().Name() == "Graph" {
-			vNet = vGraph.FieldByName("Net")
-		}
-	}
-	if vNet.IsValid() && vNet.CanSet() {
-		vNet.Set(reflect.ValueOf(n))
+func (n *Graph) Add(name string, c interface{}) error {
+	// c should be either graph or a component
+	_, isComponent := c.(Component)
+	_, isGraph := c.(Graph)
+	if !isComponent && !isGraph {
+		return fmt.Errorf("Could not add process '%s': instance is neither Component nor Graph", name)
 	}
 	// Add to the map of processes
 	n.procs[name] = c
-	return true
+	return nil
 }
 
 // AddGraph adds a new blank graph instance to a network. That instance can
 // be modified then at run-time.
-func (n *Graph) AddGraph(name string) bool {
-	net := new(Graph)
-	net.InitGraphState()
-	return n.Add(net, name)
+func (n *Graph) AddGraph(name string) error {
+	return n.Add(name, NewDefaultGraph())
 }
 
 // AddNew creates a new process instance using component factory and adds it to the network.
-func (n *Graph) AddNew(componentName string, processName string) bool {
+func (n *Graph) AddNew(processName string, componentName string) error {
 	proc := Factory(componentName)
-	return n.Add(proc, processName)
+	return n.Add(processName, proc)
 }
 
 // Remove deletes a process from the graph. First it stops the process if running.
