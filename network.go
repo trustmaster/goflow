@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"sync"
@@ -172,17 +173,17 @@ func (n *Graph) AddGraph(name string) error {
 // 	return n.Add(processName, proc)
 // }
 
-// // Remove deletes a process from the graph. First it stops the process if running.
-// // Then it disconnects it from other processes and removes the connections from
-// // the graph. Then it drops the process itself.
-// func (n *Graph) Remove(processName string) bool {
-// 	if _, exists := n.procs[processName]; !exists {
-// 		return false
-// 	}
-// 	// TODO disconnect before removal
-// 	delete(n.procs, processName)
-// 	return true
-// }
+// Remove deletes a process from the graph. First it stops the process if running.
+// Then it disconnects it from other processes and removes the connections from
+// the graph. Then it drops the process itself.
+func (n *Graph) Remove(processName string) bool {
+	if _, exists := n.procs[processName]; !exists {
+		return false
+	}
+	// TODO disconnect before removal
+	delete(n.procs, processName)
+	return true
+}
 
 // // Rename changes a process name in all connections, external ports, IIPs and the
 // // graph itself.
@@ -242,171 +243,170 @@ func (n *Graph) AddGraph(name string) error {
 // 	return false
 // }
 
-// // Connect connects a sender to a receiver and creates a channel between them using DefaultBufferSize.
-// // Normally such a connection is unbuffered but you can change by setting flow.DefaultBufferSize > 0 or
-// // by using ConnectBuf() function instead.
-// // It returns true on success or panics and returns false if error occurs.
-// func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort string) bool {
-// 	return n.ConnectBuf(senderName, senderPort, receiverName, receiverPort, DefaultBufferSize)
-// }
+// Connect connects a sender to a receiver and creates a channel between them using BufferSize configuratio nof the graph.
+// Normally such a connection is unbuffered but you can change by setting flow.DefaultBufferSize > 0 or
+// by using ConnectBuf() function instead.
+// It returns true on success or panics and returns false if error occurs.
+func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort string) bool {
+	return n.ConnectBuf(senderName, senderPort, receiverName, receiverPort, n.conf.BufferSize)
+}
 
-// // Connect connects a sender to a receiver using a channel with a buffer of a given size.
-// // It returns true on success or panics and returns false if error occurs.
-// func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort string, bufferSize int) bool {
-// 	// Ensure sender and receiver processes exist
-// 	sender, senderFound := n.procs[senderName]
-// 	receiver, receiverFound := n.procs[receiverName]
-// 	if !senderFound {
-// 		panic("Sender '" + senderName + "' not found")
-// 		return false
-// 	}
-// 	if !receiverFound {
-// 		panic("Receiver '" + receiverName + "' not found")
-// 		return false
-// 	}
+// ConnectBuf connects a sender to a receiver using a channel with a buffer of a given size.
+// It returns true on success or panics and returns false if error occurs.
+func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort string, bufferSize int) error {
+	// Ensure sender and receiver processes exist
+	sender, senderFound := n.procs[senderName]
+	receiver, receiverFound := n.procs[receiverName]
+	if !senderFound {
+		return fmt.Errorf("Connect error: sender process '%s' not found", senderName)
+	}
+	if !receiverFound {
+		return fmt.Errorf("Connect error: receiver process '%s' not found", receiverName)
+	}
 
-// 	// Ensure sender and receiver are settable
-// 	sp := reflect.ValueOf(sender)
-// 	sv := sp.Elem()
-// 	// st := sv.Type()
-// 	rp := reflect.ValueOf(receiver)
-// 	rv := rp.Elem()
-// 	// rt := rv.Type()
-// 	if !sv.CanSet() {
-// 		panic(senderName + " is not settable")
-// 		return false
-// 	}
-// 	if !rv.CanSet() {
-// 		panic(receiverName + " is not settable")
-// 		return false
-// 	}
+	// Ensure sender and receiver are settable
+	senderVal := reflect.ValueOf(sender)
+	if senderVal.Kind() == reflect.Ptr && senderVal.IsValid() {
+		senderVal = senderVal.Elem()
+	}
+	receiverVal := reflect.ValueOf(receiver)
+	if receiverVal.Kind() == reflect.Ptr && receiverVal.IsValid() {
+		receiverVal = receiverVal.Elem()
+	}
 
-// 	var sport reflect.Value
+	if !senderVal.CanSet() {
+		return fmt.Errorf("Connect error: sender '%s' is not settable", senderName)
+	}
+	if !receiverVal.CanSet() {
+		return fmt.Errorf("Connect error: receiver '%s' is not settable", receiverName)
+	}
 
-// 	// Get the actual ports and link them to the channel
-// 	// Check if sender is a net
-// 	var snet reflect.Value
-// 	if sv.Type().Name() == "Graph" {
-// 		snet = sv
-// 	} else {
-// 		snet = sv.FieldByName("Graph")
-// 	}
-// 	if snet.IsValid() {
-// 		// Sender is a net
-// 		if pm, isPm := snet.Addr().Interface().(portMapper); isPm {
-// 			sport = pm.getOutPort(senderPort)
-// 		}
-// 	} else {
-// 		// Sender is a proc
-// 		sport = sv.FieldByName(senderPort)
-// 	}
+	// Get the actual ports and link them to the channel
+	var err error
 
-// 	// Get the reciever port
-// 	var rport reflect.Value
+	// Get the sender port
+	var senderPortVal reflect.Value
+	// Check if sender is a net
+	senderNet, senderIsNet := senderVal.Interface().(Graph)
+	if senderIsNet {
+		// Sender is a net
+		senderPortVal, err = senderNet.getOutPort(senderPort)
+	} else {
+		// Sender is a proc
+		senderPortVal = senderVal.FieldByName(senderPort)
+		if !senderPortVal.IsValid() {
+			err = errors.New("")
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("Connect error: sender '%s' does not have outport '%s'", senderName, senderPort)
+	}
 
-// 	// Check if receiver is a net
-// 	var rnet reflect.Value
-// 	if rv.Type().Name() == "Graph" {
-// 		rnet = rv
-// 	} else {
-// 		rnet = rv.FieldByName("Graph")
-// 	}
-// 	if rnet.IsValid() {
-// 		if pm, isPm := rnet.Addr().Interface().(portMapper); isPm {
-// 			rport = pm.getInPort(receiverPort)
-// 		}
-// 	} else {
-// 		// Receiver is a proc
-// 		rport = rv.FieldByName(receiverPort)
-// 	}
+	// Get the sender port
+	var receiverPortVal reflect.Value
+	// Check if sender is a net
+	receiverNet, receiverIsNet := receiverVal.Interface().(Graph)
+	if receiverIsNet {
+		// Sender is a net
+		receiverPortVal, err = receiverNet.getOutPort(receiverPort)
+	} else {
+		// Sender is a proc
+		receiverPortVal = receiverVal.FieldByName(receiverPort)
+		if !receiverPortVal.IsValid() {
+			err = errors.New("")
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("Connect error: receiver '%s' does not have inport '%s'", receiverName, receiverPort)
+	}
 
-// 	// Validate receiver port
-// 	rtport := rport.Type()
-// 	if rtport.Kind() != reflect.Chan || rtport.ChanDir()&reflect.RecvDir == 0 {
-// 		panic(receiverName + "." + receiverPort + " is not a valid input channel")
-// 		return false
-// 	}
+	// Validate receiver port
+	rtport := rport.Type()
+	if rtport.Kind() != reflect.Chan || rtport.ChanDir()&reflect.RecvDir == 0 {
+		panic(receiverName + "." + receiverPort + " is not a valid input channel")
+		return false
+	}
 
-// 	// Validate sender port
-// 	stport := sport.Type()
-// 	var channel reflect.Value
-// 	if !rport.IsNil() {
-// 		for _, mycon := range n.connections {
-// 			if mycon.tgt.port == receiverPort && mycon.tgt.proc == receiverName {
-// 				channel = mycon.channel
-// 				break
-// 			}
-// 		}
-// 	}
-// 	if stport.Kind() == reflect.Slice {
+	// Validate sender port
+	stport := sport.Type()
+	var channel reflect.Value
+	if !rport.IsNil() {
+		for _, mycon := range n.connections {
+			if mycon.tgt.port == receiverPort && mycon.tgt.proc == receiverName {
+				channel = mycon.channel
+				break
+			}
+		}
+	}
+	if stport.Kind() == reflect.Slice {
 
-// 		if sport.Type().Elem().Kind() == reflect.Chan && sport.Type().Elem().ChanDir()&reflect.SendDir != 0 {
+		if sport.Type().Elem().Kind() == reflect.Chan && sport.Type().Elem().ChanDir()&reflect.SendDir != 0 {
 
-// 			if !channel.IsValid() {
-// 				// Need to create a new channel and add it to the array
-// 				chanType := reflect.ChanOf(reflect.BothDir, sport.Type().Elem().Elem())
-// 				channel = reflect.MakeChan(chanType, bufferSize)
-// 			}
-// 			sport.Set(reflect.Append(sport, channel))
-// 			n.IncSendChanRefCount(channel)
-// 		}
-// 	} else if stport.Kind() == reflect.Chan && stport.ChanDir()&reflect.SendDir != 0 {
-// 		// Check if channel was already instantiated, if so, use it. Thus we can connect serveral endpoints and golang will pseudo-randomly chooses a receiver
-// 		// Also, this avoids crashes on <-net.Wait()
-// 		if !sport.IsNil() {
-// 			//go does not allow cast of unidir chan to bidir chan (for good reason)
-// 			//but luckily we saved it, so we look it up
-// 			if channel.IsValid() && sport.Addr() != rport.Addr() {
-// 				panic("Trying to connect an already connected source to an already connected target")
-// 			}
-// 			for _, mycon := range n.connections {
-// 				if mycon.src.port == senderPort && mycon.src.proc == senderName {
-// 					channel = mycon.channel
-// 					break
-// 				}
-// 			}
-// 		}
-// 		// either sport was nil or we did not find a previous channel instance
-// 		if !channel.IsValid() {
-// 			// Make a channel of an appropriate type
-// 			chanType := reflect.ChanOf(reflect.BothDir, stport.Elem())
-// 			channel = reflect.MakeChan(chanType, bufferSize)
-// 		}
-// 	}
+			if !channel.IsValid() {
+				// Need to create a new channel and add it to the array
+				chanType := reflect.ChanOf(reflect.BothDir, sport.Type().Elem().Elem())
+				channel = reflect.MakeChan(chanType, bufferSize)
+			}
+			sport.Set(reflect.Append(sport, channel))
+			n.IncSendChanRefCount(channel)
+		}
+	} else if stport.Kind() == reflect.Chan && stport.ChanDir()&reflect.SendDir != 0 {
+		// Check if channel was already instantiated, if so, use it. Thus we can connect serveral endpoints and golang will pseudo-randomly chooses a receiver
+		// Also, this avoids crashes on <-net.Wait()
+		if !sport.IsNil() {
+			//go does not allow cast of unidir chan to bidir chan (for good reason)
+			//but luckily we saved it, so we look it up
+			if channel.IsValid() && sport.Addr() != rport.Addr() {
+				panic("Trying to connect an already connected source to an already connected target")
+			}
+			for _, mycon := range n.connections {
+				if mycon.src.port == senderPort && mycon.src.proc == senderName {
+					channel = mycon.channel
+					break
+				}
+			}
+		}
+		// either sport was nil or we did not find a previous channel instance
+		if !channel.IsValid() {
+			// Make a channel of an appropriate type
+			chanType := reflect.ChanOf(reflect.BothDir, stport.Elem())
+			channel = reflect.MakeChan(chanType, bufferSize)
+		}
+	}
 
-// 	if channel.IsNil() {
-// 		panic(senderName + "." + senderPort + " is not a valid output channel")
-// 		return false
-// 	}
+	if channel.IsNil() {
+		panic(senderName + "." + senderPort + " is not a valid output channel")
+		return false
+	}
 
-// 	// Check if ?port.Set() would cause panic and if so ... panic
-// 	if !sport.CanSet() {
-// 		panic(senderName + "." + senderPort + " is not settable")
-// 	}
-// 	if !rport.CanSet() {
-// 		panic(receiverName + "." + receiverPort + " is not settable")
-// 	}
-// 	// Set the channels
-// 	if sport.IsNil() {
-// 		//note that if sport is a slice, this does not run, instead see code above (== reflect.Slice)
-// 		sport.Set(channel)
-// 		n.IncSendChanRefCount(channel)
-// 	}
-// 	if rport.IsNil() {
-// 		rport.Set(channel)
-// 	}
+	// Check if ?port.Set() would cause panic and if so ... panic
+	if !sport.CanSet() {
+		panic(senderName + "." + senderPort + " is not settable")
+	}
+	if !rport.CanSet() {
+		panic(receiverName + "." + receiverPort + " is not settable")
+	}
+	// Set the channels
+	if sport.IsNil() {
+		//note that if sport is a slice, this does not run, instead see code above (== reflect.Slice)
+		sport.Set(channel)
+		n.IncSendChanRefCount(channel)
+	}
+	if rport.IsNil() {
+		rport.Set(channel)
+	}
 
-// 	// Add connection info
-// 	n.connections = append(n.connections, connection{
-// 		src: portName{proc: senderName,
-// 			port: senderPort},
-// 		tgt: portName{proc: receiverName,
-// 			port: receiverPort},
-// 		channel: channel,
-// 		buffer:  bufferSize})
+	// Add connection info
+	n.connections = append(n.connections, connection{
+		src: portName{proc: senderName,
+			port: senderPort},
+		tgt: portName{proc: receiverName,
+			port: receiverPort},
+		channel: channel,
+		buffer:  bufferSize})
 
-// 	return true
-// }
+	return true
+}
 
 // // Unsets an port of a given process
 // func unsetProcPort(proc interface{}, portName string, isOut bool) bool {
@@ -458,28 +458,28 @@ func (n *Graph) AddGraph(name string) error {
 // 	}
 // }
 
-// // getInPort returns the inport with given name as reflect.Value channel.
-// func (n *Graph) getInPort(name string) reflect.Value {
-// 	pName, ok := n.inPorts[name]
-// 	if !ok {
-// 		panic("flow.Graph.getInPort(): Invalid inport name: " + name)
-// 	}
-// 	return pName.channel
-// }
+// getInPort returns the inport with given name as reflect.Value channel.
+func (n *Graph) getInPort(name string) (reflect.Value, error) {
+	pName, ok := n.inPorts[name]
+	if !ok {
+		return nil, fmt.Errorf("Inport not found: '%s'", name)
+	}
+	return pName.channel, nil
+}
 
 // // listInPorts returns information about graph inports and their types.
 // func (n *Graph) listInPorts() map[string]port {
 // 	return n.inPorts
 // }
 
-// // getOutPort returns the outport with given name as reflect.Value channel.
-// func (n *Graph) getOutPort(name string) reflect.Value {
-// 	pName, ok := n.outPorts[name]
-// 	if !ok {
-// 		panic("flow.Graph.getOutPort(): Invalid outport name: " + name)
-// 	}
-// 	return pName.channel
-// }
+// getOutPort returns the outport with given name as reflect.Value channel.
+func (n *Graph) getOutPort(name string) (reflect.Value, error) {
+	pName, ok := n.outPorts[name]
+	if !ok {
+		return nil, fmt.Errorf("Outport not found: '%s'", name)
+	}
+	return pName.channel, nil
+}
 
 // // listOutPorts returns information about graph outports and their types.
 // func (n *Graph) listOutPorts() map[string]port {
