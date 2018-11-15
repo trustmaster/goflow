@@ -10,7 +10,7 @@ import (
 // GraphConfig sets up properties for a graph
 type GraphConfig struct {
 	Capacity   uint
-	BufferSize uint
+	BufferSize int
 }
 
 // defaultGraphConfig provides defaults for GraphConfig
@@ -247,7 +247,7 @@ func (n *Graph) Remove(processName string) bool {
 // Normally such a connection is unbuffered but you can change by setting flow.DefaultBufferSize > 0 or
 // by using ConnectBuf() function instead.
 // It returns true on success or panics and returns false if error occurs.
-func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort string) bool {
+func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort string) error {
 	return n.ConnectBuf(senderName, senderPort, receiverName, receiverPort, n.conf.BufferSize)
 }
 
@@ -308,7 +308,7 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 	receiverNet, receiverIsNet := receiverVal.Interface().(Graph)
 	if receiverIsNet {
 		// Sender is a net
-		receiverPortVal, err = receiverNet.getOutPort(receiverPort)
+		receiverPortVal, err = receiverNet.getInPort(receiverPort)
 	} else {
 		// Sender is a proc
 		receiverPortVal = receiverVal.FieldByName(receiverPort)
@@ -321,16 +321,16 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 	}
 
 	// Validate receiver port
-	rtport := rport.Type()
-	if rtport.Kind() != reflect.Chan || rtport.ChanDir()&reflect.RecvDir == 0 {
-		panic(receiverName + "." + receiverPort + " is not a valid input channel")
-		return false
+	recvPortType := receiverPortVal.Type()
+	if recvPortType.Kind() != reflect.Chan || recvPortType.ChanDir()&reflect.RecvDir == 0 {
+		return fmt.Errorf("'%s.%s' is not a valid input channel", receiverName, receiverPort)
 	}
 
 	// Validate sender port
-	stport := sport.Type()
+	sndPortType := senderPortVal.Type()
 	var channel reflect.Value
-	if !rport.IsNil() {
+	if !receiverPortVal.IsNil() {
+		// Find existing channel attached to the receiver
 		for _, mycon := range n.connections {
 			if mycon.tgt.port == receiverPort && mycon.tgt.proc == receiverName {
 				channel = mycon.channel
@@ -338,27 +338,27 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 			}
 		}
 	}
-	if stport.Kind() == reflect.Slice {
-
-		if sport.Type().Elem().Kind() == reflect.Chan && sport.Type().Elem().ChanDir()&reflect.SendDir != 0 {
+	if sndPortType.Kind() == reflect.Slice {
+		if senderPortVal.Type().Elem().Kind() == reflect.Chan && senderPortVal.Type().Elem().ChanDir()&reflect.SendDir != 0 {
 
 			if !channel.IsValid() {
 				// Need to create a new channel and add it to the array
-				chanType := reflect.ChanOf(reflect.BothDir, sport.Type().Elem().Elem())
+				chanType := reflect.ChanOf(reflect.BothDir, senderPortVal.Type().Elem().Elem())
 				channel = reflect.MakeChan(chanType, bufferSize)
 			}
-			sport.Set(reflect.Append(sport, channel))
+			senderPortVal.Set(reflect.Append(senderPortVal, channel))
 			n.IncSendChanRefCount(channel)
 		}
-	} else if stport.Kind() == reflect.Chan && stport.ChanDir()&reflect.SendDir != 0 {
+	} else if sndPortType.Kind() == reflect.Chan && sndPortType.ChanDir()&reflect.SendDir != 0 {
 		// Check if channel was already instantiated, if so, use it. Thus we can connect serveral endpoints and golang will pseudo-randomly chooses a receiver
 		// Also, this avoids crashes on <-net.Wait()
-		if !sport.IsNil() {
+		if !senderPortVal.IsNil() {
 			//go does not allow cast of unidir chan to bidir chan (for good reason)
 			//but luckily we saved it, so we look it up
-			if channel.IsValid() && sport.Addr() != rport.Addr() {
-				panic("Trying to connect an already connected source to an already connected target")
+			if channel.IsValid() && senderPortVal.Addr() != receiverPortVal.Addr() {
+				return fmt.Errorf("'%s.%s' cannot be connected to '%s.%s': inport already in use", receiverName, receiverPort, senderName, senderPort)
 			}
+			// Find an existing channel attached to sender
 			for _, mycon := range n.connections {
 				if mycon.src.port == senderPort && mycon.src.proc == senderName {
 					channel = mycon.channel
@@ -366,34 +366,34 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 				}
 			}
 		}
-		// either sport was nil or we did not find a previous channel instance
+		// either senderPortVal was nil or we did not find a previous channel instance
 		if !channel.IsValid() {
 			// Make a channel of an appropriate type
-			chanType := reflect.ChanOf(reflect.BothDir, stport.Elem())
+			chanType := reflect.ChanOf(reflect.BothDir, sndPortType.Elem())
 			channel = reflect.MakeChan(chanType, bufferSize)
 		}
 	}
 
 	if channel.IsNil() {
-		panic(senderName + "." + senderPort + " is not a valid output channel")
-		return false
+		return fmt.Errorf("'%s.%s' is not a valid output channel", senderName, senderPort)
 	}
 
-	// Check if ?port.Set() would cause panic and if so ... panic
-	if !sport.CanSet() {
-		panic(senderName + "." + senderPort + " is not settable")
+	// Check ports are settable
+	if !senderPortVal.CanSet() {
+		return fmt.Errorf("'%s.%s' is not assignable", senderName, senderPort)
 	}
-	if !rport.CanSet() {
-		panic(receiverName + "." + receiverPort + " is not settable")
+	if !receiverPortVal.CanSet() {
+		return fmt.Errorf("'%s.%s' is not assignable", receiverName, receiverPort)
 	}
+
 	// Set the channels
-	if sport.IsNil() {
-		//note that if sport is a slice, this does not run, instead see code above (== reflect.Slice)
-		sport.Set(channel)
+	if senderPortVal.IsNil() {
+		//note that if senderPortVal is a slice, this does not run, instead see code above (== reflect.Slice)
+		senderPortVal.Set(channel)
 		n.IncSendChanRefCount(channel)
 	}
-	if rport.IsNil() {
-		rport.Set(channel)
+	if receiverPortVal.IsNil() {
+		receiverPortVal.Set(channel)
 	}
 
 	// Add connection info
@@ -405,7 +405,7 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 		channel: channel,
 		buffer:  bufferSize})
 
-	return true
+	return nil
 }
 
 // // Unsets an port of a given process
@@ -462,7 +462,7 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 func (n *Graph) getInPort(name string) (reflect.Value, error) {
 	pName, ok := n.inPorts[name]
 	if !ok {
-		return nil, fmt.Errorf("Inport not found: '%s'", name)
+		return reflect.ValueOf(nil), fmt.Errorf("Inport not found: '%s'", name)
 	}
 	return pName.channel, nil
 }
@@ -476,7 +476,7 @@ func (n *Graph) getInPort(name string) (reflect.Value, error) {
 func (n *Graph) getOutPort(name string) (reflect.Value, error) {
 	pName, ok := n.outPorts[name]
 	if !ok {
-		return nil, fmt.Errorf("Outport not found: '%s'", name)
+		return reflect.ValueOf(nil), fmt.Errorf("Outport not found: '%s'", name)
 	}
 	return pName.channel, nil
 }
