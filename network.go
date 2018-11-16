@@ -254,70 +254,14 @@ func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort strin
 // ConnectBuf connects a sender to a receiver using a channel with a buffer of a given size.
 // It returns true on success or panics and returns false if error occurs.
 func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort string, bufferSize int) error {
-	// Ensure sender and receiver processes exist
-	sender, senderFound := n.procs[senderName]
-	receiver, receiverFound := n.procs[receiverName]
-	if !senderFound {
-		return fmt.Errorf("Connect error: sender process '%s' not found", senderName)
-	}
-	if !receiverFound {
-		return fmt.Errorf("Connect error: receiver process '%s' not found", receiverName)
-	}
-
-	// Ensure sender and receiver are settable
-	senderVal := reflect.ValueOf(sender)
-	if senderVal.Kind() == reflect.Ptr && senderVal.IsValid() {
-		senderVal = senderVal.Elem()
-	}
-	receiverVal := reflect.ValueOf(receiver)
-	if receiverVal.Kind() == reflect.Ptr && receiverVal.IsValid() {
-		receiverVal = receiverVal.Elem()
-	}
-
-	if !senderVal.CanSet() {
-		return fmt.Errorf("Connect error: sender '%s' is not settable", senderName)
-	}
-	if !receiverVal.CanSet() {
-		return fmt.Errorf("Connect error: receiver '%s' is not settable", receiverName)
-	}
-
-	// Get the actual ports and link them to the channel
-	var err error
-
-	// Get the sender port
-	var senderPortVal reflect.Value
-	// Check if sender is a net
-	senderNet, senderIsNet := senderVal.Interface().(Graph)
-	if senderIsNet {
-		// Sender is a net
-		senderPortVal, err = senderNet.getOutPort(senderPort)
-	} else {
-		// Sender is a proc
-		senderPortVal = senderVal.FieldByName(senderPort)
-		if !senderPortVal.IsValid() {
-			err = errors.New("")
-		}
-	}
+	senderPortVal, err := n.getProcPort(senderName, senderPort, true)
 	if err != nil {
-		return fmt.Errorf("Connect error: sender '%s' does not have outport '%s'", senderName, senderPort)
+		return err
 	}
 
-	// Get the sender port
-	var receiverPortVal reflect.Value
-	// Check if sender is a net
-	receiverNet, receiverIsNet := receiverVal.Interface().(Graph)
-	if receiverIsNet {
-		// Sender is a net
-		receiverPortVal, err = receiverNet.getInPort(receiverPort)
-	} else {
-		// Sender is a proc
-		receiverPortVal = receiverVal.FieldByName(receiverPort)
-		if !receiverPortVal.IsValid() {
-			err = errors.New("")
-		}
-	}
+	receiverPortVal, err := n.getProcPort(receiverName, receiverPort, false)
 	if err != nil {
-		return fmt.Errorf("Connect error: receiver '%s' does not have inport '%s'", receiverName, receiverPort)
+		return err
 	}
 
 	// Validate receiver port
@@ -406,6 +350,50 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 		buffer:  bufferSize})
 
 	return nil
+}
+
+func (n *Graph) getProcPort(procName, portName string, dirOut bool) (reflect.Value, error) {
+	nilValue := reflect.ValueOf(nil)
+	// Ensure process exists
+	proc, ok := n.procs[procName]
+	if !ok {
+		return nilValue, fmt.Errorf("Connect error: process '%s' not found", procName)
+	}
+
+	// Ensure sender is settable
+	val := reflect.ValueOf(proc)
+	if val.Kind() == reflect.Ptr && val.IsValid() {
+		val = val.Elem()
+	}
+	if !val.CanSet() {
+		return nilValue, fmt.Errorf("Connect error: process '%s' is not settable", procName)
+	}
+
+	// Get the sender port
+	var portVal reflect.Value
+	var err error
+	// Check if sender is a net
+	net, ok := val.Interface().(Graph)
+	if ok {
+		// Sender is a net
+		if dirOut {
+			portVal, err = net.getOutPort(portName)
+		} else {
+			portVal, err = net.getInPort(portName)
+		}
+
+	} else {
+		// Sender is a proc
+		portVal = val.FieldByName(portName)
+		if !portVal.IsValid() {
+			err = errors.New("")
+		}
+	}
+	if err != nil {
+		return nilValue, fmt.Errorf("Connect error: process '%s' does not have port '%s'", procName, portName)
+	}
+
+	return portVal, nil
 }
 
 // // Unsets an port of a given process
