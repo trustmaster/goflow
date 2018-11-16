@@ -254,20 +254,14 @@ func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort strin
 // ConnectBuf connects a sender to a receiver using a channel with a buffer of a given size.
 // It returns true on success or panics and returns false if error occurs.
 func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort string, bufferSize int) error {
-	senderPortVal, err := n.getProcPort(senderName, senderPort, true)
+	senderPortVal, err := n.getProcPort(senderName, senderPort, reflect.SendDir)
 	if err != nil {
 		return err
 	}
 
-	receiverPortVal, err := n.getProcPort(receiverName, receiverPort, false)
+	receiverPortVal, err := n.getProcPort(receiverName, receiverPort, reflect.RecvDir)
 	if err != nil {
 		return err
-	}
-
-	// Validate receiver port
-	recvPortType := receiverPortVal.Type()
-	if recvPortType.Kind() != reflect.Chan || recvPortType.ChanDir()&reflect.RecvDir == 0 {
-		return fmt.Errorf("'%s.%s' is not a valid input channel", receiverName, receiverPort)
 	}
 
 	// Validate sender port
@@ -282,18 +276,16 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 			}
 		}
 	}
-	if sndPortType.Kind() == reflect.Slice {
-		if senderPortVal.Type().Elem().Kind() == reflect.Chan && senderPortVal.Type().Elem().ChanDir()&reflect.SendDir != 0 {
 
-			if !channel.IsValid() {
-				// Need to create a new channel and add it to the array
-				chanType := reflect.ChanOf(reflect.BothDir, senderPortVal.Type().Elem().Elem())
-				channel = reflect.MakeChan(chanType, bufferSize)
-			}
-			senderPortVal.Set(reflect.Append(senderPortVal, channel))
-			n.IncSendChanRefCount(channel)
+	if sndPortType.Kind() == reflect.Slice {
+		if !channel.IsValid() {
+			// Need to create a new channel and add it to the array
+			chanType := reflect.ChanOf(reflect.BothDir, senderPortVal.Type().Elem().Elem())
+			channel = reflect.MakeChan(chanType, bufferSize)
 		}
-	} else if sndPortType.Kind() == reflect.Chan && sndPortType.ChanDir()&reflect.SendDir != 0 {
+		senderPortVal.Set(reflect.Append(senderPortVal, channel))
+		n.IncSendChanRefCount(channel)
+	} else {
 		// Check if channel was already instantiated, if so, use it. Thus we can connect serveral endpoints and golang will pseudo-randomly chooses a receiver
 		// Also, this avoids crashes on <-net.Wait()
 		if !senderPortVal.IsNil() {
@@ -352,7 +344,7 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 	return nil
 }
 
-func (n *Graph) getProcPort(procName, portName string, dirOut bool) (reflect.Value, error) {
+func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (reflect.Value, error) {
 	nilValue := reflect.ValueOf(nil)
 	// Ensure process exists
 	proc, ok := n.procs[procName]
@@ -369,14 +361,14 @@ func (n *Graph) getProcPort(procName, portName string, dirOut bool) (reflect.Val
 		return nilValue, fmt.Errorf("Connect error: process '%s' is not settable", procName)
 	}
 
-	// Get the sender port
+	// Get the port value
 	var portVal reflect.Value
 	var err error
 	// Check if sender is a net
 	net, ok := val.Interface().(Graph)
 	if ok {
 		// Sender is a net
-		if dirOut {
+		if dir == reflect.SendDir {
 			portVal, err = net.getOutPort(portName)
 		} else {
 			portVal, err = net.getInPort(portName)
@@ -391,6 +383,19 @@ func (n *Graph) getProcPort(procName, portName string, dirOut bool) (reflect.Val
 	}
 	if err != nil {
 		return nilValue, fmt.Errorf("Connect error: process '%s' does not have port '%s'", procName, portName)
+	}
+
+	// Validate port type
+	portType := portVal.Type()
+
+	// Sender port can be an array port
+	if dir == reflect.SendDir && portType.Kind() == reflect.Slice {
+		portType = portType.Elem()
+	}
+
+	// Validate
+	if portType.Kind() != reflect.Chan || portType.ChanDir()&dir == 0 {
+		return nilValue, fmt.Errorf("Connect error: '%s.%s' does not have a valid chan type", procName, portName)
 	}
 
 	return portVal, nil
