@@ -71,7 +71,7 @@ type Graph struct {
 	outPorts map[string]port
 	// connections contains graph edges and channels.
 	connections []connection
-	// sendChanRefCount tracks how many sendports use the same channel
+	// sendChanRefCount tracks how many outports use the same channel
 	sendChanRefCount map[uintptr]uint
 	// sendChanMutex is used to synchronize operations on the sendChanRefCount map.
 	sendChanMutex sync.Locker
@@ -121,8 +121,12 @@ func NewDefaultGraph() interface{} {
 // 	})
 // }
 
-// IncSendChanRefCount Increments SendChanRefCount
-func (n *Graph) IncSendChanRefCount(c reflect.Value) {
+// IncSendChanRefCount increments SendChanRefCount.
+// The count is needed when multiple senders are connected
+// to the same receiver. When the network is terminated and
+// senders need to close their output port, this counter
+// can help to avoid closing the same channel multiple times.
+func (n *Graph) incSendChanRefCount(c reflect.Value) {
 	n.sendChanMutex.Lock()
 	defer n.sendChanMutex.Unlock()
 
@@ -132,9 +136,9 @@ func (n *Graph) IncSendChanRefCount(c reflect.Value) {
 	n.sendChanRefCount[ptr] = cnt
 }
 
-// DecSendChanRefCount Decrements SendChanRefCount
+// DecSendChanRefCount decrements SendChanRefCount
 // It returns true if the RefCount has reached 0
-func (n *Graph) DecSendChanRefCount(c reflect.Value) bool {
+func (n *Graph) decSendChanRefCount(c reflect.Value) bool {
 	n.sendChanMutex.Lock()
 	defer n.sendChanMutex.Unlock()
 
@@ -264,69 +268,39 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 		return err
 	}
 
-	// Validate sender port
-	sndPortType := senderPortVal.Type()
+	// Try to get an existing channel
 	var channel reflect.Value
 	if !receiverPortVal.IsNil() {
 		// Find existing channel attached to the receiver
-		for _, mycon := range n.connections {
-			if mycon.tgt.port == receiverPort && mycon.tgt.proc == receiverName {
-				channel = mycon.channel
-				break
-			}
-		}
+		channel = n.findExistingChan(receiverName, receiverPort, reflect.RecvDir)
 	}
 
-	if sndPortType.Kind() == reflect.Slice {
+	sndPortType := senderPortVal.Type()
+
+	if !senderPortVal.IsNil() {
+		// If both ports are already busy, we cannot connect them
+		if channel.IsValid() && senderPortVal.Addr() != receiverPortVal.Addr() {
+			return fmt.Errorf("'%s.%s' cannot be connected to '%s.%s': both ports already in use", receiverName, receiverPort, senderName, senderPort)
+		}
+		// Find an existing channel attached to sender
+		// Receiver channel takes priority if exists
 		if !channel.IsValid() {
-			// Need to create a new channel and add it to the array
-			chanType := reflect.ChanOf(reflect.BothDir, senderPortVal.Type().Elem().Elem())
-			channel = reflect.MakeChan(chanType, bufferSize)
-		}
-		senderPortVal.Set(reflect.Append(senderPortVal, channel))
-		n.IncSendChanRefCount(channel)
-	} else {
-		// Check if channel was already instantiated, if so, use it. Thus we can connect serveral endpoints and golang will pseudo-randomly chooses a receiver
-		// Also, this avoids crashes on <-net.Wait()
-		if !senderPortVal.IsNil() {
-			//go does not allow cast of unidir chan to bidir chan (for good reason)
-			//but luckily we saved it, so we look it up
-			if channel.IsValid() && senderPortVal.Addr() != receiverPortVal.Addr() {
-				return fmt.Errorf("'%s.%s' cannot be connected to '%s.%s': inport already in use", receiverName, receiverPort, senderName, senderPort)
-			}
-			// Find an existing channel attached to sender
-			for _, mycon := range n.connections {
-				if mycon.src.port == senderPort && mycon.src.proc == senderName {
-					channel = mycon.channel
-					break
-				}
-			}
-		}
-		// either senderPortVal was nil or we did not find a previous channel instance
-		if !channel.IsValid() {
-			// Make a channel of an appropriate type
-			chanType := reflect.ChanOf(reflect.BothDir, sndPortType.Elem())
-			channel = reflect.MakeChan(chanType, bufferSize)
+			channel = n.findExistingChan(senderName, senderPort, reflect.SendDir)
 		}
 	}
 
-	if channel.IsNil() {
-		return fmt.Errorf("'%s.%s' is not a valid output channel", senderName, senderPort)
-	}
-
-	// Check ports are settable
-	if !senderPortVal.CanSet() {
-		return fmt.Errorf("'%s.%s' is not assignable", senderName, senderPort)
-	}
-	if !receiverPortVal.CanSet() {
-		return fmt.Errorf("'%s.%s' is not assignable", receiverName, receiverPort)
+	// Create a new channel if none of the existing channles found
+	if !channel.IsValid() {
+		// Make a channel of an appropriate type
+		chanType := reflect.ChanOf(reflect.BothDir, sndPortType.Elem())
+		channel = reflect.MakeChan(chanType, bufferSize)
 	}
 
 	// Set the channels
+	// TODO fix rewiring a graph without disconnecting ports
 	if senderPortVal.IsNil() {
-		//note that if senderPortVal is a slice, this does not run, instead see code above (== reflect.Slice)
 		senderPortVal.Set(channel)
-		n.IncSendChanRefCount(channel)
+		n.incSendChanRefCount(channel)
 	}
 	if receiverPortVal.IsNil() {
 		receiverPortVal.Set(channel)
@@ -398,7 +372,31 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 		return nilValue, fmt.Errorf("Connect error: '%s.%s' does not have a valid chan type", procName, portName)
 	}
 
+	// Check assignability
+	if !portVal.CanSet() {
+		return nilValue, fmt.Errorf("'%s.%s' is not assignable", procName, portName)
+	}
+
 	return portVal, nil
+}
+
+// findExistingChan returns a channel attached to receiver if it already exists
+func (n *Graph) findExistingChan(proc, procPort string, dir reflect.ChanDir) reflect.Value {
+	var channel reflect.Value
+	// Find existing channel attached to the receiver
+	for _, conn := range n.connections {
+		var p portName
+		if dir == reflect.SendDir {
+			p = conn.src
+		} else {
+			p = conn.tgt
+		}
+		if p.port == procPort && p.proc == proc {
+			channel = conn.channel
+			break
+		}
+	}
+	return channel
 }
 
 // // Unsets an port of a given process
