@@ -23,34 +23,26 @@ func (n *Graph) getOutPort(name string) (reflect.Value, error) {
 	return pName.channel, nil
 }
 
-// // MapInPort adds an inport to the net and maps it to a contained proc's port.
-// // It returns true on success or panics and returns false on error.
-// func (n *Graph) MapInPort(name, procName, procPort string) bool {
-// 	ret := false
-// 	// Check if target component and port exists
-// 	var channel reflect.Value
-// 	if p, procFound := n.procs[procName]; procFound {
-// 		if i, isNet := p.(portMapper); isNet {
-// 			// Is a subnet
-// 			ret = i.hasInPort(procPort)
-// 			channel = i.getInPort(procPort)
-// 		} else {
-// 			// Is a proc
-// 			f := reflect.ValueOf(p).Elem().FieldByName(procPort)
-// 			ret = f.IsValid() && f.Kind() == reflect.Chan && (f.Type().ChanDir()&reflect.RecvDir) != 0
-// 			channel = f
-// 		}
-// 		if !ret {
-// 			panic("flow.Graph.MapInPort(): No such inport: " + procName + "." + procPort)
-// 		}
-// 	} else {
-// 		panic("flow.Graph.MapInPort(): No such process: " + procName)
-// 	}
-// 	if ret {
-// 		n.inPorts[name] = port{proc: procName, port: procPort, channel: channel}
-// 	}
-// 	return ret
-// }
+// MapInPort adds an inport to the net and maps it to a contained proc's port.
+func (n *Graph) MapInPort(name, procName, procPort string) error {
+	var channel reflect.Value
+	var err error
+	if p, procFound := n.procs[procName]; procFound {
+		if g, isNet := p.(*Graph); isNet {
+			// Is a subnet
+			channel, err = g.getInPort(procPort)
+		} else {
+			// Is a proc
+			channel, err = n.getProcPort(procName, procPort, reflect.RecvDir)
+		}
+	} else {
+		return fmt.Errorf("Could not map inport: process '%s' not found", procName)
+	}
+	if err == nil {
+		n.inPorts[name] = port{proc: procName, port: procPort, channel: channel}
+	}
+	return err
+}
 
 // // AnnotateInPort sets optional run-time annotation for the port utilized by
 // // runtimes and FBP protocol clients.
@@ -72,34 +64,26 @@ func (n *Graph) getOutPort(name string) (reflect.Value, error) {
 // 	return true
 // }
 
-// // MapOutPort adds an outport to the net and maps it to a contained proc's port.
-// // It returns true on success or panics and returns false on error.
-// func (n *Graph) MapOutPort(name, procName, procPort string) bool {
-// 	ret := false
-// 	// Check if target component and port exists
-// 	var channel reflect.Value
-// 	if p, procFound := n.procs[procName]; procFound {
-// 		if i, isNet := p.(portMapper); isNet {
-// 			// Is a subnet
-// 			ret = i.hasOutPort(procPort)
-// 			channel = i.getOutPort(procPort)
-// 		} else {
-// 			// Is a proc
-// 			f := reflect.ValueOf(p).Elem().FieldByName(procPort)
-// 			ret = f.IsValid() && f.Kind() == reflect.Chan && (f.Type().ChanDir()&reflect.SendDir) != 0
-// 			channel = f
-// 		}
-// 		if !ret {
-// 			panic("flow.Graph.MapOutPort(): No such outport: " + procName + "." + procPort)
-// 		}
-// 	} else {
-// 		panic("flow.Graph.MapOutPort(): No such process: " + procName)
-// 	}
-// 	if ret {
-// 		n.outPorts[name] = port{proc: procName, port: procPort, channel: channel}
-// 	}
-// 	return ret
-// }
+// MapOutPort adds an outport to the net and maps it to a contained proc's port.
+func (n *Graph) MapOutPort(name, procName, procPort string) error {
+	var channel reflect.Value
+	var err error
+	if p, procFound := n.procs[procName]; procFound {
+		if g, isNet := p.(*Graph); isNet {
+			// Is a subnet
+			channel, err = g.getOutPort(procPort)
+		} else {
+			// Is a proc
+			channel, err = n.getProcPort(procName, procPort, reflect.SendDir)
+		}
+	} else {
+		return fmt.Errorf("Could not map outport: process '%s' not found", procName)
+	}
+	if err == nil {
+		n.outPorts[name] = port{proc: procName, port: procPort, channel: channel}
+	}
+	return err
+}
 
 // // AnnotateOutPort sets optional run-time annotation for the port utilized by
 // // runtimes and FBP protocol clients.
