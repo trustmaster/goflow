@@ -171,113 +171,24 @@ func (n *Graph) Remove(processName string) bool {
 // 	return n.waitGrp
 // }
 
-// // run runs the network and waits for all processes to finish.
-// func (n *Graph) run() {
-// 	// Add processes to the waitgroup before starting them
-// 	n.waitGrp.Add(len(n.procs))
-// 	for _, v := range n.procs {
-// 		// Check if it is a net or proc
-// 		r := reflect.ValueOf(v).Elem()
-// 		if r.FieldByName("Graph").IsValid() {
-// 			RunNet(v)
-// 		} else {
-// 			RunProc(v)
-// 		}
-// 	}
-// 	n.isRunning = true
-
-// 	// Send initial IPs
-// 	for _, ip := range n.iips {
-// 		// Get the reciever port
-// 		var rport reflect.Value
-// 		found := false
-
-// 		// Try to find it among network inports
-// 		for _, inPort := range n.inPorts {
-// 			if inPort.proc == ip.proc && inPort.port == ip.port {
-// 				rport = inPort.channel
-// 				found = true
-// 				break
-// 			}
-// 		}
-
-// 		if !found {
-// 			// Try to find among connections
-// 			for _, conn := range n.connections {
-// 				if conn.tgt.proc == ip.proc && conn.tgt.port == ip.port {
-// 					rport = conn.channel
-// 					found = true
-// 					break
-// 				}
-// 			}
-// 		}
-
-// 		if !found {
-// 			// Try to find a proc and attach a new channel to it
-// 			for procName, proc := range n.procs {
-// 				if procName == ip.proc {
-// 					// Check if receiver is a net
-// 					rv := reflect.ValueOf(proc).Elem()
-// 					var rnet reflect.Value
-// 					if rv.Type().Name() == "Graph" {
-// 						rnet = rv
-// 					} else {
-// 						rnet = rv.FieldByName("Graph")
-// 					}
-// 					if rnet.IsValid() {
-// 						if pm, isPm := rnet.Addr().Interface().(portMapper); isPm {
-// 							rport = pm.getInPort(ip.port)
-// 						}
-// 					} else {
-// 						// Receiver is a proc
-// 						rport = rv.FieldByName(ip.port)
-// 					}
-
-// 					// Validate receiver port
-// 					rtport := rport.Type()
-// 					if rtport.Kind() != reflect.Chan || rtport.ChanDir()&reflect.RecvDir == 0 {
-// 						panic(ip.proc + "." + ip.port + " is not a valid input channel")
-// 					}
-// 					var channel reflect.Value
-
-// 					// Make a channel of an appropriate type
-// 					chanType := reflect.ChanOf(reflect.BothDir, rtport.Elem())
-// 					channel = reflect.MakeChan(chanType, DefaultBufferSize)
-// 					// Set the channel
-// 					if rport.CanSet() {
-// 						rport.Set(channel)
-// 					} else {
-// 						panic(ip.proc + "." + ip.port + " is not settable")
-// 					}
-
-// 					// Use the new channel to send the IIP
-// 					rport = channel
-// 					found = true
-// 					break
-// 				}
-// 			}
-// 		}
-
-// 		if found {
-// 			// Send data to the port
-// 			rport.Send(reflect.ValueOf(ip.data))
-// 		} else {
-// 			panic("IIP target not found: " + ip.proc + "." + ip.port)
-// 		}
-// 	}
-
-// 	// Let the outside world know that the network is ready
-// 	close(n.ready)
-
-// 	// Wait for all processes to terminate
-// 	n.waitGrp.Wait()
-// 	n.isRunning = false
-// 	// Check if there is a parent net
-// 	if n.Net != nil {
-// 		// Notify parent of finish
-// 		n.Net.waitGrp.Done()
-// 	}
-// }
+// Process runs the network
+func (n *Graph) Process() {
+	for _, i := range n.procs {
+		c, ok := i.(Component)
+		if !ok {
+			continue
+		}
+		n.waitGrp.Add(1)
+		w := Run(c)
+		go func() {
+			<-w
+			n.waitGrp.Done()
+		}()
+	}
+	n.ready <- Done{}
+	n.waitGrp.Wait()
+	n.done <- Done{}
+}
 
 // // RunProc starts a proc added to a net at run time
 // func (n *Graph) RunProc(procName string) bool {
@@ -354,40 +265,4 @@ func (n *Graph) Remove(processName string) bool {
 // // goroutine until the network finishes its job
 // func (n *Graph) Wait() <-chan struct{} {
 // 	return n.done
-// }
-
-// // RunNet runs the network by starting all of its processes.
-// // It runs Init/Finish handlers if the network implements Initializable/Finalizable interfaces.
-// func RunNet(i interface{}) {
-// 	// Get the contained network
-// 	net, isGraph := i.(*Graph)
-// 	if !isGraph {
-// 		v := reflect.ValueOf(i).Elem()
-// 		if v.Kind() != reflect.Struct {
-// 			panic("flow.RunNet(): argument is not a pointer to struct")
-// 		}
-// 		vGraph := v.FieldByName("Graph")
-// 		if !vGraph.IsValid() || vGraph.Type().Name() != "Graph" {
-// 			panic("flow.RunNet(): argument is not a valid graph instance")
-// 		}
-// 		net = vGraph.Addr().Interface().(*Graph)
-// 	}
-
-// 	// Call user init function if exists
-// 	if initable, ok := i.(Initializable); ok {
-// 		initable.Init()
-// 	}
-
-// 	// Run the contained processes
-// 	go func() {
-// 		net.run()
-
-// 		// Call user finish function if exists
-// 		if finable, ok := i.(Finalizable); ok {
-// 			finable.Finish()
-// 		}
-
-// 		// Close the wait channel
-// 		close(net.done)
-// 	}()
 // }
