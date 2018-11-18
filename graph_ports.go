@@ -105,24 +105,26 @@ func (n *Graph) MapOutPort(name, procName, procPort string) error {
 // 	return true
 // }
 
-// // SetInPort assigns a channel to a network's inport to talk to the outer world.
-// // It returns true on success or false if the inport cannot be set.
-// func (n *Graph) SetInPort(name string, channel interface{}) bool {
-// 	res := false
-// 	// Get the component's inport associated
-// 	p := n.getInPort(name)
-// 	// Try to set it
-// 	if p.CanSet() {
-// 		p.Set(reflect.ValueOf(channel))
-// 		res = true
-// 	}
-// 	// Save it in inPorts to be used with IIPs if needed
-// 	if p, ok := n.inPorts[name]; ok {
-// 		p.channel = reflect.ValueOf(channel)
-// 		n.inPorts[name] = p
-// 	}
-// 	return res
-// }
+// SetInPort assigns a channel to a network's inport to talk to the outer world.
+func (n *Graph) SetInPort(name string, channel interface{}) error {
+	// Get the component's inport associated
+	p, err := n.getInPort(name)
+	if err != nil {
+		return err
+	}
+	// Try to set it
+	if p.CanSet() {
+		p.Set(reflect.ValueOf(channel))
+	} else {
+		return fmt.Errorf("Cannot set graph inport: '%s'", name)
+	}
+	// Save it in inPorts to be used with IIPs if needed
+	if p, ok := n.inPorts[name]; ok {
+		p.channel = reflect.ValueOf(channel)
+		n.inPorts[name] = p
+	}
+	return nil
+}
 
 // // RenameInPort changes graph's inport name
 // func (n *Graph) RenameInPort(oldName, newName string) bool {
@@ -147,24 +149,27 @@ func (n *Graph) MapOutPort(name, procName, procPort string) error {
 // 	return true
 // }
 
-// // SetOutPort assigns a channel to a network's outport to talk to the outer world.
-// // It returns true on success or false if the outport cannot be set.
-// func (n *Graph) SetOutPort(name string, channel interface{}) bool {
-// 	res := false
-// 	// Get the component's outport associated
-// 	p := n.getOutPort(name)
-// 	// Try to set it
-// 	if p.CanSet() {
-// 		p.Set(reflect.ValueOf(channel))
-// 		res = true
-// 	}
-// 	// Save it in outPorts to be used later
-// 	if p, ok := n.outPorts[name]; ok {
-// 		p.channel = reflect.ValueOf(channel)
-// 		n.outPorts[name] = p
-// 	}
-// 	return res
-// }
+// SetOutPort assigns a channel to a network's outport to talk to the outer world.
+// It returns true on success or false if the outport cannot be set.
+func (n *Graph) SetOutPort(name string, channel interface{}) error {
+	// Get the component's outport associated
+	p, err := n.getOutPort(name)
+	if err != nil {
+		return err
+	}
+	// Try to set it
+	if p.CanSet() {
+		p.Set(reflect.ValueOf(channel))
+	} else {
+		return fmt.Errorf("Cannot set graph outport: '%s'", name)
+	}
+	// Save it in outPorts to be used later
+	if p, ok := n.outPorts[name]; ok {
+		p.channel = reflect.ValueOf(channel)
+		n.outPorts[name] = p
+	}
+	return nil
+}
 
 // // RenameOutPort changes graph's outport name
 // func (n *Graph) RenameOutPort(oldName, newName string) bool {
