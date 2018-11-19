@@ -39,12 +39,6 @@ type Graph struct {
 	sendChanMutex sync.Locker
 	// iips contains initial IPs attached to the network
 	iips []iip
-	// done is used to let the outside world know when the net has finished its job
-	done Wait
-	// ready is used to let the outside world know when the net is ready to accept input
-	ready Wait
-	// isRunning indicates that the network is currently running
-	isRunning bool
 }
 
 // NewGraph returns a new initialized empty graph instance
@@ -64,8 +58,6 @@ func NewGraph(config ...GraphConfig) *Graph {
 		sendChanRefCount: make(map[uintptr]uint, conf.Capacity),
 		sendChanMutex:    new(sync.Mutex),
 		iips:             make([]iip, 0, conf.Capacity),
-		done:             make(Wait),
-		ready:            make(Wait),
 	}
 }
 
@@ -185,9 +177,7 @@ func (n *Graph) Process() {
 			n.waitGrp.Done()
 		}()
 	}
-	n.ready <- Done{}
 	n.waitGrp.Wait()
-	n.done <- Done{}
 }
 
 // // RunProc starts a proc added to a net at run time
@@ -253,16 +243,4 @@ func (n *Graph) Process() {
 // 		return StopProc(proc)
 // 	}
 // 	return true
-// }
-
-// // Ready returns a channel that can be used to suspend the caller
-// // goroutine until the network is ready to accept input packets
-// func (n *Graph) Ready() <-chan struct{} {
-// 	return n.ready
-// }
-
-// // Wait returns a channel that can be used to suspend the caller
-// // goroutine until the network finishes its job
-// func (n *Graph) Wait() <-chan struct{} {
-// 	return n.done
 // }
