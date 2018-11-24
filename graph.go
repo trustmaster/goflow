@@ -103,13 +103,12 @@ func (n *Graph) AddGraph(name string) error {
 // Remove deletes a process from the graph. First it stops the process if running.
 // Then it disconnects it from other processes and removes the connections from
 // the graph. Then it drops the process itself.
-func (n *Graph) Remove(processName string) bool {
+func (n *Graph) Remove(processName string) error {
 	if _, exists := n.procs[processName]; !exists {
-		return false
+		return fmt.Errorf("Could not remove process: '%s' does not exist", processName)
 	}
-	// TODO disconnect before removal
 	delete(n.procs, processName)
-	return true
+	return nil
 }
 
 // // Rename changes a process name in all connections, external ports, IIPs and the

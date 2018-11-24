@@ -84,3 +84,20 @@ func TestAddInvalidProcess(t *testing.T) {
 		t.Errorf("Expected an error")
 	}
 }
+
+func TestRemove(t *testing.T) {
+	n := NewGraph()
+	e1 := new(echo)
+	if err := n.Add("e1", e1); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := n.Remove("e1"); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := n.Remove("e2"); err == nil {
+		t.Errorf("Expected an error")
+		return
+	}
+}
