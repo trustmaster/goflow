@@ -75,3 +75,12 @@ func TestSimpleGraph(t *testing.T) {
 
 	<-wait
 }
+
+func TestAddInvalidProcess(t *testing.T) {
+	s := struct{ Name string }{"This is not a Component"}
+	n := NewGraph()
+	err := n.Add("wrong", s)
+	if err == nil {
+		t.Errorf("Expected an error")
+	}
+}
