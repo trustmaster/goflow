@@ -1,6 +1,17 @@
 # GoFlow - Dataflow and Flow-based programming library for Go (golang)
 
-This is quite a minimalistic implementation of [Flow-based programming](http://en.wikipedia.org/wiki/Flow-based_programming) and several other concurrent models in Go programming language that aims at designing applications as graphs of components which react to data that flows through the graph.
+[![Build Status](https://travis-ci.com/trustmaster/goflow.svg?branch=master)](https://travis-ci.com/trustmaster/goflow)
+
+_*Status of this branch*_
+
+_Warning: you are currently on v1 branch of GoFlow. v1 is a revisit and refactoring of the original GoFlow code which remained almost unchanged for 7 years._
+
+- _[More information on v1](https://github.com/trustmaster/goflow/issues/49)_
+- _[Take me back to v0](https://github.com/trustmaster/goflow/tree/v0)_
+
+_If your code depends on the old implementation, you can build it using [release 0.1](https://github.com/trustmaster/goflow/releases/tag/0.1)._
+
+This a lean and opinionated implementation of [Flow-based programming](http://en.wikipedia.org/wiki/Flow-based_programming) in Go sthat aims at designing applications as graphs of components which react to data that flows through the graph.
 
 The main properties of the proposed model are:
 
@@ -12,7 +23,7 @@ The main properties of the proposed model are:
 
 ## Getting started
 
-Current version of the library requires a latest stable Go release. If you don't have the Go compiler installed, read the official [Go install guide](http://golang.org/doc/install).
+If you don't have the Go compiler installed, read the official [Go install guide](http://golang.org/doc/install).
 
 Use go tool to install the package in your packages tree:
 
@@ -42,48 +53,42 @@ import (
 	"github.com/trustmaster/goflow"
 )
 
-// A component that generates greetings
+// Greeter sends greetings
 type Greeter struct {
-	flow.Component               // component "superclass" embedded
 	Name           <-chan string // input port
 	Res            chan<- string // output port
 }
 
 // Process incoming data
-func (g *Greeter) Process() {
+func (c *Greeter) Process() {
 	// Keep reading incoming packets
-	for name := range g.Name {
+	for name := range c.Name {
 		greeting := fmt.Sprintf("Hello, %s!", name)
 		// Send the greeting to the output port
-		g.Res <- greeting
+		c.Res <- greeting
 	}
+	close(c.Res)
 }
 
-// A component that prints its input on screen
+// Printer prints its input on screen
 type Printer struct {
-	flow.Component
 	Line <-chan string // inport
 }
 
-// Prints a line when it gets it
-func (p *Printer) Process() {
-	for line := range p.Line {
+// Process prints a line when it gets it
+func (c *Printer) Process() {
+	for line := range c.Line {
 		fmt.Println(line)
 	}
+	close(c.Line)
 }
 
-// Our greeting network
-type GreetingApp struct {
-	flow.Graph               // graph "superclass" embedded
-}
-
-// Graph constructor and structure definition
-func NewGreetingApp() *GreetingApp {
-	n := new(GreetingApp) // creates the object in heap
-	n.InitGraphState()    // allocates memory for the graph
+// NewGreetingApp defines the app graph
+func NewGreetingApp() *flow.Graph {
+	n := flow.NewGraph()
 	// Add processes to the network
-	n.Add(new(Greeter), "greeter")
-	n.Add(new(Printer), "printer")
+	n.Add("greeter", new(Greeter))
+	n.Add("printer", new(Printer))
 	// Connect them with a channel
 	n.Connect("greeter", "Res", "printer", "Line")
 	// Our net has 1 inport mapped to greeter.Name
@@ -98,21 +103,21 @@ func main() {
 	in := make(chan string)
 	net.SetInPort("In", in)
 	// Run the net
-	flow.RunNet(net)
+	wait := flow.Run(net)
 	// Now we can send some names and see what happens
 	in <- "John"
 	in <- "Boris"
 	in <- "Hanna"
-	// Close the input to shut the network down
+	// Send end of input
 	close(in)
-	// Wait until the app has done its job
-	<-net.Wait()
+	// Wait until the net has completed its job
+	<-wait
 }
 ```
 
 Looks a bit heavy for such a simple task but FBP is aimed at a bit more complex things than just printing on screen. So in more complex an realistic examples the infractructure pays the price.
 
-You probably have one question left even after reading the comments in code: why do we need to wait for the finish signal? This is because flow-based world is asynchronous and while you expect things to happen in the same sequence as they are in main(), during runtime they don't necessarily follow the same order and the application might terminate before the network has done its job. To avoid this confusion we listen for a signal on network's `Wait()` channel which is closed when the network finishes its job.
+You probably have one question left even after reading the comments in code: why do we need to wait for the finish signal? This is because flow-based world is asynchronous and while you expect things to happen in the same sequence as they are in main(), during runtime they don't necessarily follow the same order and the application might terminate before the network has done its job. To avoid this confusion we listen for a signal on network's `wait` channel which is sent when the network finishes its job.
 
 ## Terminology
 
@@ -148,10 +153,6 @@ Documentation for the flow package can be accessed using standard godoc tool, e.
 ```
 godoc github.com/trustmaster/goflow
 ```
-
-## More examples
-
-* [GoChat](https://github.com/trustmaster/gochat), a simple chat in Go using this library
 
 ## Links
 
