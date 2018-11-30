@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.com/trustmaster/goflow.svg?branch=master)](https://travis-ci.com/trustmaster/goflow)
 
-_*Status of this branch*_
+### _Status of this branch_
 
 _Warning: you are currently on v1 branch of GoFlow. v1 is a revisit and refactoring of the original GoFlow code which remained almost unchanged for 7 years._
 
@@ -10,6 +10,8 @@ _Warning: you are currently on v1 branch of GoFlow. v1 is a revisit and refactor
 - _[Take me back to v0](https://github.com/trustmaster/goflow/tree/v0)_
 
 _If your code depends on the old implementation, you can build it using [release 0.1](https://github.com/trustmaster/goflow/releases/tag/0.1)._
+
+--
 
 This a lean and opinionated implementation of [Flow-based programming](http://en.wikipedia.org/wiki/Flow-based_programming) in Go sthat aims at designing applications as graphs of components which react to data that flows through the graph.
 
