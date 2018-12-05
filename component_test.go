@@ -6,7 +6,7 @@ import (
 
 // This component interface is common for many test cases
 type intInAndOut struct {
-	In <-chan int
+	In  <-chan int
 	Out chan<- int
 }
 
@@ -14,7 +14,7 @@ type doubleOnce intInAndOut
 
 func (c *doubleOnce) Process() {
 	i := <-c.In
-	c.Out <- 2*i
+	c.Out <- 2 * i
 }
 
 // Test a simple component that runs only once
@@ -42,15 +42,15 @@ type doubler intInAndOut
 
 func (c *doubler) Process() {
 	for i := range c.In {
-		c.Out <- 2*i
+		c.Out <- 2 * i
 	}
 }
 
 // Test a simple long running component with one input
 func TestSimpleLongRunningComponent(t *testing.T) {
 	data := map[int]int{
-		12: 24,
-		7: 14,
+		12:  24,
+		7:   14,
 		400: 800,
 	}
 	in := make(chan int)
@@ -64,7 +64,7 @@ func TestSimpleLongRunningComponent(t *testing.T) {
 
 	for src, expected := range data {
 		in <- src
-		actual := <- out
+		actual := <-out
 
 		if actual != expected {
 			t.Errorf("%d != %d", actual, expected)
@@ -85,10 +85,7 @@ type adder struct {
 
 func (c *adder) Process() {
 	guard := NewInputGuard(2)
-	closeOuts := func() {
-		close(c.Sum)
-	}
-	defer closeOuts()
+	defer close(c.Sum)
 
 	op1Buf := make([]int, 0, 10)
 	op2Buf := make([]int, 0, 10)
@@ -110,7 +107,7 @@ func (c *adder) Process() {
 			} else if guard.Complete() {
 				return
 			}
-			
+
 		case op2, ok := <-c.Op2:
 			if ok {
 				addOp(op2, &op2Buf, &op1Buf)
@@ -146,7 +143,7 @@ func TestComponentWithTwoInputs(t *testing.T) {
 		}
 		close(in2)
 	}()
-	
+
 	i := 0
 	for actual := range out {
 		expected := sums[i]
@@ -155,6 +152,6 @@ func TestComponentWithTwoInputs(t *testing.T) {
 		}
 		i++
 	}
-	
+
 	<-wait
 }
