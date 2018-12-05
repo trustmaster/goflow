@@ -105,6 +105,7 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 	return nil
 }
 
+// getProcPort finds an assignable port field in one of the subprocesses
 func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (reflect.Value, error) {
 	nilValue := reflect.ValueOf(nil)
 	// Ensure process exists
@@ -167,7 +168,7 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 	return portVal, nil
 }
 
-// findExistingChan returns a channel attached to receiver if it already exists
+// findExistingChan returns a channel attached to receiver if it already exists among connections
 func (n *Graph) findExistingChan(proc, procPort string, dir reflect.ChanDir) reflect.Value {
 	var channel reflect.Value
 	// Find existing channel attached to the receiver

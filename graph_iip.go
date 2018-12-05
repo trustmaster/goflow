@@ -1,5 +1,10 @@
 package flow
 
+import (
+	"fmt"
+	"reflect"
+)
+
 // iip stands for Initial Information Packet representation
 // within the network.
 type iip struct {
@@ -29,85 +34,55 @@ func (n *Graph) RemoveIIP(processName, portName string) bool {
 	return false
 }
 
-// // run runs the network and waits for all processes to finish.
-// func (n *Graph) run() {
-// 	// Send initial IPs
-// 	for _, ip := range n.iips {
-// 		// Get the reciever port
-// 		var rport reflect.Value
-// 		found := false
+// sendIIPs sends Initial Information Packets upon network start
+func (n *Graph) sendIIPs() error {
+	// Send initial IPs
+	for _, ip := range n.iips {
+		// Get the reciever port channel
+		var channel reflect.Value
+		found := false
 
-// 		// Try to find it among network inports
-// 		for _, inPort := range n.inPorts {
-// 			if inPort.proc == ip.proc && inPort.port == ip.port {
-// 				rport = inPort.channel
-// 				found = true
-// 				break
-// 			}
-// 		}
+		// Try to find it among network inports
+		for _, inPort := range n.inPorts {
+			if inPort.proc == ip.proc && inPort.port == ip.port {
+				channel = inPort.channel
+				found = true
+				break
+			}
+		}
 
-// 		if !found {
-// 			// Try to find among connections
-// 			for _, conn := range n.connections {
-// 				if conn.tgt.proc == ip.proc && conn.tgt.port == ip.port {
-// 					rport = conn.channel
-// 					found = true
-// 					break
-// 				}
-// 			}
-// 		}
+		if !found {
+			// Try to find among connections
+			for _, conn := range n.connections {
+				if conn.tgt.proc == ip.proc && conn.tgt.port == ip.port {
+					channel = conn.channel
+					found = true
+					break
+				}
+			}
+		}
 
-// 		if !found {
-// 			// Try to find a proc and attach a new channel to it
-// 			for procName, proc := range n.procs {
-// 				if procName == ip.proc {
-// 					// Check if receiver is a net
-// 					rv := reflect.ValueOf(proc).Elem()
-// 					var rnet reflect.Value
-// 					if rv.Type().Name() == "Graph" {
-// 						rnet = rv
-// 					} else {
-// 						rnet = rv.FieldByName("Graph")
-// 					}
-// 					if rnet.IsValid() {
-// 						if pm, isPm := rnet.Addr().Interface().(portMapper); isPm {
-// 							rport = pm.getInPort(ip.port)
-// 						}
-// 					} else {
-// 						// Receiver is a proc
-// 						rport = rv.FieldByName(ip.port)
-// 					}
+		if !found {
+			// Try to find a proc and attach a new channel to it
+			recvPort, err := n.getProcPort(ip.proc, ip.port, reflect.RecvDir)
+			if err != nil {
+				return err
+			}
 
-// 					// Validate receiver port
-// 					rtport := rport.Type()
-// 					if rtport.Kind() != reflect.Chan || rtport.ChanDir()&reflect.RecvDir == 0 {
-// 						panic(ip.proc + "." + ip.port + " is not a valid input channel")
-// 					}
-// 					var channel reflect.Value
+			// Make a channel of an appropriate type
+			chanType := reflect.ChanOf(reflect.BothDir, recvPort.Type().Elem())
+			channel = reflect.MakeChan(chanType, n.conf.BufferSize)
 
-// 					// Make a channel of an appropriate type
-// 					chanType := reflect.ChanOf(reflect.BothDir, rtport.Elem())
-// 					channel = reflect.MakeChan(chanType, DefaultBufferSize)
-// 					// Set the channel
-// 					if rport.CanSet() {
-// 						rport.Set(channel)
-// 					} else {
-// 						panic(ip.proc + "." + ip.port + " is not settable")
-// 					}
+			recvPort.Set(channel)
+			found = true
+		}
 
-// 					// Use the new channel to send the IIP
-// 					rport = channel
-// 					found = true
-// 					break
-// 				}
-// 			}
-// 		}
-
-// 		if found {
-// 			// Send data to the port
-// 			rport.Send(reflect.ValueOf(ip.data))
-// 		} else {
-// 			panic("IIP target not found: " + ip.proc + "." + ip.port)
-// 		}
-// 	}
-// }
+		if found {
+			// Send data to the port
+			channel.Send(reflect.ValueOf(ip.data))
+		} else {
+			return fmt.Errorf("IIP target not found: '%s.%s'"+ip.proc, ip.port)
+		}
+	}
+	return nil
+}
