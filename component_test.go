@@ -84,7 +84,7 @@ type adder struct {
 }
 
 func (c *adder) Process() {
-	guard := NewInputGuard(2)
+	guard := NewInputGuard("op1", "op2")
 	defer close(c.Sum)
 
 	op1Buf := make([]int, 0, 10)
@@ -104,14 +104,14 @@ func (c *adder) Process() {
 		case op1, ok := <-c.Op1:
 			if ok {
 				addOp(op1, &op1Buf, &op2Buf)
-			} else if guard.Complete() {
+			} else if guard.Complete("op1") {
 				return
 			}
 
 		case op2, ok := <-c.Op2:
 			if ok {
 				addOp(op2, &op2Buf, &op1Buf)
-			} else if guard.Complete() {
+			} else if guard.Complete("op2") {
 				return
 			}
 		}

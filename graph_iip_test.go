@@ -13,7 +13,7 @@ type repeater struct {
 
 func (c *repeater) Process() {
 	defer close(c.Words)
-	guard := NewInputGuard(2)
+	guard := NewInputGuard("word", "times")
 
 	times := 0
 	word := ""
@@ -24,14 +24,14 @@ func (c *repeater) Process() {
 			if ok {
 				times = t
 				c.repeat(word, times)
-			} else if guard.Complete() {
+			} else if guard.Complete("times") {
 				return
 			}
 		case w, ok := <-c.Word:
 			if ok {
 				word = w
 				c.repeat(word, times)
-			} else if guard.Complete() {
+			} else if guard.Complete("word") {
 				return
 			}
 		}
