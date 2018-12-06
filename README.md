@@ -4,7 +4,7 @@
 
 ### _Status of this branch_
 
-_Warning: you are currently on v1 branch of GoFlow. v1 is a revisit and refactoring of the original GoFlow code which remained almost unchanged for 7 years._
+_Warning: you are currently on v1 branch of GoFlow. v1 is a revisit and refactoring of the original GoFlow code which remained almost unchanged for 7 years. This branch is deep *in progress*, no stability guaranteed. API also may change._
 
 - _[More information on v1](https://github.com/trustmaster/goflow/issues/49)_
 - _[Take me back to v0](https://github.com/trustmaster/goflow/tree/v0)_
