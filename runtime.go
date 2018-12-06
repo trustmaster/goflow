@@ -1,11 +1,14 @@
+// +build ignore
+
 package flow
 
 import (
-	"github.com/gorilla/websocket"
-	"github.com/nu7hatch/gouuid"
+	"encoding/json"
 	"log"
 	"net/http"
-	"encoding/json"
+
+	"github.com/gorilla/websocket"
+	"github.com/nu7hatch/gouuid"
 )
 
 type protocolHandler func(*websocket.Conn, interface{})

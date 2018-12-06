@@ -16,7 +16,7 @@ type runtimeInfo struct {
 	Type         string   `json:"type"`
 	Version      string   `json:"version"`
 	Capabilities []string `json:"capabilities"`
-	Id           string   `json:"id"`
+	ID           string   `json:"id"`
 }
 
 type runtimeMessage struct {
@@ -27,7 +27,7 @@ type runtimeMessage struct {
 
 // clearGraph message is sent by client to create a new empty graph
 type clearGraph struct {
-	Id          string
+	ID          string
 	Name        string `json:",omitempty"` // ignored
 	Library     string `json:",omitempty"` // ignored
 	Main        bool   `json:",omitempty"`
@@ -37,7 +37,7 @@ type clearGraph struct {
 
 // addNode message is sent by client to add a node to a graph
 type addNode struct {
-	Id        string
+	ID        string
 	Component string
 	Graph     string
 	Metadata  map[string]interface{} `json:",omitempty"` // ignored
@@ -45,7 +45,7 @@ type addNode struct {
 
 // removeNode is a client message to remove a node from a graph
 type removeNode struct {
-	Id    string
+	ID    string
 	Graph string
 }
 
@@ -59,7 +59,7 @@ type renameNode struct {
 // changeNode is a client message to change the metadata
 // associated to a node in the graph
 type changeNode struct { // ignored
-	Id       string
+	ID       string
 	Graph    string
 	Metadata map[string]interface{}
 }
@@ -157,7 +157,7 @@ type renamePort struct {
 
 // PortInfo represents a port to a runtime client
 type PortInfo struct {
-	Id          string        `json:"id"`
+	ID          string        `json:"id"`
 	Type        string        `json:"type"`
 	Description string        `json:"description"`
 	Addressable bool          `json:"addressable"` // ignored
