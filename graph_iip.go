@@ -41,6 +41,7 @@ func (n *Graph) sendIIPs() error {
 		// Get the reciever port channel
 		var channel reflect.Value
 		found := false
+		shouldClose := false
 
 		// Try to find it among network inports
 		for _, inPort := range n.inPorts {
@@ -75,11 +76,16 @@ func (n *Graph) sendIIPs() error {
 
 			recvPort.Set(channel)
 			found = true
+			shouldClose = true
 		}
 
 		if found {
 			// Send data to the port
 			channel.Send(reflect.ValueOf(ip.data))
+			if shouldClose {
+				fmt.Println("Closing")
+				channel.Close()
+			}
 		} else {
 			return fmt.Errorf("IIP target not found: '%s.%s'"+ip.proc, ip.port)
 		}

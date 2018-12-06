@@ -1,6 +1,8 @@
 package flow
 
-import "testing"
+import (
+	"testing"
+)
 
 type repeater struct {
 	Word  <-chan string

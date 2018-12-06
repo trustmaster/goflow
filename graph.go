@@ -176,5 +176,6 @@ func (n *Graph) Process() {
 			n.waitGrp.Done()
 		}()
 	}
+	n.sendIIPs()
 	n.waitGrp.Wait()
 }
