@@ -1,6 +1,7 @@
 # GoFlow - Dataflow and Flow-based programming library for Go (golang)
 
-[![Build Status](https://travis-ci.com/trustmaster/goflow.svg?branch=master)](https://travis-ci.com/trustmaster/goflow) [![Coverage Status](https://coveralls.io/repos/github/trustmaster/goflow/badge.svg?branch=master)](https://coveralls.io/github/trustmaster/goflow?branch=master)
+[![Build Status](https://travis-ci.com/trustmaster/goflow.svg?branch=master)](https://travis-ci.com/trustmaster/goflow) [![codecov](https://codecov.io/gh/trustmaster/goflow/branch/master/graph/badge.svg)](https://codecov.io/gh/trustmaster/goflow)
+
 
 ### _Status of this branch (WIP)_
 
