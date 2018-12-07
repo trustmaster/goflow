@@ -31,7 +31,7 @@ func (n *Graph) RemoveIIP(processName, portName string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("RemoveIIP error: could not find '%s.%s'", processName, portName)
+	return fmt.Errorf("RemoveIIP error: could not find IIP for '%s.%s'", processName, portName)
 }
 
 // sendIIPs sends Initial Information Packets upon network start

@@ -68,3 +68,34 @@ func TestBasicIIP(t *testing.T) {
 
 	<-wait
 }
+
+func TestAddRemoveIIP(t *testing.T) {
+	n := NewGraph()
+
+	if err := n.Add("e", new(echo)); err != nil {
+		t.Error(err)
+		return
+	}
+
+	if err := n.AddIIP("e", "In", 5); err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Adding an IIP to a non-existing process/port should fail
+	if err := n.AddIIP("d", "No", 404); err == nil {
+		t.FailNow()
+		return
+	}
+
+	if err := n.RemoveIIP("e", "In"); err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Second attempt to remove same IIP should fail
+	if err := n.RemoveIIP("e", "In"); err == nil {
+		t.FailNow()
+		return
+	}
+}
