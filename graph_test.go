@@ -4,18 +4,6 @@ import (
 	"testing"
 )
 
-type echo struct {
-	In  <-chan int
-	Out chan<- int
-}
-
-func (c *echo) Process() {
-	for i := range c.In {
-		c.Out <- i
-	}
-	close(c.Out)
-}
-
 func newDoubleEcho() (*Graph, error) {
 	n := NewGraph()
 	// Components

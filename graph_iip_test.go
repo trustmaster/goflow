@@ -4,49 +4,6 @@ import (
 	"testing"
 )
 
-type repeater struct {
-	Word  <-chan string
-	Times <-chan int
-
-	Words chan<- string
-}
-
-func (c *repeater) Process() {
-	defer close(c.Words)
-	guard := NewInputGuard("word", "times")
-
-	times := 0
-	word := ""
-
-	for {
-		select {
-		case t, ok := <-c.Times:
-			if ok {
-				times = t
-				c.repeat(word, times)
-			} else if guard.Complete("times") {
-				return
-			}
-		case w, ok := <-c.Word:
-			if ok {
-				word = w
-				c.repeat(word, times)
-			} else if guard.Complete("word") {
-				return
-			}
-		}
-	}
-}
-
-func (c *repeater) repeat(word string, times int) {
-	if word == "" || times <= 0 {
-		return
-	}
-	for i := 0; i < times; i++ {
-		c.Words <- word
-	}
-}
-
 func newRepeat5Times() (*Graph, error) {
 	n := NewGraph()
 
