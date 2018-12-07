@@ -2,8 +2,6 @@ language: go
 
 go:
   - "1.x"
-before_install:
-  - go get -t -v ./...
 
 script:
   - ./test_codecov.sh
