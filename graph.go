@@ -164,6 +164,7 @@ func (n *Graph) Remove(processName string) error {
 
 // Process runs the network
 func (n *Graph) Process() {
+	n.sendIIPs()
 	for _, i := range n.procs {
 		c, ok := i.(Component)
 		if !ok {
@@ -176,6 +177,5 @@ func (n *Graph) Process() {
 			n.waitGrp.Done()
 		}()
 	}
-	n.sendIIPs()
 	n.waitGrp.Wait()
 }

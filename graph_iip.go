@@ -81,11 +81,13 @@ func (n *Graph) sendIIPs() error {
 
 		if found {
 			// Send data to the port
-			channel.Send(reflect.ValueOf(ip.data))
-			if shouldClose {
-				fmt.Println("Closing")
-				channel.Close()
-			}
+			go func() {
+				channel.Send(reflect.ValueOf(ip.data))
+				if shouldClose {
+					fmt.Println("Closing")
+					channel.Close()
+				}
+			}()
 		} else {
 			return fmt.Errorf("IIP target not found: '%s.%s'"+ip.proc, ip.port)
 		}

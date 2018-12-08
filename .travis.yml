@@ -4,6 +4,7 @@ go:
   - "1.x"
 
 script:
+  - go test -v -race
   - ./test_codecov.sh
 
 after_success:
