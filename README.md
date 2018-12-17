@@ -83,7 +83,6 @@ func (c *Printer) Process() {
 	for line := range c.Line {
 		fmt.Println(line)
 	}
-	close(c.Line)
 }
 
 // NewGreetingApp defines the app graph
