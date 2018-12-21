@@ -74,3 +74,53 @@ func TestConnectInvalidParams(t *testing.T) {
 		})
 	}
 }
+
+func TestSubgraphSender(t *testing.T) {
+	sub, err := newDoubleEcho()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	n := NewGraph()
+	if err := n.Add("sub", sub); err != nil {
+		t.Error(err)
+		return
+	}
+	n.Add("e3", new(echo))
+
+	if err := n.Connect("sub", "Out", "e3", "In"); err != nil {
+		t.Error(err)
+		return
+	}
+
+	n.MapInPort("In", "sub", "In")
+	n.MapOutPort("Out", "e3", "Out")
+
+	testGraphWithNumberSequence(n, t)
+}
+
+func TestSubgraphReceiver(t *testing.T) {
+	sub, err := newDoubleEcho()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	n := NewGraph()
+	if err := n.Add("sub", sub); err != nil {
+		t.Error(err)
+		return
+	}
+	n.Add("e3", new(echo))
+
+	if err := n.Connect("e3", "Out", "sub", "In"); err != nil {
+		t.Error(err)
+		return
+	}
+
+	n.MapInPort("In", "e3", "In")
+	n.MapOutPort("Out", "sub", "Out")
+
+	testGraphWithNumberSequence(n, t)
+}
