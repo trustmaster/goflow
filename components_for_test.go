@@ -32,7 +32,6 @@ type adder struct {
 
 func (c *adder) Process() {
 	guard := NewInputGuard("op1", "op2")
-	defer close(c.Sum)
 
 	op1Buf := make([]int, 0, 10)
 	op2Buf := make([]int, 0, 10)
@@ -75,7 +74,6 @@ func (c *echo) Process() {
 	for i := range c.In {
 		c.Out <- i
 	}
-	close(c.Out)
 }
 
 // repeater repeats an input string a given number of times
@@ -87,7 +85,6 @@ type repeater struct {
 }
 
 func (c *repeater) Process() {
-	defer close(c.Words)
 	guard := NewInputGuard("word", "times")
 
 	times := 0
