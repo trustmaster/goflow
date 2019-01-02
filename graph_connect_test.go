@@ -124,3 +124,92 @@ func TestSubgraphReceiver(t *testing.T) {
 
 	testGraphWithNumberSequence(n, t)
 }
+
+func newFanOutFanIn() (*Graph, error) {
+	n := NewGraph()
+
+	components := map[string]interface{}{
+		"e1": new(echo),
+		"d1": new(doubler),
+		"d2": new(doubler),
+		"d3": new(doubler),
+		"e2": new(echo),
+	}
+
+	for name, c := range components {
+		if err := n.Add(name, c); err != nil {
+			return nil, err
+		}
+	}
+
+	connections := []struct{ sn, sp, rn, rp string }{
+		{"e1", "Out", "d1", "In"},
+		{"e1", "Out", "d2", "In"},
+		{"e1", "Out", "d3", "In"},
+		{"d1", "Out", "e2", "In"},
+		{"d2", "Out", "e2", "In"},
+		{"d3", "Out", "e2", "In"},
+	}
+
+	for _, c := range connections {
+		if err := n.Connect(c.sn, c.sp, c.rn, c.rp); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := n.MapInPort("In", "e1", "In"); err != nil {
+		return nil, err
+	}
+
+	if err := n.MapOutPort("Out", "e2", "Out"); err != nil {
+		return nil, err
+	}
+
+	return n, nil
+}
+
+func TestFanOutFanIn(t *testing.T) {
+	inData := []int{1, 2, 3, 4, 5, 6, 7, 8}
+	outData := []int{2, 4, 6, 8, 10, 12, 14, 16}
+
+	n, err := newFanOutFanIn()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	in := make(chan int)
+	out := make(chan int)
+	n.SetInPort("In", in)
+	n.SetOutPort("Out", out)
+
+	wait := Run(n)
+
+	go func() {
+		for _, n := range inData {
+			in <- n
+		}
+		close(in)
+	}()
+
+	i := 0
+	for actual := range out {
+		found := false
+		for j := 0; j < len(outData); j++ {
+			if outData[j] == actual {
+				found = true
+				outData = append(outData[:j], outData[j+1:]...)
+			}
+		}
+		if !found {
+			t.Errorf("%d not found in expected data", actual)
+		}
+		i++
+	}
+
+	if i != len(inData) {
+		t.Errorf("Output count missmatch: %d != %d", i, len(inData))
+	}
+
+	<-wait
+}
