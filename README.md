@@ -70,7 +70,6 @@ func (c *Greeter) Process() {
 		// Send the greeting to the output port
 		c.Res <- greeting
 	}
-	close(c.Res)
 }
 
 // Printer prints its input on screen
