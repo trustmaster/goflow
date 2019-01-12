@@ -150,6 +150,57 @@ func TestGraphInportIIP(t *testing.T) {
 	<-wait
 }
 
+func TestInternalConnectionIIP(t *testing.T) {
+	input := 1
+	iip := 2
+	output := []int{1, 2}
+	qty := 2
+
+	n, err := newDoubleEcho()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if err := n.AddIIP("e2", "In", iip); err != nil {
+		t.Error(err)
+		return
+	}
+
+	in := make(chan int)
+	out := make(chan int)
+
+	if err := n.SetInPort("In", in); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := n.SetOutPort("Out", out); err != nil {
+		t.Error(err)
+		return
+	}
+
+	wait := Run(n)
+
+	go func() {
+		in <- input
+		close(in)
+	}()
+
+	i := 0
+	for actual := range out {
+		// The order of output is not guaranteed in this case
+		if actual != output[0] && actual != output[1] {
+			t.Errorf("Unexpected value %d", actual)
+		}
+		i++
+	}
+	if i != qty {
+		t.Errorf("Returned %d words instead of %d", i, qty)
+	}
+
+	<-wait
+}
+
 func TestAddRemoveIIP(t *testing.T) {
 	n := NewGraph()
 
