@@ -157,7 +157,7 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 
 	// Validate
 	if portType.Kind() != reflect.Chan || portType.ChanDir()&dir == 0 {
-		return nilValue, fmt.Errorf("Connect error: '%s.%s' does not have a valid chan type", procName, portName)
+		return nilValue, fmt.Errorf("Connect error: '%s.%s' is not of the correct chan type", procName, portName)
 	}
 
 	// Check assignability

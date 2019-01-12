@@ -70,7 +70,6 @@ func (c *Greeter) Process() {
 		// Send the greeting to the output port
 		c.Res <- greeting
 	}
-	close(c.Res)
 }
 
 // Printer prints its input on screen
@@ -161,10 +160,8 @@ godoc github.com/trustmaster/goflow
 Here are related projects and resources:
 
 * [Flowbased.org](https://github.com/flowbased/flowbased.org/wiki), specifications and recommendations for FBP systems.
-* [J. Paul Morrison's Flow-Based Programming](http://www.jpaulmorrison.com/fbp/), the origin of FBP, [JavaFBP, C#FBP](http://sourceforge.net/projects/flow-based-pgmg/) and [DrawFBP](http://www.jpaulmorrison.com/fbp/#DrawFBP) diagramming tool.
-* [Knol about FBP](http://knol.google.com/k/flow-based-programming)
+* [J. Paul Morrison's Flow-Based Programming](http://www.jpaulmorrison.com/fbp/), the origin of FBP, [JavaFBP](https://github.com/jpaulm/javafbp), [C#FBP](https://github.com/jpaulm/csharpfbp) and [DrawFBP](https://github.com/jpaulm/drawfbp) diagramming tool.
 * [NoFlo](http://noflojs.org/), FBP for JavaScript and Node.js
-* [Pypes](http://www.pypes.org/), flow-based Python ETL
 * [Go](http://golang.org/), the Go programming language
 
 ## TODO

@@ -30,13 +30,17 @@ func newDoubleEcho() (*Graph, error) {
 }
 
 func TestSimpleGraph(t *testing.T) {
-	data := []int{7, 97, 16, 356, 81}
-
 	n, err := newDoubleEcho()
 	if err != nil {
 		t.Error(err)
 		return
 	}
+
+	testGraphWithNumberSequence(n, t)
+}
+
+func testGraphWithNumberSequence(n *Graph, t *testing.T) {
+	data := []int{7, 97, 16, 356, 81}
 
 	in := make(chan int)
 	out := make(chan int)

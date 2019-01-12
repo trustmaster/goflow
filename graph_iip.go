@@ -84,7 +84,6 @@ func (n *Graph) sendIIPs() error {
 			go func() {
 				channel.Send(reflect.ValueOf(ip.data))
 				if shouldClose {
-					fmt.Println("Closing")
 					channel.Close()
 				}
 			}()

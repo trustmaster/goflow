@@ -81,13 +81,12 @@ func TestComponentWithTwoInputs(t *testing.T) {
 		close(in2)
 	}()
 
-	i := 0
-	for actual := range out {
+	for i := 0; i < len(sums); i++ {
+		actual := <-out
 		expected := sums[i]
 		if actual != expected {
 			t.Errorf("%d != %d", actual, expected)
 		}
-		i++
 	}
 
 	<-wait

@@ -2,6 +2,7 @@ package flow
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 )
 
@@ -172,10 +173,27 @@ func (n *Graph) Process() {
 		}
 		n.waitGrp.Add(1)
 		w := Run(c)
+		proc := i
 		go func() {
 			<-w
+			n.closeProcOuts(proc)
 			n.waitGrp.Done()
 		}()
 	}
 	n.waitGrp.Wait()
+}
+
+func (n *Graph) closeProcOuts(proc interface{}) {
+	val := reflect.ValueOf(proc).Elem()
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Field(i)
+		fieldType := field.Type()
+		if !(field.IsValid() && field.Kind() == reflect.Chan && field.CanSet() &&
+			fieldType.ChanDir()&reflect.SendDir != 0 && fieldType.ChanDir()&reflect.RecvDir == 0) {
+			continue
+		}
+		if n.decSendChanRefCount(field) {
+			field.Close()
+		}
+	}
 }
