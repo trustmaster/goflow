@@ -1,4 +1,4 @@
-package flow
+package goflow
 
 // Component is a unit that can start a process
 type Component interface {

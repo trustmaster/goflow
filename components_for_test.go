@@ -1,4 +1,4 @@
-package flow
+package goflow
 
 // doubler doubles its input
 type doubler struct {

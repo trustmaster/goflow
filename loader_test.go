@@ -1,6 +1,6 @@
 // +build ignore
 
-package flow
+package goflow
 
 import (
 	"sync"

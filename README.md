@@ -85,8 +85,8 @@ func (c *Printer) Process() {
 }
 
 // NewGreetingApp defines the app graph
-func NewGreetingApp() *flow.Graph {
-	n := flow.NewGraph()
+func NewGreetingApp() *goflow.Graph {
+	n := goflow.NewGraph()
 	// Add processes to the network
 	n.Add("greeter", new(Greeter))
 	n.Add("printer", new(Printer))
@@ -104,7 +104,7 @@ func main() {
 	in := make(chan string)
 	net.SetInPort("In", in)
 	// Run the net
-	wait := flow.Run(net)
+	wait := goflow.Run(net)
 	// Now we can send some names and see what happens
 	in <- "John"
 	in <- "Boris"

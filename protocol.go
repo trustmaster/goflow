@@ -1,4 +1,4 @@
-package flow
+package goflow
 
 // Message represents a single FBP protocol message
 type Message struct {
