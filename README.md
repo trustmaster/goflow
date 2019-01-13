@@ -14,7 +14,7 @@ _If your code depends on the old implementation, you can build it using [release
 
 --
 
-This a lean and opinionated implementation of [Flow-based programming](http://en.wikipedia.org/wiki/Flow-based_programming) in Go sthat aims at designing applications as graphs of components which react to data that flows through the graph.
+GoFlow is a lean and opinionated implementation of [Flow-based programming](http://en.wikipedia.org/wiki/Flow-based_programming) in Go that aims at designing applications as graphs of components which react to data that flows through the graph.
 
 The main properties of the proposed model are:
 
