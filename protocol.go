@@ -1,5 +1,26 @@
 package goflow
 
+// PortInfo represents a port to a runtime client
+type PortInfo struct {
+	ID          string        `json:"id"`
+	Type        string        `json:"type"`
+	Description string        `json:"description"`
+	Addressable bool          `json:"addressable"` // ignored
+	Required    bool          `json:"required"`
+	Values      []interface{} `json:"values"`  // ignored
+	Default     interface{}   `json:"default"` // ignored
+}
+
+// ComponentInfo represents a component to a protocol client
+type ComponentInfo struct {
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Icon        string     `json:"icon"`
+	Subgraph    bool       `json:"subgraph"`
+	InPorts     []PortInfo `json:"inPorts"`
+	OutPorts    []PortInfo `json:"outPorts"`
+}
+
 // Message represents a single FBP protocol message
 type Message struct {
 	// Protocol is NoFlo protocol identifier:
@@ -153,27 +174,6 @@ type renamePort struct {
 	From  string
 	To    string
 	Graph string
-}
-
-// PortInfo represents a port to a runtime client
-type PortInfo struct {
-	ID          string        `json:"id"`
-	Type        string        `json:"type"`
-	Description string        `json:"description"`
-	Addressable bool          `json:"addressable"` // ignored
-	Required    bool          `json:"required"`
-	Values      []interface{} `json:"values"`  // ignored
-	Default     interface{}   `json:"default"` // ignored
-}
-
-// ComponentInfo represents a component to a protocol client
-type ComponentInfo struct {
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	Icon        string     `json:"icon"`
-	Subgraph    bool       `json:"subgraph"`
-	InPorts     []PortInfo `json:"inPorts"`
-	OutPorts    []PortInfo `json:"outPorts"`
 }
 
 type componentMessage struct {
