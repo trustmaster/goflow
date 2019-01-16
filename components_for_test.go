@@ -118,3 +118,35 @@ func (c *repeater) repeat(word string, times int) {
 		c.Words <- word
 	}
 }
+
+func RegisterTestComponents(f *Factory) error {
+	f.Register("echo", func() interface{} {
+		return new(echo)
+	})
+	f.Annotate("echo", Annotation{
+		Description: "Passes an int from in to out without changing it",
+		Icon:        "arrow-right",
+	})
+	f.Register("doubler", func() interface{} {
+		return new(doubler)
+	})
+	f.Annotate("doubler", Annotation{
+		Description: "Doubles its input",
+		Icon:        "times-circle",
+	})
+	f.Register("repeater", func() interface{} {
+		return new(repeater)
+	})
+	f.Annotate("repeater", Annotation{
+		Description: "Repeats Word given numer of Times",
+		Icon:        "times-circle",
+	})
+	f.Register("adder", func() interface{} {
+		return new(adder)
+	})
+	f.Annotate("adder", Annotation{
+		Description: "Sums integers coming to its inports",
+		Icon:        "plus-circle",
+	})
+	return nil
+}

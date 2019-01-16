@@ -2,16 +2,20 @@ package goflow
 
 import "fmt"
 
-// ComponentConstructor is a function that can be registered in the ComponentRegistry
-// so that it is used when creating new processes of a specific component using
-// Factory function at run-time.
-type ComponentConstructor func() interface{}
+// Annotation provides reference information about a component
+// to graph designers and operators
+type Annotation struct {
+	// Description tells what the component does
+	Description string
+	// Icon name in Font Awesome is used for visualization
+	Icon string
+}
 
-// ComponentEntry contains runtime information about a component
-type ComponentEntry struct {
+// registryEntry contains runtime information about a component
+type registryEntry struct {
 	// Constructor is a function that creates a component instance.
 	// It is required for the factory to add components at run-time.
-	Constructor ComponentConstructor
+	Constructor func() interface{}
 	// Run-time component description
 	Info ComponentInfo
 }
@@ -29,7 +33,7 @@ func defaultFactoryConfig() FactoryConfig {
 
 // Factory registers components and creates their instances at run-time
 type Factory struct {
-	registry map[string]ComponentEntry
+	registry map[string]registryEntry
 }
 
 // NewFactory creates a new component Factory instance
@@ -40,15 +44,32 @@ func NewFactory(config ...FactoryConfig) *Factory {
 	}
 
 	return &Factory{
-		registry: make(map[string]ComponentEntry, conf.RegistryCapacity),
+		registry: make(map[string]registryEntry, conf.RegistryCapacity),
 	}
 }
 
 // Register registers a component so that it can be instantiated at run-time
-func (f *Factory) Register(componentName string, entry ComponentEntry) error {
+func (f *Factory) Register(componentName string, constructor func() interface{}) error {
 	if _, exists := f.registry[componentName]; exists {
 		return fmt.Errorf("Registry error: component '%s' already registered", componentName)
 	}
+	f.registry[componentName] = registryEntry{
+		Constructor: constructor,
+		Info: ComponentInfo{
+			Name: componentName,
+		},
+	}
+	return nil
+}
+
+// Annotate adds human-readable documentation for a component to the runtime
+func (f *Factory) Annotate(componentName string, annotation Annotation) error {
+	if _, exists := f.registry[componentName]; !exists {
+		return fmt.Errorf("Registry annotation error: component '%s' is not registered", componentName)
+	}
+	entry := f.registry[componentName]
+	entry.Info.Description = annotation.Description
+	entry.Info.Icon = annotation.Icon
 	f.registry[componentName] = entry
 	return nil
 }
@@ -59,9 +80,8 @@ func (f *Factory) Unregister(componentName string) error {
 	if _, exists := f.registry[componentName]; exists {
 		delete(f.registry, componentName)
 		return nil
-	} else {
-		return fmt.Errorf("Registry error: component '%s' is not registered", componentName)
 	}
+	return fmt.Errorf("Registry error: component '%s' is not registered", componentName)
 }
 
 // Create creates a new instance of a component registered under a specific name.
