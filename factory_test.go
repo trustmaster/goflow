@@ -29,6 +29,43 @@ func TestFactoryCreate(t *testing.T) {
 	}
 }
 
+func TestFactoryRegistration(t *testing.T) {
+	f := NewFactory(FactoryConfig{
+		RegistryCapacity: 10,
+	})
+
+	if err := RegisterTestComponents(f); err != nil {
+		t.Error(err)
+		return
+	}
+
+	err := f.Register("echo", func() interface{} {
+		return new(echo)
+	})
+	if err == nil {
+		t.Errorf("Expected an error")
+		return
+	}
+
+	err = f.Annotate("notfound", Annotation{})
+	if err == nil {
+		t.Errorf("Expected an error")
+		return
+	}
+
+	err = f.Unregister("echo")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = f.Unregister("echo")
+	if err == nil {
+		t.Errorf("Expected an error")
+		return
+	}
+}
+
 func TestFactoryGraph(t *testing.T) {
 	f := NewFactory()
 	err := RegisterTestComponents(f)
@@ -50,6 +87,11 @@ func TestFactoryGraph(t *testing.T) {
 	}
 	if err = n.AddNew("e", "echo", f); err != nil {
 		t.Error(err)
+		return
+	}
+
+	if err = n.AddNew("notfound", "notfound", f); err == nil {
+		t.Errorf("Expected an error")
 		return
 	}
 
