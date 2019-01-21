@@ -95,11 +95,14 @@ func (n *Graph) AddGraph(name string) error {
 	return n.Add(name, NewDefaultGraph())
 }
 
-// // AddNew creates a new process instance using component factory and adds it to the network.
-// func (n *Graph) AddNew(processName string, componentName string) error {
-// 	proc := Factory(componentName)
-// 	return n.Add(processName, proc)
-// }
+// AddNew creates a new process instance using component factory and adds it to the network.
+func (n *Graph) AddNew(processName string, componentName string, f *Factory) error {
+	proc, err := f.Create(componentName)
+	if err != nil {
+		return err
+	}
+	return n.Add(processName, proc)
+}
 
 // Remove deletes a process from the graph. First it stops the process if running.
 // Then it disconnects it from other processes and removes the connections from

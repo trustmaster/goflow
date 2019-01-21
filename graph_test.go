@@ -93,3 +93,14 @@ func TestRemove(t *testing.T) {
 		return
 	}
 }
+
+func RegisterTestGraph(f *Factory) error {
+	f.Register("doubleEcho", func() interface{} {
+		g, _ := newDoubleEcho()
+		return g
+	})
+	f.Annotate("doubleEcho", Annotation{
+		Description: "Contains a chain of two echo components",
+	})
+	return nil
+}
