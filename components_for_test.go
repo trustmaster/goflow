@@ -120,29 +120,29 @@ func (c *repeater) repeat(word string, times int) {
 }
 
 func RegisterTestComponents(f *Factory) error {
-	f.Register("echo", func() interface{} {
-		return new(echo)
+	f.Register("echo", func() (interface{}, error) {
+		return new(echo), nil
 	})
 	f.Annotate("echo", Annotation{
 		Description: "Passes an int from in to out without changing it",
 		Icon:        "arrow-right",
 	})
-	f.Register("doubler", func() interface{} {
-		return new(doubler)
+	f.Register("doubler", func() (interface{}, error) {
+		return new(doubler), nil
 	})
 	f.Annotate("doubler", Annotation{
 		Description: "Doubles its input",
 		Icon:        "times-circle",
 	})
-	f.Register("repeater", func() interface{} {
-		return new(repeater)
+	f.Register("repeater", func() (interface{}, error) {
+		return new(repeater), nil
 	})
 	f.Annotate("repeater", Annotation{
 		Description: "Repeats Word given numer of Times",
 		Icon:        "times-circle",
 	})
-	f.Register("adder", func() interface{} {
-		return new(adder)
+	f.Register("adder", func() (interface{}, error) {
+		return new(adder), nil
 	})
 	f.Annotate("adder", Annotation{
 		Description: "Sums integers coming to its inports",

@@ -2,6 +2,9 @@ package goflow
 
 import "fmt"
 
+// Constructor is used to create a component instance at run-time
+type Constructor func() (interface{}, error)
+
 // Annotation provides reference information about a component
 // to graph designers and operators
 type Annotation struct {
@@ -15,7 +18,7 @@ type Annotation struct {
 type registryEntry struct {
 	// Constructor is a function that creates a component instance.
 	// It is required for the factory to add components at run-time.
-	Constructor func() interface{}
+	Constructor Constructor
 	// Run-time component description
 	Info ComponentInfo
 }
@@ -49,7 +52,7 @@ func NewFactory(config ...FactoryConfig) *Factory {
 }
 
 // Register registers a component so that it can be instantiated at run-time
-func (f *Factory) Register(componentName string, constructor func() interface{}) error {
+func (f *Factory) Register(componentName string, constructor Constructor) error {
 	if _, exists := f.registry[componentName]; exists {
 		return fmt.Errorf("Registry error: component '%s' already registered", componentName)
 	}
@@ -87,7 +90,7 @@ func (f *Factory) Unregister(componentName string) error {
 // Create creates a new instance of a component registered under a specific name.
 func (f *Factory) Create(componentName string) (interface{}, error) {
 	if info, exists := f.registry[componentName]; exists {
-		return info.Constructor(), nil
+		return info.Constructor()
 	}
 	return nil, fmt.Errorf("Factory error: component '%s' does not exist", componentName)
 }
