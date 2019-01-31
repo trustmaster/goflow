@@ -1,0 +1,7 @@
+INPORT=Reader.FILE:FILE
+# OUTPORT=:Network
+# OUTPORT=:Error
+
+OUTPORT=Reader.DATA:DATA
+
+Reader(dsl/Reader)
