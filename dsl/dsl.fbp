@@ -1,7 +1,9 @@
 INPORT=Reader.FILE:FILE
-# OUTPORT=:Network
-# OUTPORT=:Error
+OUTPORT=Parser.OUT:TREE
+OUTPORT=Error.ERROR:ERROR
 
-OUTPORT=Reader.DATA:DATA
+Read(dsl/ReadFile) READER -> DATA Lexer(dsl/Lexer) TOKENS -> TOKENS Parser(dsl/Parser)
 
-Reader(dsl/Reader)
+Reader ERR -> IN Error(dsl/Error)
+Lexer ERR -> IN Error
+Parser ERR -> IN Error
