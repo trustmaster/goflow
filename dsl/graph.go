@@ -6,8 +6,8 @@ import (
 
 // RegisterComponents adds components of this library to the factory registry
 func RegisterComponents(f *goflow.Factory) error {
-	if err := f.Register("dsl/Reader", func() (interface{}, error) {
-		return new(Reader), nil
+	if err := f.Register("dsl/ReadFile", func() (interface{}, error) {
+		return new(ReadFile), nil
 	}); err != nil {
 		return err
 	}
