@@ -244,8 +244,8 @@ func (p *pipeline) fails(f func() error) *pipeline {
 		return p
 	}
 
-	p.err = f()
-	if p.err == nil {
+	err := f()
+	if err == nil {
 		p.err = fmt.Errorf("Expected an error")
 	}
 	return p
