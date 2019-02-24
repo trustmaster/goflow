@@ -2,8 +2,9 @@ INPORT=Reader.FILE:FILE
 OUTPORT=Parser.OUT:TREE
 OUTPORT=Error.ERROR:ERROR
 
-Read(dsl/ReadFile) READER -> DATA Lexer(dsl/Lexer) TOKENS -> TOKENS Parser(dsl/Parser)
+Read(dsl/Reader) READER -> DATA Lexer(dsl/Lexer) TOKENS -> TOKENS Parser(dsl/Parser)
 
+# Error handling
 Reader ERR -> IN Error(dsl/Error)
 Lexer ERR -> IN Error
 Parser ERR -> IN Error
