@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"strings"
 )
 
 // TokenType differentiates tokens
@@ -21,7 +22,6 @@ const (
 	LITERAL_BEG
 	IDENT  // ProcName
 	INT    // 123
-	FLOAT  // 123.45
 	STRING // "data"
 	LITERAL_END
 
@@ -95,19 +95,22 @@ func (c *Tokenizer) Process() {
 				break
 			}
 			if isWhitespace(ch) {
-				t = Token{
-					Type:  WS,
-					Pos:   pos,
-					Value: string(ch),
-				}
-				len = scanClass(r, &t, isWhitespace)
+				t, len = scanByClass(r, ch, WS, pos, isWhitespace)
 			} else if isLineBreak(ch) {
-				t = Token{
-					Type:  EOL,
-					Pos:   pos,
-					Value: string(ch),
+				t, len = scanByClass(r, ch, EOL, pos, isLineBreak)
+			} else if isLetter(ch) {
+				// Can be a start of an ident or keyword
+				t, len = scanByClass(r, ch, IDENT, pos, isIdent)
+				// Check for keywords
+				val := strings.ToLower(t.Value)
+				switch val {
+				case "inport":
+					t.Type = INPORT
+				case "outport":
+					t.Type = OUTPORT
 				}
-				len = scanClass(r, &t, isLineBreak)
+			} else if isDigit(ch) {
+				t, len = scanByClass(r, ch, INT, pos, isDigit)
 			}
 			c.Token <- t
 			pos += len + 1
@@ -121,12 +124,12 @@ func (c *Tokenizer) Process() {
 	}
 }
 
-// predicate checks fi a char belongs to a class
+// predicate checks if a char belongs to a class
 type predicate func(ch rune) bool
 
-// scanClass scans all characters belonging to the same class
-func scanClass(r *bufio.Reader, t *Token, belongs predicate) int {
-	buf := bytes.NewBufferString(t.Value)
+// scanByClass scans all characters belonging to the same class into a token
+func scanByClass(r *bufio.Reader, first rune, tt TokenType, pos int, belongs predicate) (Token, int) {
+	buf := bytes.NewBufferString(string(first))
 	len := 0
 	for {
 		ch, _, err := r.ReadRune()
@@ -140,8 +143,11 @@ func scanClass(r *bufio.Reader, t *Token, belongs predicate) int {
 			break
 		}
 	}
-	t.Value = buf.String()
-	return len
+	return Token{
+		Type:  tt,
+		Pos:   pos,
+		Value: buf.String(),
+	}, len
 }
 
 func isWhitespace(ch rune) bool {
@@ -150,4 +156,16 @@ func isWhitespace(ch rune) bool {
 
 func isLineBreak(ch rune) bool {
 	return ch == '\r' || ch == '\n'
+}
+
+func isLetter(ch rune) bool {
+	return ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z'
+}
+
+func isDigit(ch rune) bool {
+	return ch >= '0' && ch <= '9'
+}
+
+func isIdent(ch rune) bool {
+	return isLetter(ch) || isDigit(ch) || ch == '_'
 }
