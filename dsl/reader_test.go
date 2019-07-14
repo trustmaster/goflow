@@ -1,7 +1,6 @@
 package dsl
 
 import (
-	"io/ioutil"
 	"testing"
 
 	"github.com/trustmaster/goflow"
@@ -9,7 +8,7 @@ import (
 
 func TestReader(t *testing.T) {
 	in := make(chan string, 2)
-	out := make(chan File)
+	out := make(chan *File)
 	e := make(chan FileError)
 
 	f := goflow.NewFactory()
@@ -24,7 +23,7 @@ func TestReader(t *testing.T) {
 		return
 	}
 	c := i.(*Reader)
-	c.Filename = in
+	c.Name = in
 	c.File = out
 	c.Err = e
 
@@ -50,12 +49,12 @@ func TestReader(t *testing.T) {
 					break
 				}
 				if expected == "error" {
-					t.Errorf("Unexpected Reader")
+					t.Errorf("Unexpected File")
 					break
 				}
-				_, err := ioutil.ReadAll(f.Reader)
-				if err != nil {
-					t.Error(err)
+				if len(f.Data) == 0 {
+					t.Errorf("Read data is empty")
+					break
 				}
 			case fe := <-e:
 				if fe.Name != name {

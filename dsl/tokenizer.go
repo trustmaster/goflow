@@ -1,51 +1,44 @@
 package dsl
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
-	"strings"
 )
 
 // TokenType differentiates tokens
-type TokenType int
+type TokenType string
 
 const (
 	// Token types
-	ILLEGAL TokenType = iota
-	BOF               // Beginning of file
-	EOF               // End of file
-	WS                // Whitespace
-	EOL               // End of line
+	tokIllegal    = TokenType("illegal")    // S:Fallback P:9
+	tokBeginFile  = TokenType("beginFile")  // S:Auto
+	tokEOF        = TokenType("eof")        // S:Auto
+	tokWhitespace = TokenType("whitespace") // S:Chars P:1
+	tokEOL        = TokenType("eol")        // S:Chars P:1
 
 	// Literals
-	LITERAL_BEG
-	IDENT  // ProcName
-	INT    // 123
-	STRING // "data"
-	LITERAL_END
+	tokIdent     = TokenType("ident")     // ProcName S:Chars P:3
+	tokInt       = TokenType("int")       // 123 S:Chars P:2
+	tokQuotedStr = TokenType("quotedStr") // "data" S:Quoted P:2
 
 	// Operators
-	OPS_BEG
-	EQL    // =
-	DOT    // .
-	COL    // :
-	LPAREN // (
-	RPAREN // )
-	ARROW  // ->
-	HASH   // #
-	OPS_END
+	tokEqual  = TokenType("equal")  // = S:Chars P:2
+	tokDot    = TokenType("dot")    // . S:Chars P:2
+	tokColon  = TokenType("colon")  // : S:Chars P:2
+	tokLparen = TokenType("lparen") // ( S:Chars P:2
+	tokRparen = TokenType("rparen") // ) S:Chars P:2
+	tokArrow  = TokenType("arrow")  // -> S:Sequence P:2
+	tokHash   = TokenType("hash")   // # S:Comment P:2
 
 	// Keywords
-	KEYWORD_BEG
-	INPORT
-	OUTPORT
-	KEYWORD_END
+	tokInport  = TokenType("inport")  // S:Sequence P:2
+	tokOutport = TokenType("outport") // S:Sequence P:2
 )
 
-// Token represents a single lexem
+// Token represents a single lexem in a File
 type Token struct {
 	Type  TokenType
+	File  *File
 	Pos   int
 	Value string
 }
@@ -68,9 +61,9 @@ func (e LexError) Error() string {
 
 // Tokenizer splits the file into tokens
 type Tokenizer struct {
-	File  <-chan File
+	File  <-chan *File
 	Token chan<- Token
-	Error chan<- LexError
+	Err   chan<- LexError
 }
 
 // Process scans the input stream and splits it into tokens
@@ -80,44 +73,42 @@ func (c *Tokenizer) Process() {
 		pos := 0
 
 		c.Token <- Token{
-			Type:  BOF,
+			Type:  tokBeginFile,
+			File:  f,
 			Pos:   pos,
 			Value: f.Name,
 		}
 
-		r := bufio.NewReader(f.Reader)
-		var t Token
-		len := 0
+		// var t Token
+		// l := 0
+		// fileSize := len(f.Data)
 
-		for {
-			ch, _, err := r.ReadRune()
-			if ch == rune(0) || err != nil {
-				break
-			}
-			if isWhitespace(ch) {
-				t, len = scanByClass(r, ch, WS, pos, isWhitespace)
-			} else if isLineBreak(ch) {
-				t, len = scanByClass(r, ch, EOL, pos, isLineBreak)
-			} else if isLetter(ch) {
-				// Can be a start of an ident or keyword
-				t, len = scanByClass(r, ch, IDENT, pos, isIdent)
-				// Check for keywords
-				val := strings.ToLower(t.Value)
-				switch val {
-				case "inport":
-					t.Type = INPORT
-				case "outport":
-					t.Type = OUTPORT
-				}
-			} else if isDigit(ch) {
-				t, len = scanByClass(r, ch, INT, pos, isDigit)
-			}
-			c.Token <- t
-			pos += len + 1
-		}
+		// for ; pos < fileSize; pos++ {
+		// 	ch := f.Data[pos]
+		// 	if isWhitespace(ch) {
+		// 		t, l = scanByClass(r, ch, WS, pos, isWhitespace)
+		// 	} else if isLineBreak(ch) {
+		// 		t, l = scanByClass(r, ch, EOL, pos, isLineBreak)
+		// 	} else if isLetter(ch) {
+		// 		// Can be a start of an ident or keyword
+		// 		t, l = scanByClass(r, ch, IDENT, pos, isIdent)
+		// 		// Check for keywords
+		// 		val := strings.ToLower(t.Value)
+		// 		switch val {
+		// 		case "inport":
+		// 			t.Type = INPORT
+		// 		case "outport":
+		// 			t.Type = OUTPORT
+		// 		}
+		// 	} else if isDigit(ch) {
+		// 		t, l = scanByClass(r, ch, INT, pos, isDigit)
+		// 	}
+		// 	c.Token <- t
+		// 	pos += l + 1
+		// }
 
 		c.Token <- Token{
-			Type:  EOF,
+			Type:  tokEOF,
 			Pos:   pos,
 			Value: f.Name,
 		}
@@ -125,24 +116,24 @@ func (c *Tokenizer) Process() {
 }
 
 // predicate checks if a char belongs to a class
-type predicate func(ch rune) bool
+type predicate func(ch byte) bool
 
 // scanByClass scans all characters belonging to the same class into a token
-func scanByClass(r *bufio.Reader, first rune, tt TokenType, pos int, belongs predicate) (Token, int) {
+func scanByClass(data []byte, first byte, tt TokenType, pos int, belongs predicate) (Token, int) {
 	buf := bytes.NewBufferString(string(first))
 	len := 0
-	for {
-		ch, _, err := r.ReadRune()
-		if ch == rune(0) || err != nil {
-			break
-		} else if belongs(ch) {
-			buf.WriteRune(ch)
-			len++
-		} else {
-			r.UnreadRune()
-			break
-		}
-	}
+	// for ; pos{
+	// 	ch := data[pos]
+	// 	if ch == rune(0) || err != nil {
+	// 		break
+	// 	} else if belongs(ch) {
+	// 		buf.WriteRune(ch)
+	// 		len++
+	// 	} else {
+	// 		r.UnreadRune()
+	// 		break
+	// 	}
+	// }
 	return Token{
 		Type:  tt,
 		Pos:   pos,
