@@ -2,14 +2,14 @@ package dsl
 
 import (
 	"fmt"
-	"io"
+	"io/ioutil"
 	"os"
 )
 
 // File represents a source file
 type File struct {
-	Name   string
-	Reader io.Reader
+	Name string
+	Data []byte
 }
 
 // FileError is an error while reading from a file
@@ -25,25 +25,35 @@ func (e FileError) Error() string {
 
 // Reader opens a file for reading
 type Reader struct {
-	Filename <-chan string
-	File     chan<- File
-	Err      chan<- FileError
+	Name <-chan string
+	File chan<- *File
+	Err  chan<- FileError
 }
 
 // Process handles the input and transforms it to output
 func (c *Reader) Process() {
-	for name := range c.Filename {
-		file, err := os.Open(name)
-		if err == nil {
-			c.File <- File{
-				Name:   name,
-				Reader: file,
-			}
-		} else {
+	check := func(err error, name string) bool {
+		if err != nil {
 			c.Err <- FileError{
 				Name: name,
 				Err:  err,
 			}
+			return false
+		}
+		return true
+	}
+	for name := range c.Name {
+		r, err := os.Open(name)
+		if !check(err, name) {
+			continue
+		}
+		data, err := ioutil.ReadAll(r)
+		if !check(err, name) {
+			continue
+		}
+		c.File <- &File{
+			Name: name,
+			Data: data,
 		}
 	}
 }

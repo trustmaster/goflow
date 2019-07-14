@@ -1,0 +1,58 @@
+INPORT=ScanFile.IN:IN
+OUTPORT=Collect.OUT:OUT
+
+# Main tokenizing logic
+ScanFile(dsl/ScanFile) OUT -> IN ScanEOL(dsl/ScanChars) HIT -> IN Collect(dsl/CollectTokens)
+ScanEOL MISS -> IN ScanWhitespace(dsl/ScanChars) HIT -> IN Collect
+ScanWhitespace MISS -> IN ScanInt(dsl/ScanChars) HIT -> IN Collect
+ScanInt MISS -> IN ScanString(dsl/ScanQuoted) HIT -> IN Collect
+ScanString MISS -> IN ScanEq(dsl/ScanChars) HIT -> IN Collect
+ScanEq MISS -> IN ScanDot(dsl/ScanChars) HIT -> IN Collect
+ScanDot MISS -> IN ScanColon(dsl/ScanChars) HIT -> IN Collect
+ScanColon MISS -> IN ScanLParen(dsl/ScanChars) HIT -> IN Collect
+ScanLParen MISS -> IN ScanRParen(dsl/ScanChars) HIT -> IN Collect
+ScanRParen MISS -> IN ScanArrow(dsl/ScanSequence) HIT -> IN Collect
+ScanArrow MISS -> IN ScanHash(dsl/ScanComment) HIT -> IN Collect
+ScanHash MISS -> IN ScanInport(dsl/ScanKeyword) HIT -> IN Collect
+ScanInport MISS -> IN ScanOutport(dsl/ScanKeyword) HIT -> IN Collect
+ScanOutport MISS -> IN ScanIdent(dsl/ScanChars) HIT -> IN Collect
+# If nothing matched, return an invalid token and end the loop
+ScanIdent MISS -> IN ScanInvalid(dsl/ScanInvalid) TOKEN -> IN Collect
+
+# Loop to get next token after successful scan
+Collect OUT -> IN ScanEOL
+
+# Setting up the scanners
+'\r\n' -> SET ScanEOL
+'eol' -> TYPE ScanEOL
+
+'\t ' -> SET ScanWhitespace
+'whitespace' -> TYPE ScanWhitespace
+
+'0123456789' -> SET ScanInt
+'int' -> TYPE ScanInt
+
+# TODO ScanString
+
+'=' -> SET ScanEq
+'eq' -> TYPE ScanEq
+
+'.' -> SET ScanDot
+'dot' -> TYPE ScanDot
+
+':' -> SET ScanColon
+'colon' -> TYPE ScanColon
+
+'(' -> SET ScanLParen
+'lparen' -> TYPE ScanLParen
+
+')' -> SET ScanRParen
+'rparen' -> TYPE ScanRParen
+
+# TODO ScanArrow
+# TODO ScanHash
+# TODO ScanInport
+# TODO ScanOutport
+
+'[\w_]' -> SET ScanIdent
+'ident' -> TYPE ScanIdent

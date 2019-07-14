@@ -11,5 +11,15 @@ func RegisterComponents(f *goflow.Factory) error {
 	}); err != nil {
 		return err
 	}
+	if err := f.Register("dsl/Tokenizer", func() (interface{}, error) {
+		return new(Tokenizer), nil
+	}); err != nil {
+		return err
+	}
+	if err := f.Register("dsl/ScanChars", func() (interface{}, error) {
+		return new(ScanChars), nil
+	}); err != nil {
+		return err
+	}
 	return nil
 }
