@@ -76,7 +76,7 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 		}
 	}
 
-	// Create a new channel if none of the existing channles found
+	// Create a new channel if none of the existing channels found
 	if !channel.IsValid() {
 		// Make a channel of an appropriate type
 		chanType := reflect.ChanOf(reflect.BothDir, sndPortType.Elem())
