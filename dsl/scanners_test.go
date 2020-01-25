@@ -6,46 +6,128 @@ import (
 	"github.com/trustmaster/goflow"
 )
 
-func TestScanSet(t *testing.T) {
+func TestScanners(t *testing.T) {
 	type testCase struct {
+		c       string
 		name    string
 		set     string
 		tokType TokenType
 		data    string
 		hit     bool
 		value   string
+		pos     int
 	}
 
 	cases := []testCase{
+		// ScanChars
 		{
+			c:       "dsl/ScanChars",
 			name:    "Matching an integer",
 			set:     "0123456789",
 			tokType: tokInt,
 			data:    "123.456",
+			pos:     0,
 			hit:     true,
 			value:   "123",
 		},
 		{
+			c:       "dsl/ScanChars",
 			name:    "Not matching an integer",
 			set:     "0123456789",
 			tokType: tokInt,
 			data:    "a123456",
+			pos:     0,
 			hit:     false,
 			value:   "",
 		},
 		{
+			c:       "dsl/ScanChars",
 			name:    "Matching a regexp class",
 			set:     "[a-zA-Z0-9_]",
 			tokType: tokIdent,
 			data:    "cool_Var123.PORT ->",
+			pos:     0,
 			hit:     true,
 			value:   "cool_Var123",
 		},
 		{
+			c:       "dsl/ScanChars",
 			name:    "Not matching a regexp class",
 			set:     `[ \t\r\n]`,
 			tokType: tokWhitespace,
 			data:    "Illeg al\n",
+			pos:     0,
+			hit:     false,
+			value:   "",
+		},
+		{
+			c:       "dsl/ScanChars",
+			name:    "Matching with non-zero offset",
+			set:     ".",
+			tokType: tokDot,
+			data:    "abc.def",
+			pos:     3,
+			hit:     true,
+			value:   ".",
+		},
+		// ScanKeyword
+		{
+			c:       "dsl/ScanKeyword",
+			name:    "Matching a keyword",
+			set:     "INPORT",
+			tokType: tokInport,
+			data:    "INPORT=Foo.BAR:BAR",
+			pos:     0,
+			hit:     true,
+			value:   "INPORT",
+		},
+		{
+			c:       "dsl/ScanKeyword",
+			name:    "Matching a keyword (case-insensitive)",
+			set:     "inport",
+			tokType: tokInport,
+			data:    "inPort=Foo.BAR:BAR",
+			pos:     0,
+			hit:     true,
+			value:   "INPORT",
+		},
+		{
+			c:       "dsl/ScanKeyword",
+			name:    "Matching a keyword with non-zero offset",
+			set:     "INPORT",
+			tokType: tokInport,
+			data:    ":FOO\nINPORT=Foo.BAR:BAR",
+			pos:     5,
+			hit:     true,
+			value:   "INPORT",
+		},
+		{
+			c:       "dsl/ScanKeyword",
+			name:    "Input too short",
+			set:     "INPORT",
+			tokType: tokInport,
+			data:    "INP",
+			pos:     0,
+			hit:     false,
+			value:   "",
+		},
+		{
+			c:       "dsl/ScanKeyword",
+			name:    "Is not a whole word",
+			set:     "INPORT",
+			tokType: tokInport,
+			data:    "INPORTSTONE=Foo.BAR:BAR",
+			pos:     0,
+			hit:     false,
+			value:   "",
+		},
+		{
+			c:       "dsl/ScanKeyword",
+			name:    "Does not match",
+			set:     "INPORT",
+			tokType: tokInport,
+			data:    "OUTPORT=Foo.BAR:BAR",
+			pos:     0,
 			hit:     false,
 			value:   "",
 		},
@@ -64,19 +146,21 @@ func TestScanSet(t *testing.T) {
 			return
 		}
 
-		i, err := f.Create("dsl/ScanChars")
+		i, err := f.Create(tc.c)
 		if err != nil {
 			t.Error(err)
 			return
 		}
-		c := i.(*ScanChars)
-		c.Set = set
-		c.Type = tokType
-		c.In = in
-		c.Hit = hit
-		c.Miss = miss
+		s := i.(scanner)
+		s.assign(Scanner{
+			Set:  set,
+			Type: tokType,
+			In:   in,
+			Hit:  hit,
+			Miss: miss,
+		})
 
-		wait := goflow.Run(c)
+		wait := goflow.Run(s)
 
 		tokType <- string(tc.tokType)
 		set <- tc.set
@@ -85,7 +169,7 @@ func TestScanSet(t *testing.T) {
 				Name: "test.fbp",
 				Data: []byte(tc.data),
 			},
-			Pos: 0,
+			Pos: tc.pos,
 		}
 
 		go func() {
@@ -95,20 +179,20 @@ func TestScanSet(t *testing.T) {
 					return
 				}
 				if !tc.hit {
-					t.Errorf("Unexpected hit: %v", tok)
+					t.Errorf("Unexpected hit: '%s' at %d", tok.Value, tok.Pos)
 				}
 				if tok.Type != tc.tokType {
 					t.Errorf("Unexpected token type: %s", tok.Type)
 				}
 				if tok.Value != tc.value {
-					t.Errorf("Unexpected token value: %s", tok.Value)
+					t.Errorf("Unexpected token value: '%s'", tok.Value)
 				}
 			case tok, ok := <-miss:
 				if !ok {
 					return
 				}
 				if tc.hit {
-					t.Errorf("Unexpected miss: %v", tok)
+					t.Errorf("Unexpected miss: '%s' at %d", tok.Value, tok.Pos)
 				}
 			}
 
@@ -120,7 +204,7 @@ func TestScanSet(t *testing.T) {
 
 	t.Parallel()
 	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
+		t.Run(c.c+": "+c.name, func(t *testing.T) {
 			runCase(c, t)
 		})
 	}

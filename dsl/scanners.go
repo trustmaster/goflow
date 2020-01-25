@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// ScanChars scans a token withing a given set of characters
-type ScanChars struct {
+// Scanner is a unified structure for scanner components which defines their port signature
+type Scanner struct {
 	// Set is an IIP that contains valid characters. Supports special characters: \r, \n, \t.
 	// A regular expression character class can be passed like: "[a-zA-Z\s]".
 	Set <-chan string
@@ -21,6 +21,24 @@ type ScanChars struct {
 	Miss chan<- Token
 }
 
+type scanner interface {
+	assign(Scanner)
+	Process()
+}
+
+func (s *Scanner) assign(ports Scanner) {
+	s.Set = ports.Set
+	s.Type = ports.Type
+	s.In = ports.In
+	s.Hit = ports.Hit
+	s.Miss = ports.Miss
+}
+
+// ScanChars scans a token of characters belonging to Set
+type ScanChars struct {
+	Scanner
+}
+
 // Process reads IIPs and validates incoming tokens
 func (s *ScanChars) Process() {
 	// Read IIPs first
@@ -30,28 +48,7 @@ func (s *ScanChars) Process() {
 	if set, ok = <-s.Set; !ok {
 		return
 	}
-	var matcher func(r rune) bool
-	var reg *regexp.Regexp
-	if set[0] == '[' && set[len(set)-1] == ']' {
-		// A regexp class
-		var err error
-		reg, err = regexp.Compile(set)
-		if err != nil {
-			// TODO error handling
-			return
-		}
-		matcher = func(r rune) bool {
-			return reg.Match([]byte{byte(r)})
-		}
-	} else {
-		// Replace special chars
-		set = strings.ReplaceAll(set, `\t`, "\t")
-		set = strings.ReplaceAll(set, `\r`, "\r")
-		set = strings.ReplaceAll(set, `\n`, "\n")
-		matcher = func(r rune) bool {
-			return strings.ContainsRune(set, r)
-		}
-	}
+	matcher := s.matcher(set)
 
 	if tokenType, ok = <-s.Type; !ok {
 		return
@@ -68,9 +65,9 @@ func (s *ScanChars) Process() {
 			}
 			buf.WriteRune(r)
 		}
+		tok.Value = buf.String()
 		if buf.Len() > 0 {
 			tok.Type = TokenType(tokenType)
-			tok.Value = buf.String()
 			s.Hit <- tok
 		} else {
 			s.Miss <- tok
@@ -78,18 +75,34 @@ func (s *ScanChars) Process() {
 	}
 }
 
-// ScanKeyword scans a specific keyword that is not part of other word
+func (s *ScanChars) matcher(set string) func(r rune) bool {
+	if set[0] == '[' && set[len(set)-1] == ']' {
+		// A regexp class
+		var reg *regexp.Regexp
+		var err error
+		reg, err = regexp.Compile(set)
+		if err != nil {
+			// TODO error handling
+			return func(r rune) bool {
+				return false
+			}
+		}
+		return func(r rune) bool {
+			return reg.Match([]byte{byte(r)})
+		}
+	}
+	// Replace special chars
+	set = strings.ReplaceAll(set, `\t`, "\t")
+	set = strings.ReplaceAll(set, `\r`, "\r")
+	set = strings.ReplaceAll(set, `\n`, "\n")
+	return func(r rune) bool {
+		return strings.ContainsRune(set, r)
+	}
+}
+
+// ScanKeyword scans a case-insensitive keyword that is not part of another word
 type ScanKeyword struct {
-	// Word is a case-insensitive keyword
-	Word <-chan string
-	// Type is an IIP that contains string token type associated with the set
-	Type <-chan string
-	// In is an incoming empty token
-	In <-chan Token
-	// Hit is a successfully matched token
-	Hit chan<- Token
-	// Miss is the unmodified empty token in case there was no match
-	Miss chan<- Token
+	Scanner
 }
 
 // Process reads IIPs and validates incoming tokens
@@ -98,7 +111,7 @@ func (s *ScanKeyword) Process() {
 	word := ""
 	tokenType := ""
 	ok := true
-	if word, ok = <-s.Word; !ok {
+	if word, ok = <-s.Set; !ok {
 		return
 	}
 	word = strings.ToUpper(word)
@@ -115,7 +128,8 @@ func (s *ScanKeyword) Process() {
 			s.Miss <- tok
 			continue
 		}
-		if strings.ToUpper(string(tok.File.Data[tok.Pos:tok.Pos+wordLen])) == word {
+		tok.Value = string(tok.File.Data[tok.Pos : tok.Pos+wordLen])
+		if strings.ToUpper(tok.Value) == word {
 			// Potential match, should be followed by EOF or non-word character
 			if tok.Pos+wordLen < dataLen {
 				nextChar := tok.File.Data[tok.Pos+wordLen]
@@ -129,24 +143,16 @@ func (s *ScanKeyword) Process() {
 			tok.Type = TokenType(tokenType)
 			tok.Value = word
 			s.Hit <- tok
+			continue
 		}
 		// No match
 		s.Miss <- tok
 	}
 }
 
-// ScanSequence scans a sequence of characters
+// ScanSequence scans an exact sequence of characters
 type ScanSequence struct {
-	// Seq is the exact sequence of characters to read
-	Seq <-chan string
-	// Type is an IIP that contains string token type associated with the set
-	Type <-chan string
-	// In is an incoming empty token
-	In <-chan Token
-	// Hit is a successfully matched token
-	Hit chan<- Token
-	// Miss is the unmodified empty token in case there was no match
-	Miss chan<- Token
+	Scanner
 }
 
 // ScanQuoted scans a quoted string
