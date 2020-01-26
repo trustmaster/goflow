@@ -171,6 +171,37 @@ func TestScanners(t *testing.T) {
 			hit:     false,
 			value:   "",
 		},
+		// ScanComment
+		{
+			c:       "dsl/ScanComment",
+			name:    "Scans a comment till the end of line",
+			set:     "#",
+			tokType: tokComment,
+			data:    "Foo BAR -> BOO Baz # This is a comment",
+			pos:     19,
+			hit:     true,
+			value:   "# This is a comment",
+		},
+		{
+			c:       "dsl/ScanComment",
+			name:    "Scans a comment till the end of line",
+			set:     "#",
+			tokType: tokComment,
+			data:    "Foo BAR -> BOO Baz # This is a comment\r\nNew LINE",
+			pos:     19,
+			hit:     true,
+			value:   "# This is a comment",
+		},
+		{
+			c:       "dsl/ScanComment",
+			name:    "Does not match non-comment",
+			set:     "#",
+			tokType: tokComment,
+			data:    "Foo BAR -> BOO Baz",
+			pos:     0,
+			hit:     false,
+			value:   "",
+		},
 	}
 
 	runCase := func(tc testCase, t *testing.T) {

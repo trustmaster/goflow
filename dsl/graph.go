@@ -26,5 +26,10 @@ func RegisterComponents(f *goflow.Factory) error {
 	}); err != nil {
 		return err
 	}
+	if err := f.Register("dsl/ScanComment", func() (interface{}, error) {
+		return new(ScanComment), nil
+	}); err != nil {
+		return err
+	}
 	return nil
 }

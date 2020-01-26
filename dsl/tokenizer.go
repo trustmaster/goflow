@@ -15,6 +15,7 @@ const (
 	tokEOF        = TokenType("eof")        // S:Auto
 	tokWhitespace = TokenType("whitespace") // S:Chars P:1
 	tokEOL        = TokenType("eol")        // S:Chars P:1
+	tokComment    = TokenType("comment")    // # S:Comment P:2
 
 	// Literals
 	tokIdent     = TokenType("ident")     // ProcName S:Chars P:3
@@ -28,7 +29,6 @@ const (
 	tokLparen = TokenType("lparen") // ( S:Keyword P:2
 	tokRparen = TokenType("rparen") // ) S:Keyword P:2
 	tokArrow  = TokenType("arrow")  // -> S:Keyword P:2
-	tokHash   = TokenType("hash")   // # S:Comment P:2
 	tokSlash  = TokenType("slash")  // / S:Keyword P:2
 
 	// Keywords
