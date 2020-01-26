@@ -21,6 +21,7 @@ type Scanner struct {
 	Miss chan<- Token
 }
 
+// scanner is used to test Scanner components via common interface
 type scanner interface {
 	assign(Scanner)
 	Process()
@@ -100,7 +101,9 @@ func (s *ScanChars) matcher(set string) func(r rune) bool {
 	}
 }
 
-// ScanKeyword scans a case-insensitive keyword that is not part of another word
+// ScanKeyword scans a case-insensitive keyword that is not part of another word.
+// If Set is an identifier, it makes sure the keyword is not a substring of another identifier.
+// If Set is an operator, it makes sure the operator is followed by identifier or space.
 type ScanKeyword struct {
 	Scanner
 }
@@ -119,7 +122,14 @@ func (s *ScanKeyword) Process() {
 	if tokenType, ok = <-s.Type; !ok {
 		return
 	}
-	keywordReg := regexp.MustCompile(`[\w_]`)
+
+	identReg := regexp.MustCompile(`[\w_]`)
+	shouldNotBeFollowedBy := identReg
+	isIdent := identReg.MatchString(word)
+	if !isIdent {
+		shouldNotBeFollowedBy = regexp.MustCompile(`[^\w\s]`)
+	}
+
 	// Process incoming tokens
 	for tok := range s.In {
 		dataLen := len(tok.File.Data)
@@ -133,7 +143,7 @@ func (s *ScanKeyword) Process() {
 			// Potential match, should be followed by EOF or non-word character
 			if tok.Pos+wordLen < dataLen {
 				nextChar := tok.File.Data[tok.Pos+wordLen]
-				if keywordReg.Match([]byte{nextChar}) {
+				if shouldNotBeFollowedBy.Match([]byte{nextChar}) {
 					// This is not the whole word
 					s.Miss <- tok
 					continue
@@ -148,11 +158,6 @@ func (s *ScanKeyword) Process() {
 		// No match
 		s.Miss <- tok
 	}
-}
-
-// ScanSequence scans an exact sequence of characters
-type ScanSequence struct {
-	Scanner
 }
 
 // ScanQuoted scans a quoted string
