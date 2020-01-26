@@ -160,6 +160,46 @@ func (s *ScanKeyword) Process() {
 	}
 }
 
+// ScanComment scans a comment from hash till the end of line
+type ScanComment struct {
+	Scanner
+}
+
+// Process reads IIPs and validates incoming tokens
+func (s *ScanComment) Process() {
+	// Read IIPs
+	prefix := ""
+	tokenType := ""
+	ok := true
+	if prefix, ok = <-s.Set; !ok {
+		return
+	}
+	if tokenType, ok = <-s.Type; !ok {
+		return
+	}
+
+	// Process incoming tokens
+	for tok := range s.In {
+		if tok.File.Data[tok.Pos] != prefix[0] {
+			s.Miss <- tok
+			continue
+		}
+		buf := bytes.NewBufferString("")
+		dataLen := len(tok.File.Data)
+		// Read all characters till the end of the line
+		for i := tok.Pos; i < dataLen; i++ {
+			r := rune(tok.File.Data[i])
+			if r == rune(0) || r == rune('\n') || r == rune('\r') {
+				break
+			}
+			buf.WriteRune(r)
+		}
+		tok.Value = buf.String()
+		tok.Type = TokenType(tokenType)
+		s.Hit <- tok
+	}
+}
+
 // ScanQuoted scans a quoted string
 type ScanQuoted struct {
 	// In is an incoming empty token

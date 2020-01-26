@@ -58,7 +58,7 @@ Collect OUT -> IN ScanEOL
 'slash' -> TYPE ScanSlash
 
 '#' -> SET ScanHash
-'hash' -> TYPE ScanHash
+'comment' -> TYPE ScanHash
 
 'INPORT' -> SET ScanInport
 'inport' -> TYPE ScanInport
