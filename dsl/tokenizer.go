@@ -22,17 +22,18 @@ const (
 	tokQuotedStr = TokenType("quotedStr") // "data" S:Quoted P:2
 
 	// Operators
-	tokEqual  = TokenType("equal")  // = S:Chars P:2
-	tokDot    = TokenType("dot")    // . S:Chars P:2
-	tokColon  = TokenType("colon")  // : S:Chars P:2
-	tokLparen = TokenType("lparen") // ( S:Chars P:2
-	tokRparen = TokenType("rparen") // ) S:Chars P:2
-	tokArrow  = TokenType("arrow")  // -> S:Sequence P:2
+	tokEqual  = TokenType("equal")  // = S:Keyword P:2
+	tokDot    = TokenType("dot")    // . S:Keyword P:2
+	tokColon  = TokenType("colon")  // : S:Keyword P:2
+	tokLparen = TokenType("lparen") // ( S:Keyword P:2
+	tokRparen = TokenType("rparen") // ) S:Keyword P:2
+	tokArrow  = TokenType("arrow")  // -> S:Keyword P:2
 	tokHash   = TokenType("hash")   // # S:Comment P:2
+	tokSlash  = TokenType("slash")  // / S:Keyword P:2
 
 	// Keywords
-	tokInport  = TokenType("inport")  // S:Sequence P:2
-	tokOutport = TokenType("outport") // S:Sequence P:2
+	tokInport  = TokenType("inport")  // S:Keyword P:2
+	tokOutport = TokenType("outport") // S:Keyword P:2
 )
 
 // Token represents a single lexem in a File

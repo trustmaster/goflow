@@ -6,13 +6,14 @@ ScanFile(dsl/ScanFile) OUT -> IN ScanEOL(dsl/ScanChars) HIT -> IN Collect(dsl/Co
 ScanEOL MISS -> IN ScanWhitespace(dsl/ScanChars) HIT -> IN Collect
 ScanWhitespace MISS -> IN ScanInt(dsl/ScanChars) HIT -> IN Collect
 ScanInt MISS -> IN ScanString(dsl/ScanQuoted) HIT -> IN Collect
-ScanString MISS -> IN ScanEq(dsl/ScanChars) HIT -> IN Collect
-ScanEq MISS -> IN ScanDot(dsl/ScanChars) HIT -> IN Collect
-ScanDot MISS -> IN ScanColon(dsl/ScanChars) HIT -> IN Collect
-ScanColon MISS -> IN ScanLParen(dsl/ScanChars) HIT -> IN Collect
-ScanLParen MISS -> IN ScanRParen(dsl/ScanChars) HIT -> IN Collect
-ScanRParen MISS -> IN ScanArrow(dsl/ScanSequence) HIT -> IN Collect
-ScanArrow MISS -> IN ScanHash(dsl/ScanComment) HIT -> IN Collect
+ScanString MISS -> IN ScanEq(dsl/ScanKeyword) HIT -> IN Collect
+ScanEq MISS -> IN ScanDot(dsl/ScanKeyword) HIT -> IN Collect
+ScanDot MISS -> IN ScanColon(dsl/ScanKeyword) HIT -> IN Collect
+ScanColon MISS -> IN ScanLParen(dsl/ScanKeyword) HIT -> IN Collect
+ScanLParen MISS -> IN ScanRParen(dsl/ScanKeyword) HIT -> IN Collect
+ScanRParen MISS -> IN ScanArrow(dsl/ScanKeyword) HIT -> IN Collect
+ScanArrow MISS -> IN ScanSlash(dsl/ScanKeyword) HIT -> IN Collect
+ScanSlash MISS -> IN ScanHash(dsl/ScanComment) HIT -> IN Collect
 ScanHash MISS -> IN ScanInport(dsl/ScanKeyword) HIT -> IN Collect
 ScanInport MISS -> IN ScanOutport(dsl/ScanKeyword) HIT -> IN Collect
 ScanOutport MISS -> IN ScanIdent(dsl/ScanChars) HIT -> IN Collect
@@ -32,7 +33,8 @@ Collect OUT -> IN ScanEOL
 '0123456789' -> SET ScanInt
 'int' -> TYPE ScanInt
 
-# TODO ScanString
+'"\'' -> SET ScanString
+'quotedStr' -> TYPE ScanString
 
 '=' -> SET ScanEq
 'eq' -> TYPE ScanEq
@@ -49,10 +51,20 @@ Collect OUT -> IN ScanEOL
 ')' -> SET ScanRParen
 'rparen' -> TYPE ScanRParen
 
-# TODO ScanArrow
-# TODO ScanHash
-# TODO ScanInport
-# TODO ScanOutport
+'->' -> SET ScanArrow
+'arrow' -> TYPE ScanArrow
+
+'/' -> SET ScanSlash
+'slash' -> TYPE ScanSlash
+
+'#' -> SET ScanHash
+'hash' -> TYPE ScanHash
+
+'INPORT' -> SET ScanInport
+'inport' -> TYPE ScanInport
+
+'OUTPORT' -> SET ScanOutport
+'outport' -> TYPE ScanOutport
 
 '[\w_]' -> SET ScanIdent
 'ident' -> TYPE ScanIdent
