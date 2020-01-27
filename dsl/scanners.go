@@ -27,12 +27,40 @@ type scanner interface {
 	Process()
 }
 
+// assign binds ports for testing
 func (s *Scanner) assign(ports Scanner) {
 	s.Set = ports.Set
 	s.Type = ports.Type
 	s.In = ports.In
 	s.Hit = ports.Hit
 	s.Miss = ports.Miss
+}
+
+// readIIPs reads configuration ports. Connections have to be buffered to avoid order deadlock
+func (s *Scanner) readIIPs() (set string, tokenType string, ok bool) {
+	if set, ok = <-s.Set; !ok {
+		return
+	}
+	if tokenType, ok = <-s.Type; !ok {
+		return
+	}
+	return
+}
+
+// scanTok is a callback that scans a single token
+type scanTok func(Token) (Token, bool)
+
+// handleTokens reads incoming tokens and applies a scan callback to them
+func (s *Scanner) handleTokens(scan scanTok) {
+	// Read incoming tokens and scan them with a callback
+	for tok := range s.In {
+		t, match := scan(tok)
+		if match {
+			s.Hit <- t
+		} else {
+			s.Miss <- t
+		}
+	}
 }
 
 // ScanChars scans a token of characters belonging to Set
@@ -42,20 +70,12 @@ type ScanChars struct {
 
 // Process reads IIPs and validates incoming tokens
 func (s *ScanChars) Process() {
-	// Read IIPs first
-	set := ""
-	tokenType := ""
-	ok := true
-	if set, ok = <-s.Set; !ok {
+	set, tokenType, ok := s.readIIPs()
+	if !ok {
 		return
 	}
 	matcher := s.matcher(set)
-
-	if tokenType, ok = <-s.Type; !ok {
-		return
-	}
-	// Then process the incoming tokens
-	for tok := range s.In {
+	s.handleTokens(func(tok Token) (Token, bool) {
 		buf := bytes.NewBufferString("")
 		dataLen := len(tok.File.Data)
 		// Read as many chars within the set as possible
@@ -67,13 +87,9 @@ func (s *ScanChars) Process() {
 			buf.WriteRune(r)
 		}
 		tok.Value = buf.String()
-		if buf.Len() > 0 {
-			tok.Type = TokenType(tokenType)
-			s.Hit <- tok
-		} else {
-			s.Miss <- tok
-		}
-	}
+		tok.Type = TokenType(tokenType)
+		return tok, buf.Len() > 0
+	})
 }
 
 func (s *ScanChars) matcher(set string) func(r rune) bool {
@@ -110,18 +126,12 @@ type ScanKeyword struct {
 
 // Process reads IIPs and validates incoming tokens
 func (s *ScanKeyword) Process() {
-	// Read IIPs
-	word := ""
-	tokenType := ""
-	ok := true
-	if word, ok = <-s.Set; !ok {
+	word, tokenType, ok := s.readIIPs()
+	if !ok {
 		return
 	}
 	word = strings.ToUpper(word)
 	wordLen := len(word)
-	if tokenType, ok = <-s.Type; !ok {
-		return
-	}
 
 	identReg := regexp.MustCompile(`[\w_]`)
 	shouldNotBeFollowedBy := identReg
@@ -130,13 +140,11 @@ func (s *ScanKeyword) Process() {
 		shouldNotBeFollowedBy = regexp.MustCompile(`[^\w\s]`)
 	}
 
-	// Process incoming tokens
-	for tok := range s.In {
+	s.handleTokens(func(tok Token) (Token, bool) {
 		dataLen := len(tok.File.Data)
 		if tok.Pos+wordLen > dataLen {
 			// Data is too short
-			s.Miss <- tok
-			continue
+			return tok, false
 		}
 		tok.Value = string(tok.File.Data[tok.Pos : tok.Pos+wordLen])
 		if strings.ToUpper(tok.Value) == word {
@@ -145,19 +153,17 @@ func (s *ScanKeyword) Process() {
 				nextChar := tok.File.Data[tok.Pos+wordLen]
 				if shouldNotBeFollowedBy.Match([]byte{nextChar}) {
 					// This is not the whole word
-					s.Miss <- tok
-					continue
+					return tok, false
 				}
 			}
 			// Checks passed, it's a match
 			tok.Type = TokenType(tokenType)
 			tok.Value = word
-			s.Hit <- tok
-			continue
+			return tok, true
 		}
 		// No match
-		s.Miss <- tok
-	}
+		return tok, false
+	})
 }
 
 // ScanComment scans a comment from hash till the end of line
@@ -167,22 +173,13 @@ type ScanComment struct {
 
 // Process reads IIPs and validates incoming tokens
 func (s *ScanComment) Process() {
-	// Read IIPs
-	prefix := ""
-	tokenType := ""
-	ok := true
-	if prefix, ok = <-s.Set; !ok {
+	prefix, tokenType, ok := s.readIIPs()
+	if !ok {
 		return
 	}
-	if tokenType, ok = <-s.Type; !ok {
-		return
-	}
-
-	// Process incoming tokens
-	for tok := range s.In {
+	s.handleTokens(func(tok Token) (Token, bool) {
 		if tok.File.Data[tok.Pos] != prefix[0] {
-			s.Miss <- tok
-			continue
+			return tok, false
 		}
 		buf := bytes.NewBufferString("")
 		dataLen := len(tok.File.Data)
@@ -196,8 +193,8 @@ func (s *ScanComment) Process() {
 		}
 		tok.Value = buf.String()
 		tok.Type = TokenType(tokenType)
-		s.Hit <- tok
-	}
+		return tok, true
+	})
 }
 
 // ScanQuoted scans a quoted string

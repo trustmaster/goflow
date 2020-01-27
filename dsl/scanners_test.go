@@ -174,7 +174,7 @@ func TestScanners(t *testing.T) {
 		// ScanComment
 		{
 			c:       "dsl/ScanComment",
-			name:    "Scans a comment till the end of line",
+			name:    "Scans a comment till the end of data",
 			set:     "#",
 			tokType: tokComment,
 			data:    "Foo BAR -> BOO Baz # This is a comment",
