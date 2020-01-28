@@ -214,3 +214,12 @@ type ScanInvalid struct {
 	// Token returns and invalid token
 	Token chan<- Token
 }
+
+// Process marks all incoming tokens as invalid
+func (s *ScanInvalid) Process() {
+	for tok := range s.In {
+		tok.Type = tokIllegal
+		tok.Value = string(tok.File.Data[tok.Pos])
+		s.Token <- tok
+	}
+}
