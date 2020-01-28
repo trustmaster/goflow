@@ -280,3 +280,41 @@ func TestScanners(t *testing.T) {
 		})
 	}
 }
+
+func TestInvalidToken(t *testing.T) {
+	t.Parallel()
+
+	in := make(chan Token)
+	out := make(chan Token)
+
+	c := new(ScanInvalid)
+	c.In = in
+	c.Token = out
+
+	wait := goflow.Run(c)
+
+	str := "Any token passed to this component will be illegal"
+	in <- Token{
+		File: &File{
+			Name: "test.fbp",
+			Data: []byte(str),
+		},
+		Pos: 0,
+	}
+
+	go func() {
+		tok, ok := <-out
+		if !ok {
+			t.Fail()
+		}
+		if tok.Type != tokIllegal {
+			t.Errorf("Unexpected token type '%s'", tok.Type)
+		}
+		if tok.Value != string(str[0]) {
+			t.Errorf("Unexpected token value '%s'", tok.Value)
+		}
+		close(in)
+	}()
+
+	<-wait
+}
