@@ -199,12 +199,50 @@ func (s *ScanComment) Process() {
 
 // ScanQuoted scans a quoted string
 type ScanQuoted struct {
-	// In is an incoming empty token
-	In <-chan Token
-	// Hit is a successfully matched token
-	Hit chan<- Token
-	// Miss is the unmodified empty token in case there was no match
-	Miss chan<- Token
+	Scanner
+}
+
+// Process scans for quoted strings in the incoming tokens
+func (s *ScanQuoted) Process() {
+	quotes, tokenType, ok := s.readIIPs()
+	if !ok {
+		return
+	}
+	s.handleTokens(func(tok Token) (Token, bool) {
+		// Find the quote char
+		var q rune = 0
+		for _, b := range quotes {
+			if rune(tok.File.Data[tok.Pos]) == b {
+				q = b
+				break
+			}
+		}
+		if q == 0 {
+			return tok, false
+		}
+
+		var e rune = '\\'
+		escaped := 0
+		buf := bytes.NewBufferString(string(q))
+		dataLen := len(tok.File.Data)
+		for i := tok.Pos + 1; i < dataLen; i++ {
+			r := rune(tok.File.Data[i])
+			if r == e {
+				escaped = (escaped + 1) % 2
+				if escaped == 1 {
+					continue
+				}
+			}
+			buf.WriteRune(r)
+			if r == q && escaped == 0 {
+				break
+			}
+			escaped = 0
+		}
+		tok.Value = buf.String()
+		tok.Type = TokenType(tokenType)
+		return tok, true
+	})
 }
 
 // ScanInvalid returns an illegal token
