@@ -18,18 +18,18 @@ type port struct {
 	info PortInfo
 }
 
-// procPortName stores full port name within the network.
-type procPortName struct {
-	// Process name in the network
+// address is a full port accessor including the index part
+type address struct {
 	proc string
-	// Port name of the process
 	port string
+	key  string
+	// index int
 }
 
 // connection stores information about a connection within the net.
 type connection struct {
-	src     procPortName
-	tgt     procPortName
+	src     address
+	tgt     address
 	channel reflect.Value
 	buffer  int
 }
@@ -45,14 +45,17 @@ func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort strin
 // ConnectBuf connects a sender to a receiver using a channel with a buffer of a given size.
 // It returns true on success or panics and returns false if error occurs.
 func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort string, bufferSize int) error {
+	sendAddr := parseAddress(senderName, senderPort)
 	senderPortVal, err := n.getProcPort(senderName, senderPort, reflect.SendDir)
 	if err != nil {
 		return fmt.Errorf("connect: %w", err)
 	}
+
 	if err = validatePort(senderPortVal, reflect.SendDir); err != nil {
 		return fmt.Errorf("connect: validation of '%s.%s' failed: %w", senderName, senderPort, err)
 	}
 
+	recvAddr := parseAddress(receiverName, receiverPort)
 	receiverPortVal, err := n.getProcPort(receiverName, receiverPort, reflect.RecvDir)
 	if err != nil {
 		return fmt.Errorf("connect: %w", err)
@@ -65,7 +68,7 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 	var channel reflect.Value
 	if !receiverPortVal.IsNil() {
 		// Find existing channel attached to the receiver
-		channel = n.findExistingChan(receiverName, receiverPort, reflect.RecvDir)
+		channel = n.findExistingChan(recvAddr, reflect.RecvDir)
 	}
 
 	sndPortType := senderPortVal.Type()
@@ -78,7 +81,7 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 		// Find an existing channel attached to sender
 		// Receiver channel takes priority if exists
 		if !channel.IsValid() {
-			channel = n.findExistingChan(senderName, senderPort, reflect.SendDir)
+			channel = n.findExistingChan(sendAddr, reflect.SendDir)
 		}
 	}
 
@@ -101,10 +104,8 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 
 	// Add connection info
 	n.connections = append(n.connections, connection{
-		src: procPortName{proc: senderName,
-			port: senderPort},
-		tgt: procPortName{proc: receiverName,
-			port: receiverPort},
+		src:     sendAddr,
+		tgt:     recvAddr,
 		channel: channel,
 		buffer:  bufferSize})
 
@@ -175,18 +176,48 @@ func validatePort(portVal reflect.Value, dir reflect.ChanDir) error {
 	return nil
 }
 
+// parseAddress unfolds a string port name into parts, including array index or hashmap key
+func parseAddress(proc, port string) address {
+	n := address{
+		proc: proc,
+		port: port,
+		// index: -1,
+	}
+	keyPos := 0
+	key := ""
+	for i, r := range port {
+		if r == '[' {
+			keyPos = i + 1
+			n.port = port[0:i]
+		}
+		if r == ']' {
+			key = port[keyPos:i]
+		}
+	}
+	if key == "" {
+		return n
+	}
+	// if i, err := strconv.Atoi(key); err == nil {
+	// 	n.index = i
+	// } else {
+	// 	n.key = key
+	// }
+	n.key = key
+	return n
+}
+
 // findExistingChan returns a channel attached to receiver if it already exists among connections
-func (n *Graph) findExistingChan(proc, procPort string, dir reflect.ChanDir) reflect.Value {
+func (n *Graph) findExistingChan(addr address, dir reflect.ChanDir) reflect.Value {
 	var channel reflect.Value
 	// Find existing channel attached to the receiver
 	for _, conn := range n.connections {
-		var p procPortName
+		var a address
 		if dir == reflect.SendDir {
-			p = conn.src
+			a = conn.src
 		} else {
-			p = conn.tgt
+			a = conn.tgt
 		}
-		if p.port == procPort && p.proc == proc {
+		if a == addr {
 			channel = conn.channel
 			break
 		}
