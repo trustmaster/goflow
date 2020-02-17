@@ -46,67 +46,40 @@ func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort strin
 // It returns true on success or panics and returns false if error occurs.
 func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort string, bufferSize int) error {
 	sendAddr := parseAddress(senderName, senderPort)
-	senderPortVal, err := n.getProcPort(senderName, senderPort, reflect.SendDir)
+	sendPort, err := n.getProcPort(senderName, senderPort, reflect.SendDir)
 	if err != nil {
 		return fmt.Errorf("connect: %w", err)
-	}
-
-	if err = validatePort(senderPortVal, reflect.SendDir); err != nil {
-		return fmt.Errorf("connect: validation of '%s.%s' failed: %w", senderName, senderPort, err)
 	}
 
 	recvAddr := parseAddress(receiverName, receiverPort)
-	receiverPortVal, err := n.getProcPort(receiverName, receiverPort, reflect.RecvDir)
+	recvPort, err := n.getProcPort(receiverName, receiverPort, reflect.RecvDir)
 	if err != nil {
 		return fmt.Errorf("connect: %w", err)
 	}
-	if err = validatePort(receiverPortVal, reflect.RecvDir); err != nil {
-		return fmt.Errorf("connect: validation of '%s.%s' failed: %w", receiverName, receiverPort, err)
+
+	ch, err := attachPort(sendPort, reflect.SendDir, reflect.ValueOf(nil), bufferSize)
+	if err != nil {
+		return fmt.Errorf("connect '%s.%s': %w", senderName, senderPort, err)
 	}
 
-	// Try to get an existing channel
-	var channel reflect.Value
-	if !receiverPortVal.IsNil() {
-		// Find existing channel attached to the receiver
-		channel = n.findExistingChan(recvAddr, reflect.RecvDir)
+	if _, err = attachPort(recvPort, reflect.RecvDir, ch, bufferSize); err != nil {
+		return fmt.Errorf("connect '%s.%s': %w", receiverName, receiverPort, err)
 	}
 
-	sndPortType := senderPortVal.Type()
-
-	if !senderPortVal.IsNil() {
-		// If both ports are already busy, we cannot connect them
-		if channel.IsValid() && senderPortVal.Addr() != receiverPortVal.Addr() {
-			return fmt.Errorf("connect: '%s.%s' cannot be connected to '%s.%s': both ports already in use", receiverName, receiverPort, senderName, senderPort)
-		}
-		// Find an existing channel attached to sender
-		// Receiver channel takes priority if exists
-		if !channel.IsValid() {
-			channel = n.findExistingChan(sendAddr, reflect.SendDir)
-		}
-	}
-
-	// Create a new channel if none of the existing channels found
-	if !channel.IsValid() {
-		// Make a channel of an appropriate type
-		chanType := reflect.ChanOf(reflect.BothDir, sndPortType.Elem())
-		channel = reflect.MakeChan(chanType, bufferSize)
-	}
-
-	// Set the channels
-	// TODO fix rewiring a graph without disconnecting ports
-	if senderPortVal.IsNil() {
-		senderPortVal.Set(channel)
-		n.incSendChanRefCount(channel)
-	}
-	if receiverPortVal.IsNil() {
-		receiverPortVal.Set(channel)
-	}
+	// // TODO fix rewiring a graph without disconnecting ports
+	// if senderPortVal.IsNil() {
+	// 	senderPortVal.Set(channel)
+	// 	n.incSendChanRefCount(channel)
+	// }
+	// if receiverPortVal.IsNil() {
+	// 	receiverPortVal.Set(channel)
+	// }
 
 	// Add connection info
 	n.connections = append(n.connections, connection{
 		src:     sendAddr,
 		tgt:     recvAddr,
-		channel: channel,
+		channel: ch,
 		buffer:  bufferSize})
 
 	return nil
@@ -118,7 +91,7 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 	// Check if process exists
 	proc, ok := n.procs[procName]
 	if !ok {
-		return nilValue, fmt.Errorf("getProcPort: process '%s' not found", procName)
+		return nilValue, fmt.Errorf("process '%s' not found", procName)
 	}
 
 	// Check if process is settable
@@ -127,7 +100,7 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 		val = val.Elem()
 	}
 	if !val.CanSet() {
-		return nilValue, fmt.Errorf("getProcPort: process '%s' is not settable", procName)
+		return nilValue, fmt.Errorf("process '%s' is not settable", procName)
 	}
 
 	// Get the port value
@@ -151,16 +124,28 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 		}
 	}
 	if err != nil {
-		return nilValue, fmt.Errorf("getProcPort: process '%s' does not have port '%s'", procName, portName)
+		return nilValue, fmt.Errorf("process '%s' does not have port '%s'", procName, portName)
 	}
 
 	return portVal, nil
 }
 
-func validatePort(portVal reflect.Value, dir reflect.ChanDir) error {
-	// Validate port type
-	portType := portVal.Type()
+func attachPort(port reflect.Value, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
+	if err := validateChanDir(port.Type(), dir); err != nil {
+		return ch, err
+	}
+	if err := validateCanSet(port); err != nil {
+		return ch, err
+	}
+	ch, err := selectOrMakeChan(ch, port, bufSize)
+	if err != nil {
+		return ch, err
+	}
+	port.Set(ch)
+	return ch, nil
+}
 
+func validateChanDir(portType reflect.Type, dir reflect.ChanDir) error {
 	if portType.Kind() != reflect.Chan {
 		return fmt.Errorf("not a channel")
 	}
@@ -168,12 +153,28 @@ func validatePort(portVal reflect.Value, dir reflect.ChanDir) error {
 	if portType.ChanDir()&dir == 0 {
 		return fmt.Errorf("channel does not support direction %s", dir.String())
 	}
+	return nil
+}
 
-	// Check assignability
+func validateCanSet(portVal reflect.Value) error {
 	if !portVal.CanSet() {
 		return fmt.Errorf("port is not assignable")
 	}
 	return nil
+}
+
+func selectOrMakeChan(new, existing reflect.Value, bufSize int) (reflect.Value, error) {
+	if existing.IsValid() {
+		if !new.IsValid() {
+			return existing, nil
+		}
+		return new, fmt.Errorf("cannot attach new channel to already attached port")
+	}
+	if !new.IsValid() {
+		chanType := reflect.ChanOf(reflect.BothDir, new.Type())
+		new = reflect.MakeChan(chanType, bufSize)
+	}
+	return new, nil
 }
 
 // parseAddress unfolds a string port name into parts, including array index or hashmap key
