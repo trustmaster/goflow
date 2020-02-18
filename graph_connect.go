@@ -57,7 +57,22 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 		return fmt.Errorf("connect: %w", err)
 	}
 
-	ch, err := attachPort(sendPort, reflect.SendDir, reflect.ValueOf(nil), bufferSize)
+	isNewChan := false // tells if a new channel will need to be created for this connection
+	// Try to find an existing outbound channel from the same sender,
+	// so it can be used as fan-out FIFO
+	ch := n.findExistingChan(sendAddr, reflect.SendDir)
+	if !ch.IsValid() || ch.IsNil() {
+		// Then try to find an existing inbound channel to the same receiver,
+		// so it can be used as a fan-in FIFO
+		ch = n.findExistingChan(recvAddr, reflect.RecvDir)
+		if ch.IsValid() && !ch.IsNil() {
+			// Increase the number of listeners on this already used channel
+			n.incChanListenersCount(ch)
+		} else {
+			isNewChan = true
+		}
+	}
+	ch, err = attachPort(sendPort, reflect.SendDir, ch, bufferSize)
 	if err != nil {
 		return fmt.Errorf("connect '%s.%s': %w", senderName, senderPort, err)
 	}
@@ -65,15 +80,10 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 	if _, err = attachPort(recvPort, reflect.RecvDir, ch, bufferSize); err != nil {
 		return fmt.Errorf("connect '%s.%s': %w", receiverName, receiverPort, err)
 	}
-
-	// // TODO fix rewiring a graph without disconnecting ports
-	// if senderPortVal.IsNil() {
-	// 	senderPortVal.Set(channel)
-	// 	n.incSendChanRefCount(channel)
-	// }
-	// if receiverPortVal.IsNil() {
-	// 	receiverPortVal.Set(channel)
-	// }
+	if isNewChan {
+		// Register the first listener on a newly created channel
+		n.incChanListenersCount(ch)
+	}
 
 	// Add connection info
 	n.connections = append(n.connections, connection{
@@ -164,14 +174,11 @@ func validateCanSet(portVal reflect.Value) error {
 }
 
 func selectOrMakeChan(new, existing reflect.Value, bufSize int) (reflect.Value, error) {
-	if existing.IsValid() {
-		if !new.IsValid() {
+	if !new.IsValid() || new.IsNil() {
+		if existing.IsValid() && !existing.IsNil() {
 			return existing, nil
 		}
-		return new, fmt.Errorf("cannot attach new channel to already attached port")
-	}
-	if !new.IsValid() {
-		chanType := reflect.ChanOf(reflect.BothDir, new.Type())
+		chanType := reflect.ChanOf(reflect.BothDir, existing.Type().Elem())
 		new = reflect.MakeChan(chanType, bufSize)
 	}
 	return new, nil
@@ -226,34 +233,34 @@ func (n *Graph) findExistingChan(addr address, dir reflect.ChanDir) reflect.Valu
 	return channel
 }
 
-// IncSendChanRefCount increments SendChanRefCount.
+// incChanListenersCount increments SendChanRefCount.
 // The count is needed when multiple senders are connected
 // to the same receiver. When the network is terminated and
 // senders need to close their output port, this counter
 // can help to avoid closing the same channel multiple times.
-func (n *Graph) incSendChanRefCount(c reflect.Value) {
-	n.sendChanMutex.Lock()
-	defer n.sendChanMutex.Unlock()
+func (n *Graph) incChanListenersCount(c reflect.Value) {
+	n.chanListenersCountLock.Lock()
+	defer n.chanListenersCountLock.Unlock()
 
 	ptr := c.Pointer()
-	cnt := n.sendChanRefCount[ptr]
+	cnt := n.chanListenersCount[ptr]
 	cnt++
-	n.sendChanRefCount[ptr] = cnt
+	n.chanListenersCount[ptr] = cnt
 }
 
-// DecSendChanRefCount decrements SendChanRefCount
+// decChanListenersCount decrements SendChanRefCount
 // It returns true if the RefCount has reached 0
-func (n *Graph) decSendChanRefCount(c reflect.Value) bool {
-	n.sendChanMutex.Lock()
-	defer n.sendChanMutex.Unlock()
+func (n *Graph) decChanListenersCount(c reflect.Value) bool {
+	n.chanListenersCountLock.Lock()
+	defer n.chanListenersCountLock.Unlock()
 
 	ptr := c.Pointer()
-	cnt := n.sendChanRefCount[ptr]
+	cnt := n.chanListenersCount[ptr]
 	if cnt == 0 {
 		return true //yes you may try to close a nonexistant channel, see what happens...
 	}
 	cnt--
-	n.sendChanRefCount[ptr] = cnt
+	n.chanListenersCount[ptr] = cnt
 	return cnt == 0
 }
 
