@@ -34,10 +34,10 @@ type Graph struct {
 	outPorts map[string]port
 	// connections contains graph edges and channels.
 	connections []connection
-	// sendChanRefCount tracks how many outports use the same channel
-	sendChanRefCount map[uintptr]uint
-	// sendChanMutex is used to synchronize operations on the sendChanRefCount map.
-	sendChanMutex sync.Locker
+	// chanListenersCount tracks how many outports use the same channel
+	chanListenersCount map[uintptr]uint
+	// chanListenersCountLock is used to synchronize operations on the chanListenersCount map.
+	chanListenersCountLock sync.Locker
 	// iips contains initial IPs attached to the network
 	iips []iip
 }
@@ -50,15 +50,15 @@ func NewGraph(config ...GraphConfig) *Graph {
 	}
 
 	return &Graph{
-		conf:             conf,
-		waitGrp:          new(sync.WaitGroup),
-		procs:            make(map[string]interface{}, conf.Capacity),
-		inPorts:          make(map[string]port, conf.Capacity),
-		outPorts:         make(map[string]port, conf.Capacity),
-		connections:      make([]connection, 0, conf.Capacity),
-		sendChanRefCount: make(map[uintptr]uint, conf.Capacity),
-		sendChanMutex:    new(sync.Mutex),
-		iips:             make([]iip, 0, conf.Capacity),
+		conf:                   conf,
+		waitGrp:                new(sync.WaitGroup),
+		procs:                  make(map[string]interface{}, conf.Capacity),
+		inPorts:                make(map[string]port, conf.Capacity),
+		outPorts:               make(map[string]port, conf.Capacity),
+		connections:            make([]connection, 0, conf.Capacity),
+		chanListenersCount:     make(map[uintptr]uint, conf.Capacity),
+		chanListenersCountLock: new(sync.Mutex),
+		iips:                   make([]iip, 0, conf.Capacity),
 	}
 }
 
@@ -195,7 +195,7 @@ func (n *Graph) closeProcOuts(proc interface{}) {
 			fieldType.ChanDir()&reflect.SendDir != 0 && fieldType.ChanDir()&reflect.RecvDir == 0) {
 			continue
 		}
-		if n.decSendChanRefCount(field) {
+		if n.decChanListenersCount(field) {
 			field.Close()
 		}
 	}

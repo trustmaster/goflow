@@ -28,37 +28,37 @@ func TestConnectInvalidParams(t *testing.T) {
 		{
 			"Invalid receiver proc",
 			n.Connect("e1", "Out", "noproc", "In"),
-			"Connect error: process 'noproc' not found",
+			"connect: process 'noproc' not found",
 		},
 		{
 			"Invalid receiver port",
 			n.Connect("e1", "Out", "e2", "NotIn"),
-			"Connect error: process 'e2' does not have port 'NotIn'",
+			"connect: process 'e2' does not have port 'NotIn'",
 		},
 		{
 			"Invalid sender proc",
 			n.Connect("noproc", "Out", "e2", "In"),
-			"Connect error: process 'noproc' not found",
+			"connect: process 'noproc' not found",
 		},
 		{
 			"Invalid sender port",
 			n.Connect("e1", "NotOut", "e2", "In"),
-			"Connect error: process 'e1' does not have port 'NotOut'",
+			"connect: process 'e1' does not have port 'NotOut'",
 		},
 		{
 			"Sending to output",
 			n.Connect("e1", "Out", "e2", "Out"),
-			"Connect error: 'e2.Out' is not of the correct chan type",
+			"connect 'e2.Out': channel does not support direction <-chan",
 		},
 		{
 			"Sending from input",
 			n.Connect("e1", "In", "e2", "In"),
-			"Connect error: 'e1.In' is not of the correct chan type",
+			"connect 'e1.In': channel does not support direction chan<-",
 		},
 		{
 			"Connecting to non-chan",
 			n.Connect("e1", "Out", "inv", "NotChan"),
-			"Connect error: 'inv.NotChan' is not of the correct chan type",
+			"connect 'inv.NotChan': not a channel",
 		},
 	}
 
