@@ -147,10 +147,7 @@ func attachPort(port reflect.Value, dir reflect.ChanDir, ch reflect.Value, bufSi
 	if err := validateCanSet(port); err != nil {
 		return ch, err
 	}
-	ch, err := selectOrMakeChan(ch, port, bufSize)
-	if err != nil {
-		return ch, err
-	}
+	ch = selectOrMakeChan(ch, port, bufSize)
 	port.Set(ch)
 	return ch, nil
 }
@@ -173,15 +170,15 @@ func validateCanSet(portVal reflect.Value) error {
 	return nil
 }
 
-func selectOrMakeChan(new, existing reflect.Value, bufSize int) (reflect.Value, error) {
+func selectOrMakeChan(new, existing reflect.Value, bufSize int) reflect.Value {
 	if !new.IsValid() || new.IsNil() {
 		if existing.IsValid() && !existing.IsNil() {
-			return existing, nil
+			return existing
 		}
 		chanType := reflect.ChanOf(reflect.BothDir, existing.Type().Elem())
 		new = reflect.MakeChan(chanType, bufSize)
 	}
-	return new, nil
+	return new
 }
 
 // parseAddress unfolds a string port name into parts, including array index or hashmap key
