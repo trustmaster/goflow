@@ -38,6 +38,7 @@ func (n *Graph) RemoveIIP(processName, portName string) error {
 func (n *Graph) sendIIPs() error {
 	// Send initial IPs
 	for _, ip := range n.iips {
+		ip := ip
 		// Get the reciever port channel
 		var channel reflect.Value
 		found := false
