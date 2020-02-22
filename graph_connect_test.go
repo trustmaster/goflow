@@ -223,8 +223,8 @@ func newMapPorts() (*Graph, error) {
 		"e3":  new(echo),
 		"e11": new(echo),
 		"e22": new(echo),
-		"e33": new(echo),
-		"r":   new(router),
+		// "e33": new(echo),
+		"r": new(router),
 	}
 
 	for name, c := range components {
@@ -236,7 +236,7 @@ func newMapPorts() (*Graph, error) {
 	connections := []struct{ sn, sp, rn, rp string }{
 		{"e1", "Out", "r", "In[e1]"},
 		{"e2", "Out", "r", "In[e2]"},
-		{"e33", "Out", "r", "In[e3]"},
+		// {"e33", "Out", "r", "In[e3]"},
 		{"r", "Out[e3]", "e3", "In"},
 		{"r", "Out[e2]", "e22", "In"},
 		{"r", "Out[e1]", "e11", "In"},
@@ -254,8 +254,8 @@ func newMapPorts() (*Graph, error) {
 	}{
 		{"e1", "In", 1},
 		{"e2", "In", 2},
-		// {"r", "In[e3]", 3},
-		{"e33", "In", 3},
+		{"r", "In[e3]", 3},
+		// {"e33", "In", 3},
 	}
 
 	for _, p := range iips {

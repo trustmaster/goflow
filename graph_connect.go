@@ -26,6 +26,13 @@ type address struct {
 	// index int
 }
 
+func (a address) String() string {
+	if a.key != "" {
+		return fmt.Sprintf("%s.%s[%s]", a.proc, a.port, a.key)
+	}
+	return fmt.Sprintf("%s.%s", a.proc, a.port)
+}
+
 // connection stores information about a connection within the net.
 type connection struct {
 	src     address
