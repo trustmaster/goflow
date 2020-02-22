@@ -213,3 +213,100 @@ func TestFanOutFanIn(t *testing.T) {
 
 	<-wait
 }
+
+func newMapPorts() (*Graph, error) {
+	n := NewGraph()
+
+	components := map[string]interface{}{
+		"e1":  new(echo),
+		"e2":  new(echo),
+		"e3":  new(echo),
+		"e11": new(echo),
+		"e22": new(echo),
+		"e33": new(echo),
+		"r":   new(router),
+	}
+
+	for name, c := range components {
+		if err := n.Add(name, c); err != nil {
+			return nil, err
+		}
+	}
+
+	connections := []struct{ sn, sp, rn, rp string }{
+		{"e1", "Out", "r", "In[e1]"},
+		{"e2", "Out", "r", "In[e2]"},
+		{"e33", "Out", "r", "In[e3]"},
+		{"r", "Out[e3]", "e3", "In"},
+		{"r", "Out[e2]", "e22", "In"},
+		{"r", "Out[e1]", "e11", "In"},
+	}
+
+	for _, c := range connections {
+		if err := n.Connect(c.sn, c.sp, c.rn, c.rp); err != nil {
+			return nil, err
+		}
+	}
+
+	iips := []struct {
+		proc, port string
+		v          int
+	}{
+		{"e1", "In", 1},
+		{"e2", "In", 2},
+		// {"r", "In[e3]", 3},
+		{"e33", "In", 3},
+	}
+
+	for _, p := range iips {
+		if err := n.AddIIP(p.proc, p.port, p.v); err != nil {
+			return nil, err
+		}
+	}
+
+	outPorts := []struct{ pn, pp, name string }{
+		{"e11", "Out", "O1"},
+		{"e22", "Out", "O2"},
+		{"e3", "Out", "O3"},
+	}
+
+	for _, p := range outPorts {
+		if err := n.MapOutPort(p.name, p.pn, p.pp); err != nil {
+			return nil, err
+		}
+	}
+
+	return n, nil
+}
+
+func TestMapPorts(t *testing.T) {
+	n, err := newMapPorts()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	o1 := make(chan int)
+	o2 := make(chan int)
+	o3 := make(chan int)
+	n.SetOutPort("O1", o1)
+	n.SetOutPort("O2", o2)
+	n.SetOutPort("O3", o3)
+
+	wait := Run(n)
+
+	v1 := <-o1
+	v2 := <-o2
+	v3 := <-o3
+
+	expected := []int{1, 2, 3}
+	actual := []int{v1, v2, v3}
+
+	for i, v := range actual {
+		if v != expected[i] {
+			t.Errorf("Expected %d, got %d", expected[i], v)
+		}
+	}
+
+	<-wait
+}

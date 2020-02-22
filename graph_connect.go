@@ -46,13 +46,13 @@ func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort strin
 // It returns true on success or panics and returns false if error occurs.
 func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort string, bufferSize int) error {
 	sendAddr := parseAddress(senderName, senderPort)
-	sendPort, err := n.getProcPort(senderName, senderPort, reflect.SendDir)
+	sendPort, err := n.getProcPort(senderName, sendAddr.port, reflect.SendDir)
 	if err != nil {
 		return fmt.Errorf("connect: %w", err)
 	}
 
 	recvAddr := parseAddress(receiverName, receiverPort)
-	recvPort, err := n.getProcPort(receiverName, receiverPort, reflect.RecvDir)
+	recvPort, err := n.getProcPort(receiverName, recvAddr.port, reflect.RecvDir)
 	if err != nil {
 		return fmt.Errorf("connect: %w", err)
 	}
@@ -72,12 +72,12 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 			isNewChan = true
 		}
 	}
-	ch, err = attachPort(sendPort, reflect.SendDir, ch, bufferSize)
+	ch, err = attachPort(sendPort, sendAddr, reflect.SendDir, ch, bufferSize)
 	if err != nil {
 		return fmt.Errorf("connect '%s.%s': %w", senderName, senderPort, err)
 	}
 
-	if _, err = attachPort(recvPort, reflect.RecvDir, ch, bufferSize); err != nil {
+	if _, err = attachPort(recvPort, recvAddr, reflect.RecvDir, ch, bufferSize); err != nil {
 		return fmt.Errorf("connect '%s.%s': %w", receiverName, receiverPort, err)
 	}
 	if isNewChan {
@@ -140,15 +140,37 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 	return portVal, nil
 }
 
-func attachPort(port reflect.Value, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
+func attachPort(port reflect.Value, addr address, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
+	if addr.key != "" {
+		return attachMapPort(port, addr.key, dir, ch, bufSize)
+	}
+	return attachChanPort(port, dir, ch, bufSize)
+}
+
+func attachChanPort(port reflect.Value, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
 	if err := validateChanDir(port.Type(), dir); err != nil {
 		return ch, err
 	}
 	if err := validateCanSet(port); err != nil {
 		return ch, err
 	}
-	ch = selectOrMakeChan(ch, port, bufSize)
+	ch = selectOrMakeChan(ch, port, port.Type().Elem(), bufSize)
 	port.Set(ch)
+	return ch, nil
+}
+
+func attachMapPort(port reflect.Value, key string, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
+	if err := validateChanDir(port.Type().Elem(), dir); err != nil {
+		return ch, err
+	}
+	kv := reflect.ValueOf(key)
+	item := port.MapIndex(kv)
+	ch = selectOrMakeChan(ch, item, port.Type().Elem().Elem(), bufSize)
+	if port.IsNil() {
+		m := reflect.MakeMap(port.Type())
+		port.Set(m)
+	}
+	port.SetMapIndex(kv, ch)
 	return ch, nil
 }
 
@@ -170,12 +192,12 @@ func validateCanSet(portVal reflect.Value) error {
 	return nil
 }
 
-func selectOrMakeChan(new, existing reflect.Value, bufSize int) reflect.Value {
+func selectOrMakeChan(new, existing reflect.Value, t reflect.Type, bufSize int) reflect.Value {
 	if !new.IsValid() || new.IsNil() {
 		if existing.IsValid() && !existing.IsNil() {
 			return existing
 		}
-		chanType := reflect.ChanOf(reflect.BothDir, existing.Type().Elem())
+		chanType := reflect.ChanOf(reflect.BothDir, t)
 		new = reflect.MakeChan(chanType, bufSize)
 	}
 	return new
