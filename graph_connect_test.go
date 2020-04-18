@@ -214,7 +214,6 @@ func newMapPorts() (*Graph, error) {
 
 	components := map[string]interface{}{
 		"e1":  new(echo),
-		"e3":  new(echo),
 		"e11": new(echo),
 		"e22": new(echo),
 		"r":   new(router),
@@ -228,7 +227,6 @@ func newMapPorts() (*Graph, error) {
 
 	connections := []struct{ sn, sp, rn, rp string }{
 		{"e1", "Out", "r", "In[e1]"},
-		{"r", "Out[e3]", "e3", "In"},
 		{"r", "Out[e2]", "e22", "In"},
 		{"r", "Out[e1]", "e11", "In"},
 	}
@@ -258,7 +256,7 @@ func newMapPorts() (*Graph, error) {
 	outPorts := []struct{ pn, pp, name string }{
 		{"e11", "Out", "O1"},
 		{"e22", "Out", "O2"},
-		{"e3", "Out", "O3"},
+		{"r", "Out[e3]", "O3"},
 	}
 
 	for _, p := range outPorts {
@@ -285,7 +283,10 @@ func TestMapPorts(t *testing.T) {
 	}
 	n.SetOutPort("O1", o1)
 	n.SetOutPort("O2", o2)
-	n.SetOutPort("O3", o3)
+	if err := n.SetOutPort("O3", o3); err != nil {
+		t.Error(err)
+		return
+	}
 
 	wait := Run(n)
 
@@ -312,7 +313,6 @@ func newArrayPorts() (*Graph, error) {
 
 	components := map[string]interface{}{
 		"e0":  new(echo),
-		"e2":  new(echo),
 		"e00": new(echo),
 		"e11": new(echo),
 		"r":   new(irouter),
@@ -326,7 +326,6 @@ func newArrayPorts() (*Graph, error) {
 
 	connections := []struct{ sn, sp, rn, rp string }{
 		{"e0", "Out", "r", "In[0]"},
-		{"r", "Out[2]", "e2", "In"},
 		{"r", "Out[1]", "e11", "In"},
 		{"r", "Out[0]", "e00", "In"},
 	}
@@ -356,7 +355,7 @@ func newArrayPorts() (*Graph, error) {
 	outPorts := []struct{ pn, pp, name string }{
 		{"e00", "Out", "O0"},
 		{"e11", "Out", "O1"},
-		{"e2", "Out", "O2"},
+		{"r", "Out[2]", "O2"},
 	}
 
 	for _, p := range outPorts {
@@ -383,7 +382,10 @@ func TestArrayPorts(t *testing.T) {
 	}
 	n.SetOutPort("O0", o0)
 	n.SetOutPort("O1", o1)
-	n.SetOutPort("O2", o2)
+	if err := n.SetOutPort("O2", o2); err != nil {
+		t.Error(err)
+		return
+	}
 
 	wait := Run(n)
 
