@@ -11,12 +11,8 @@ func newRepeatGraph() (*Graph, error) {
 		return nil, err
 	}
 
-	if err := n.MapInPort("Word", "r", "Word"); err != nil {
-		return nil, err
-	}
-	if err := n.MapOutPort("Words", "r", "Words"); err != nil {
-		return nil, err
-	}
+	n.MapInPort("Word", "r", "Word")
+	n.MapOutPort("Words", "r", "Words")
 
 	return n, nil
 }
@@ -78,15 +74,9 @@ func newRepeatGraph2Ins() (*Graph, error) {
 		return nil, err
 	}
 
-	if err := n.MapInPort("Word", "r", "Word"); err != nil {
-		return nil, err
-	}
-	if err := n.MapInPort("Times", "r", "Times"); err != nil {
-		return nil, err
-	}
-	if err := n.MapOutPort("Words", "r", "Words"); err != nil {
-		return nil, err
-	}
+	n.MapInPort("Word", "r", "Word")
+	n.MapInPort("Times", "r", "Times")
+	n.MapOutPort("Words", "r", "Words")
 
 	return n, nil
 }

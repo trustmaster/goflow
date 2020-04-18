@@ -48,17 +48,15 @@ func TestSetMissingProcPorts(t *testing.T) {
 		return
 	}
 
-	if err := n.MapInPort("In", "nope", "In"); err != nil {
-		t.Error(err)
-		return
-	}
+	n.MapInPort("In", "nope", "In")
+	n.MapOutPort("Out", "nope", "Out")
 
-	if err := n.MapOutPort("Out", "nope", "Out"); err == nil {
+	if err := n.SetInPort("In", make(chan int)); err == nil {
 		t.Errorf("Expected an error")
 		return
 	}
 
-	if err := n.SetInPort("In", make(chan int)); err == nil {
+	if err := n.SetOutPort("Out", make(chan int)); err == nil {
 		t.Errorf("Expected an error")
 		return
 	}

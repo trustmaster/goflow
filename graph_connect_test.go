@@ -157,13 +157,8 @@ func newFanOutFanIn() (*Graph, error) {
 		}
 	}
 
-	if err := n.MapInPort("In", "e1", "In"); err != nil {
-		return nil, err
-	}
-
-	if err := n.MapOutPort("Out", "e2", "Out"); err != nil {
-		return nil, err
-	}
+	n.MapInPort("In", "e1", "In")
+	n.MapOutPort("Out", "e2", "Out")
 
 	return n, nil
 }
@@ -258,9 +253,7 @@ func newMapPorts() (*Graph, error) {
 		}
 	}
 
-	if err := n.MapInPort("I2", "r", "In[e2]"); err != nil {
-		return nil, err
-	}
+	n.MapInPort("I2", "r", "In[e2]")
 
 	outPorts := []struct{ pn, pp, name string }{
 		{"e11", "Out", "O1"},
@@ -269,9 +262,7 @@ func newMapPorts() (*Graph, error) {
 	}
 
 	for _, p := range outPorts {
-		if err := n.MapOutPort(p.name, p.pn, p.pp); err != nil {
-			return nil, err
-		}
+		n.MapOutPort(p.name, p.pn, p.pp)
 	}
 
 	return n, nil
