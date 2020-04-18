@@ -100,14 +100,8 @@ func TestFactoryGraph(t *testing.T) {
 		return
 	}
 
-	if err = n.MapInPort("In", "de", "In"); err != nil {
-		t.Error(err)
-		return
-	}
-	if err = n.MapOutPort("Out", "e", "Out"); err != nil {
-		t.Error(err)
-		return
-	}
+	n.MapInPort("In", "de", "In")
+	n.MapOutPort("Out", "e", "Out")
 
 	testGraphWithNumberSequence(n, t)
 }

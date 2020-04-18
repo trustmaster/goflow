@@ -28,22 +28,22 @@ func TestConnectInvalidParams(t *testing.T) {
 		{
 			"Invalid receiver proc",
 			n.Connect("e1", "Out", "noproc", "In"),
-			"connect: process 'noproc' not found",
+			"connect: getProcPort: process 'noproc' not found",
 		},
 		{
 			"Invalid receiver port",
 			n.Connect("e1", "Out", "e2", "NotIn"),
-			"connect: process 'e2' does not have port 'NotIn'",
+			"connect: getProcPort: process 'e2' does not have a valid port 'NotIn'",
 		},
 		{
 			"Invalid sender proc",
 			n.Connect("noproc", "Out", "e2", "In"),
-			"connect: process 'noproc' not found",
+			"connect: getProcPort: process 'noproc' not found",
 		},
 		{
 			"Invalid sender port",
 			n.Connect("e1", "NotOut", "e2", "In"),
-			"connect: process 'e1' does not have port 'NotOut'",
+			"connect: getProcPort: process 'e1' does not have a valid port 'NotOut'",
 		},
 		{
 			"Sending to output",
@@ -157,13 +157,8 @@ func newFanOutFanIn() (*Graph, error) {
 		}
 	}
 
-	if err := n.MapInPort("In", "e1", "In"); err != nil {
-		return nil, err
-	}
-
-	if err := n.MapOutPort("Out", "e2", "Out"); err != nil {
-		return nil, err
-	}
+	n.MapInPort("In", "e1", "In")
+	n.MapOutPort("Out", "e2", "Out")
 
 	return n, nil
 }
@@ -209,6 +204,204 @@ func TestFanOutFanIn(t *testing.T) {
 
 	if i != len(inData) {
 		t.Errorf("Output count missmatch: %d != %d", i, len(inData))
+	}
+
+	<-wait
+}
+
+func newMapPorts() (*Graph, error) {
+	n := NewGraph()
+
+	components := map[string]interface{}{
+		"e1":  new(echo),
+		"e11": new(echo),
+		"e22": new(echo),
+		"r":   new(router),
+	}
+
+	for name, c := range components {
+		if err := n.Add(name, c); err != nil {
+			return nil, err
+		}
+	}
+
+	connections := []struct{ sn, sp, rn, rp string }{
+		{"e1", "Out", "r", "In[e1]"},
+		{"r", "Out[e2]", "e22", "In"},
+		{"r", "Out[e1]", "e11", "In"},
+	}
+
+	for _, c := range connections {
+		if err := n.Connect(c.sn, c.sp, c.rn, c.rp); err != nil {
+			return nil, err
+		}
+	}
+
+	iips := []struct {
+		proc, port string
+		v          int
+	}{
+		{"e1", "In", 1},
+		{"r", "In[e3]", 3},
+	}
+
+	for _, p := range iips {
+		if err := n.AddIIP(p.proc, p.port, p.v); err != nil {
+			return nil, err
+		}
+	}
+
+	n.MapInPort("I2", "r", "In[e2]")
+
+	outPorts := []struct{ pn, pp, name string }{
+		{"e11", "Out", "O1"},
+		{"e22", "Out", "O2"},
+		{"r", "Out[e3]", "O3"},
+	}
+
+	for _, p := range outPorts {
+		n.MapOutPort(p.name, p.pn, p.pp)
+	}
+
+	return n, nil
+}
+
+func TestMapPorts(t *testing.T) {
+	n, err := newMapPorts()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	i2 := make(chan int, 1)
+	o1 := make(chan int)
+	o2 := make(chan int)
+	o3 := make(chan int)
+	if err := n.SetInPort("I2", i2); err != nil {
+		t.Error(err)
+		return
+	}
+	n.SetOutPort("O1", o1)
+	n.SetOutPort("O2", o2)
+	if err := n.SetOutPort("O3", o3); err != nil {
+		t.Error(err)
+		return
+	}
+
+	wait := Run(n)
+
+	i2 <- 2
+	close(i2)
+	v1 := <-o1
+	v2 := <-o2
+	v3 := <-o3
+
+	expected := []int{1, 2, 3}
+	actual := []int{v1, v2, v3}
+
+	for i, v := range actual {
+		if v != expected[i] {
+			t.Errorf("Expected %d, got %d", expected[i], v)
+		}
+	}
+
+	<-wait
+}
+
+func newArrayPorts() (*Graph, error) {
+	n := NewGraph()
+
+	components := map[string]interface{}{
+		"e0":  new(echo),
+		"e00": new(echo),
+		"e11": new(echo),
+		"r":   new(irouter),
+	}
+
+	for name, c := range components {
+		if err := n.Add(name, c); err != nil {
+			return nil, err
+		}
+	}
+
+	connections := []struct{ sn, sp, rn, rp string }{
+		{"e0", "Out", "r", "In[0]"},
+		{"r", "Out[1]", "e11", "In"},
+		{"r", "Out[0]", "e00", "In"},
+	}
+
+	for _, c := range connections {
+		if err := n.Connect(c.sn, c.sp, c.rn, c.rp); err != nil {
+			return nil, err
+		}
+	}
+
+	iips := []struct {
+		proc, port string
+		v          int
+	}{
+		{"e0", "In", 1},
+		{"r", "In[2]", 3},
+	}
+
+	for _, p := range iips {
+		if err := n.AddIIP(p.proc, p.port, p.v); err != nil {
+			return nil, err
+		}
+	}
+
+	n.MapInPort("I1", "r", "In[1]")
+
+	outPorts := []struct{ pn, pp, name string }{
+		{"e00", "Out", "O0"},
+		{"e11", "Out", "O1"},
+		{"r", "Out[2]", "O2"},
+	}
+
+	for _, p := range outPorts {
+		n.MapOutPort(p.name, p.pn, p.pp)
+	}
+
+	return n, nil
+}
+
+func TestArrayPorts(t *testing.T) {
+	n, err := newArrayPorts()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	i1 := make(chan int, 1)
+	o0 := make(chan int)
+	o1 := make(chan int)
+	o2 := make(chan int)
+	if err := n.SetInPort("I1", i1); err != nil {
+		t.Error(err)
+		return
+	}
+	n.SetOutPort("O0", o0)
+	n.SetOutPort("O1", o1)
+	if err := n.SetOutPort("O2", o2); err != nil {
+		t.Error(err)
+		return
+	}
+
+	wait := Run(n)
+
+	i1 <- 2
+	close(i1)
+	v0 := <-o0
+	v1 := <-o1
+	v2 := <-o2
+
+	expected := []int{1, 2, 3}
+	actual := []int{v0, v1, v2}
+
+	for i, v := range actual {
+		if v != expected[i] {
+			t.Errorf("Expected %d, got %d", expected[i], v)
+		}
 	}
 
 	<-wait

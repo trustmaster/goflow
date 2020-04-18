@@ -1,5 +1,9 @@
 package goflow
 
+import (
+	"sync"
+)
+
 // doubler doubles its input
 type doubler struct {
 	In  <-chan int
@@ -117,6 +121,56 @@ func (c *repeater) repeat(word string, times int) {
 	for i := 0; i < times; i++ {
 		c.Words <- word
 	}
+}
+
+// router routes input map port to output
+type router struct {
+	In  map[string]<-chan int
+	Out map[string]chan<- int
+}
+
+// Process routes incoming packets to the output by sending them to the same
+// outport key as the inport key they arrived at
+func (c *router) Process() {
+	wg := new(sync.WaitGroup)
+	for k, ch := range c.In {
+		k := k
+		ch := ch
+		wg.Add(1)
+		go func() {
+			for n := range ch {
+				c.Out[k] <- n
+			}
+			close(c.Out[k])
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+}
+
+// irouter routes input array port to output
+type irouter struct {
+	In  [](<-chan int)
+	Out [](chan<- int)
+}
+
+// Process routes incoming packets to the output by sending them to the same
+// outport key as the inport key they arrived at
+func (c *irouter) Process() {
+	wg := new(sync.WaitGroup)
+	for k, ch := range c.In {
+		k := k
+		ch := ch
+		wg.Add(1)
+		go func() {
+			for n := range ch {
+				c.Out[k] <- n
+			}
+			close(c.Out[k])
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }
 
 func RegisterTestComponents(f *Factory) error {

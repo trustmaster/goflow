@@ -1,29 +1,24 @@
 package goflow
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 )
-
-// port stores full port information within the network.
-type port struct {
-	// Process name in the network
-	proc string
-	// Port name of the process
-	port string
-	// Actual channel attached
-	channel reflect.Value
-	// Runtime info
-	info PortInfo
-}
 
 // address is a full port accessor including the index part
 type address struct {
-	proc string
-	port string
-	key  string
-	// index int
+	proc  string
+	port  string
+	key   string
+	index int
+}
+
+func (a address) String() string {
+	if a.key != "" {
+		return fmt.Sprintf("%s.%s[%s]", a.proc, a.port, a.key)
+	}
+	return fmt.Sprintf("%s.%s", a.proc, a.port)
 }
 
 // connection stores information about a connection within the net.
@@ -46,13 +41,13 @@ func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort strin
 // It returns true on success or panics and returns false if error occurs.
 func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort string, bufferSize int) error {
 	sendAddr := parseAddress(senderName, senderPort)
-	sendPort, err := n.getProcPort(senderName, senderPort, reflect.SendDir)
+	sendPort, err := n.getProcPort(senderName, sendAddr.port, reflect.SendDir)
 	if err != nil {
 		return fmt.Errorf("connect: %w", err)
 	}
 
 	recvAddr := parseAddress(receiverName, receiverPort)
-	recvPort, err := n.getProcPort(receiverName, receiverPort, reflect.RecvDir)
+	recvPort, err := n.getProcPort(receiverName, recvAddr.port, reflect.RecvDir)
 	if err != nil {
 		return fmt.Errorf("connect: %w", err)
 	}
@@ -72,12 +67,12 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 			isNewChan = true
 		}
 	}
-	ch, err = attachPort(sendPort, reflect.SendDir, ch, bufferSize)
+	ch, err = attachPort(sendPort, sendAddr, reflect.SendDir, ch, bufferSize)
 	if err != nil {
 		return fmt.Errorf("connect '%s.%s': %w", senderName, senderPort, err)
 	}
 
-	if _, err = attachPort(recvPort, reflect.RecvDir, ch, bufferSize); err != nil {
+	if _, err = attachPort(recvPort, recvAddr, reflect.RecvDir, ch, bufferSize); err != nil {
 		return fmt.Errorf("connect '%s.%s': %w", receiverName, receiverPort, err)
 	}
 	if isNewChan {
@@ -101,7 +96,7 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 	// Check if process exists
 	proc, ok := n.procs[procName]
 	if !ok {
-		return nilValue, fmt.Errorf("process '%s' not found", procName)
+		return nilValue, fmt.Errorf("getProcPort: process '%s' not found", procName)
 	}
 
 	// Check if process is settable
@@ -110,7 +105,7 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 		val = val.Elem()
 	}
 	if !val.CanSet() {
-		return nilValue, fmt.Errorf("process '%s' is not settable", procName)
+		return nilValue, fmt.Errorf("getProcPort: process '%s' is not settable", procName)
 	}
 
 	// Get the port value
@@ -120,35 +115,86 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 	net, ok := val.Interface().(Graph)
 	if ok {
 		// Sender is a net
+		var ports map[string]port
 		if dir == reflect.SendDir {
-			portVal, err = net.getOutPort(portName)
+			ports = net.outPorts
 		} else {
-			portVal, err = net.getInPort(portName)
+			ports = net.inPorts
 		}
+		port, ok := ports[portName]
+		if !ok {
+			return nilValue, fmt.Errorf("getProcPort: subgraph '%s' does not have inport '%s'", procName, portName)
+		}
+		portVal, err = net.getProcPort(port.addr.proc, port.addr.port, dir)
 
 	} else {
 		// Sender is a proc
 		portVal = val.FieldByName(portName)
-		if !portVal.IsValid() {
-			err = errors.New("")
-		}
+	}
+	if err == nil && (!portVal.IsValid()) {
+		err = fmt.Errorf("process '%s' does not have a valid port '%s'", procName, portName)
 	}
 	if err != nil {
-		return nilValue, fmt.Errorf("process '%s' does not have port '%s'", procName, portName)
+		return nilValue, fmt.Errorf("getProcPort: %w", err)
 	}
 
 	return portVal, nil
 }
 
-func attachPort(port reflect.Value, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
+func attachPort(port reflect.Value, addr address, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
+	if addr.index > -1 {
+		return attachArrayPort(port, addr.index, dir, ch, bufSize)
+	}
+	if addr.key != "" {
+		return attachMapPort(port, addr.key, dir, ch, bufSize)
+	}
+	return attachChanPort(port, dir, ch, bufSize)
+}
+
+func attachChanPort(port reflect.Value, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
 	if err := validateChanDir(port.Type(), dir); err != nil {
 		return ch, err
 	}
 	if err := validateCanSet(port); err != nil {
 		return ch, err
 	}
-	ch = selectOrMakeChan(ch, port, bufSize)
+	ch = selectOrMakeChan(ch, port, port.Type().Elem(), bufSize)
 	port.Set(ch)
+	return ch, nil
+}
+
+func attachMapPort(port reflect.Value, key string, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
+	if err := validateChanDir(port.Type().Elem(), dir); err != nil {
+		return ch, err
+	}
+	kv := reflect.ValueOf(key)
+	item := port.MapIndex(kv)
+	ch = selectOrMakeChan(ch, item, port.Type().Elem().Elem(), bufSize)
+	if port.IsNil() {
+		m := reflect.MakeMap(port.Type())
+		port.Set(m)
+	}
+	port.SetMapIndex(kv, ch)
+	return ch, nil
+}
+
+func attachArrayPort(port reflect.Value, key int, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
+	if err := validateChanDir(port.Type().Elem(), dir); err != nil {
+		return ch, err
+	}
+	if port.IsNil() {
+		m := reflect.MakeSlice(port.Type(), 0, 32)
+		port.Set(m)
+	}
+	if port.Cap() <= key {
+		port.SetCap(2 * key)
+	}
+	if port.Len() <= key {
+		port.SetLen(key + 1)
+	}
+	item := port.Index(key)
+	ch = selectOrMakeChan(ch, item, port.Type().Elem().Elem(), bufSize)
+	item.Set(ch)
 	return ch, nil
 }
 
@@ -170,12 +216,12 @@ func validateCanSet(portVal reflect.Value) error {
 	return nil
 }
 
-func selectOrMakeChan(new, existing reflect.Value, bufSize int) reflect.Value {
+func selectOrMakeChan(new, existing reflect.Value, t reflect.Type, bufSize int) reflect.Value {
 	if !new.IsValid() || new.IsNil() {
 		if existing.IsValid() && !existing.IsNil() {
 			return existing
 		}
-		chanType := reflect.ChanOf(reflect.BothDir, existing.Type().Elem())
+		chanType := reflect.ChanOf(reflect.BothDir, t)
 		new = reflect.MakeChan(chanType, bufSize)
 	}
 	return new
@@ -184,9 +230,9 @@ func selectOrMakeChan(new, existing reflect.Value, bufSize int) reflect.Value {
 // parseAddress unfolds a string port name into parts, including array index or hashmap key
 func parseAddress(proc, port string) address {
 	n := address{
-		proc: proc,
-		port: port,
-		// index: -1,
+		proc:  proc,
+		port:  port,
+		index: -1,
 	}
 	keyPos := 0
 	key := ""
@@ -202,11 +248,11 @@ func parseAddress(proc, port string) address {
 	if key == "" {
 		return n
 	}
-	// if i, err := strconv.Atoi(key); err == nil {
-	// 	n.index = i
-	// } else {
-	// 	n.key = key
-	// }
+	if i, err := strconv.Atoi(key); err == nil {
+		n.index = i
+	} else {
+		n.key = key
+	}
 	n.key = key
 	return n
 }

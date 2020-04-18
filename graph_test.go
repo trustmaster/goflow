@@ -20,12 +20,8 @@ func newDoubleEcho() (*Graph, error) {
 		return nil, err
 	}
 	// Ports
-	if err := n.MapInPort("In", "e1", "In"); err != nil {
-		return nil, err
-	}
-	if err := n.MapOutPort("Out", "e2", "Out"); err != nil {
-		return nil, err
-	}
+	n.MapInPort("In", "e1", "In")
+	n.MapOutPort("Out", "e2", "Out")
 	return n, nil
 }
 

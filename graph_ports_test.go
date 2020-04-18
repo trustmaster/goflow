@@ -40,7 +40,7 @@ func TestInPortNotFound(t *testing.T) {
 	}
 }
 
-func TestMapMissingProcPorts(t *testing.T) {
+func TestSetMissingProcPorts(t *testing.T) {
 	n := NewGraph()
 
 	if err := n.Add("e1", new(echo)); err != nil {
@@ -48,12 +48,15 @@ func TestMapMissingProcPorts(t *testing.T) {
 		return
 	}
 
-	if err := n.MapInPort("In", "nope", "In"); err == nil {
+	n.MapInPort("In", "nope", "In")
+	n.MapOutPort("Out", "nope", "Out")
+
+	if err := n.SetInPort("In", make(chan int)); err == nil {
 		t.Errorf("Expected an error")
 		return
 	}
 
-	if err := n.MapOutPort("Out", "nope", "Out"); err == nil {
+	if err := n.SetOutPort("Out", make(chan int)); err == nil {
 		t.Errorf("Expected an error")
 		return
 	}
