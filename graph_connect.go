@@ -140,21 +140,6 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 	return portVal, nil
 }
 
-func (n *Graph) getChan(addr address, dir reflect.ChanDir) (reflect.Value, error) {
-	port, err := n.getProcPort(addr.proc, addr.port, dir)
-	if err != nil {
-		return reflect.ValueOf(nil), err
-	}
-	if addr.key == "" {
-		return port, nil
-	}
-	ch := port.MapIndex(reflect.ValueOf(addr.key))
-	if !ch.IsValid() || ch.IsNil() {
-		return ch, fmt.Errorf("getChan: port '%s.%s' does not have index '%s'", addr.proc, addr.port, addr.key)
-	}
-	return ch, nil
-}
-
 func attachPort(port reflect.Value, addr address, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
 	if addr.key != "" {
 		return attachMapPort(port, addr.key, dir, ch, bufSize)
