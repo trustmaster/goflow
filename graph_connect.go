@@ -3,14 +3,15 @@ package goflow
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 )
 
 // address is a full port accessor including the index part
 type address struct {
-	proc string
-	port string
-	key  string
-	// index int
+	proc  string
+	port  string
+	key   string
+	index int
 }
 
 func (a address) String() string {
@@ -141,6 +142,9 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 }
 
 func attachPort(port reflect.Value, addr address, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
+	if addr.index > -1 {
+		return attachArrayPort(port, addr.index, dir, ch, bufSize)
+	}
 	if addr.key != "" {
 		return attachMapPort(port, addr.key, dir, ch, bufSize)
 	}
@@ -171,6 +175,26 @@ func attachMapPort(port reflect.Value, key string, dir reflect.ChanDir, ch refle
 		port.Set(m)
 	}
 	port.SetMapIndex(kv, ch)
+	return ch, nil
+}
+
+func attachArrayPort(port reflect.Value, key int, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
+	if err := validateChanDir(port.Type().Elem(), dir); err != nil {
+		return ch, err
+	}
+	if port.IsNil() {
+		m := reflect.MakeSlice(port.Type(), 0, 32)
+		port.Set(m)
+	}
+	if port.Cap() <= key {
+		port.SetCap(2 * key)
+	}
+	if port.Len() <= key {
+		port.SetLen(key + 1)
+	}
+	item := port.Index(key)
+	ch = selectOrMakeChan(ch, item, port.Type().Elem().Elem(), bufSize)
+	item.Set(ch)
 	return ch, nil
 }
 
@@ -206,9 +230,9 @@ func selectOrMakeChan(new, existing reflect.Value, t reflect.Type, bufSize int) 
 // parseAddress unfolds a string port name into parts, including array index or hashmap key
 func parseAddress(proc, port string) address {
 	n := address{
-		proc: proc,
-		port: port,
-		// index: -1,
+		proc:  proc,
+		port:  port,
+		index: -1,
 	}
 	keyPos := 0
 	key := ""
@@ -224,11 +248,11 @@ func parseAddress(proc, port string) address {
 	if key == "" {
 		return n
 	}
-	// if i, err := strconv.Atoi(key); err == nil {
-	// 	n.index = i
-	// } else {
-	// 	n.key = key
-	// }
+	if i, err := strconv.Atoi(key); err == nil {
+		n.index = i
+	} else {
+		n.key = key
+	}
 	n.key = key
 	return n
 }
