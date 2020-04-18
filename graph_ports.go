@@ -5,43 +5,30 @@ import (
 	"reflect"
 )
 
-// getInPort returns the inport with given name as reflect.Value channel.
-func (n *Graph) getInPort(name string) (reflect.Value, error) {
-	pName, ok := n.inPorts[name]
-	if !ok {
-		return reflect.ValueOf(nil), fmt.Errorf("Inport not found: '%s'", name)
-	}
-	return pName.channel, nil
+// port stores full port information within the network.
+type port struct {
+	// Address of the port in the graph
+	addr address
+	// Actual channel attached
+	channel reflect.Value
+	// Runtime info
+	info PortInfo
 }
 
 // getOutPort returns the outport with given name as reflect.Value channel.
 func (n *Graph) getOutPort(name string) (reflect.Value, error) {
 	pName, ok := n.outPorts[name]
 	if !ok {
-		return reflect.ValueOf(nil), fmt.Errorf("Outport not found: '%s'", name)
+		return reflect.ValueOf(nil), fmt.Errorf("outport not found: '%s'", name)
 	}
 	return pName.channel, nil
 }
 
 // MapInPort adds an inport to the net and maps it to a contained proc's port.
 func (n *Graph) MapInPort(name, procName, procPort string) error {
-	var channel reflect.Value
-	var err error
-	if p, procFound := n.procs[procName]; procFound {
-		if g, isNet := p.(*Graph); isNet {
-			// Is a subnet
-			channel, err = g.getInPort(procPort)
-		} else {
-			// Is a proc
-			channel, err = n.getProcPort(procName, procPort, reflect.RecvDir)
-		}
-	} else {
-		return fmt.Errorf("Could not map inport: process '%s' not found", procName)
-	}
-	if err == nil {
-		n.inPorts[name] = port{proc: procName, port: procPort, channel: channel}
-	}
-	return err
+	addr := parseAddress(procName, procPort)
+	n.inPorts[name] = port{addr: addr}
+	return nil
 }
 
 // // AnnotateInPort sets optional run-time annotation for the port utilized by
@@ -68,19 +55,20 @@ func (n *Graph) MapInPort(name, procName, procPort string) error {
 func (n *Graph) MapOutPort(name, procName, procPort string) error {
 	var channel reflect.Value
 	var err error
+	addr := parseAddress(procName, procPort)
 	if p, procFound := n.procs[procName]; procFound {
 		if g, isNet := p.(*Graph); isNet {
 			// Is a subnet
 			channel, err = g.getOutPort(procPort)
 		} else {
 			// Is a proc
-			channel, err = n.getProcPort(procName, procPort, reflect.SendDir)
+			channel, err = n.getChan(addr, reflect.SendDir)
 		}
 	} else {
-		return fmt.Errorf("Could not map outport: process '%s' not found", procName)
+		return fmt.Errorf("could not map outport: process '%s' not found", procName)
 	}
 	if err == nil {
-		n.outPorts[name] = port{proc: procName, port: procPort, channel: channel}
+		n.outPorts[name] = port{addr: addr, channel: channel}
 	}
 	return err
 }
@@ -107,22 +95,22 @@ func (n *Graph) MapOutPort(name, procName, procPort string) error {
 
 // SetInPort assigns a channel to a network's inport to talk to the outer world.
 func (n *Graph) SetInPort(name string, channel interface{}) error {
-	// Get the component's inport associated
-	p, err := n.getInPort(name)
-	if err != nil {
-		return err
+	p, ok := n.inPorts[name]
+	if !ok {
+		return fmt.Errorf("SetInPort: port '%s' not defined", name)
 	}
-	// Try to set it
-	if p.CanSet() {
-		p.Set(reflect.ValueOf(channel))
-	} else {
-		return fmt.Errorf("Cannot set graph inport: '%s'", name)
+	// Try to attach it
+	port, err := n.getProcPort(p.addr.proc, p.addr.port, reflect.RecvDir)
+	if err != nil {
+		return fmt.Errorf("cannot set inport '%s': %v", name, err)
+	}
+	_, err = attachPort(port, p.addr, reflect.RecvDir, reflect.ValueOf(channel), n.conf.BufferSize)
+	if err != nil {
+		return fmt.Errorf("cannot attach inport '%s': %v", name, err)
 	}
 	// Save it in inPorts to be used with IIPs if needed
-	if p, ok := n.inPorts[name]; ok {
-		p.channel = reflect.ValueOf(channel)
-		n.inPorts[name] = p
-	}
+	p.channel = reflect.ValueOf(channel)
+	n.inPorts[name] = p
 	return nil
 }
 

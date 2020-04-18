@@ -136,13 +136,13 @@ func (c *router) Process() {
 	for k, ch := range c.In {
 		k := k
 		ch := ch
+		wg.Add(1)
 		go func() {
-			wg.Add(1)
 			for n := range ch {
 				c.Out[k] <- n
 			}
-			wg.Done()
 			close(c.Out[k])
+			wg.Done()
 		}()
 	}
 	wg.Wait()

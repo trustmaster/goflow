@@ -28,22 +28,22 @@ func TestConnectInvalidParams(t *testing.T) {
 		{
 			"Invalid receiver proc",
 			n.Connect("e1", "Out", "noproc", "In"),
-			"connect: process 'noproc' not found",
+			"connect: getProcPort: process 'noproc' not found",
 		},
 		{
 			"Invalid receiver port",
 			n.Connect("e1", "Out", "e2", "NotIn"),
-			"connect: process 'e2' does not have port 'NotIn'",
+			"connect: getProcPort: process 'e2' does not have a valid port 'NotIn'",
 		},
 		{
 			"Invalid sender proc",
 			n.Connect("noproc", "Out", "e2", "In"),
-			"connect: process 'noproc' not found",
+			"connect: getProcPort: process 'noproc' not found",
 		},
 		{
 			"Invalid sender port",
 			n.Connect("e1", "NotOut", "e2", "In"),
-			"connect: process 'e1' does not have port 'NotOut'",
+			"connect: getProcPort: process 'e1' does not have a valid port 'NotOut'",
 		},
 		{
 			"Sending to output",
@@ -219,12 +219,10 @@ func newMapPorts() (*Graph, error) {
 
 	components := map[string]interface{}{
 		"e1":  new(echo),
-		"e2":  new(echo),
 		"e3":  new(echo),
 		"e11": new(echo),
 		"e22": new(echo),
-		// "e33": new(echo),
-		"r": new(router),
+		"r":   new(router),
 	}
 
 	for name, c := range components {
@@ -235,8 +233,6 @@ func newMapPorts() (*Graph, error) {
 
 	connections := []struct{ sn, sp, rn, rp string }{
 		{"e1", "Out", "r", "In[e1]"},
-		{"e2", "Out", "r", "In[e2]"},
-		// {"e33", "Out", "r", "In[e3]"},
 		{"r", "Out[e3]", "e3", "In"},
 		{"r", "Out[e2]", "e22", "In"},
 		{"r", "Out[e1]", "e11", "In"},
@@ -253,15 +249,17 @@ func newMapPorts() (*Graph, error) {
 		v          int
 	}{
 		{"e1", "In", 1},
-		{"e2", "In", 2},
 		{"r", "In[e3]", 3},
-		// {"e33", "In", 3},
 	}
 
 	for _, p := range iips {
 		if err := n.AddIIP(p.proc, p.port, p.v); err != nil {
 			return nil, err
 		}
+	}
+
+	if err := n.MapInPort("I2", "r", "In[e2]"); err != nil {
+		return nil, err
 	}
 
 	outPorts := []struct{ pn, pp, name string }{
@@ -286,15 +284,22 @@ func TestMapPorts(t *testing.T) {
 		return
 	}
 
+	i2 := make(chan int, 1)
 	o1 := make(chan int)
 	o2 := make(chan int)
 	o3 := make(chan int)
+	if err := n.SetInPort("I2", i2); err != nil {
+		t.Error(err)
+		return
+	}
 	n.SetOutPort("O1", o1)
 	n.SetOutPort("O2", o2)
 	n.SetOutPort("O3", o3)
 
 	wait := Run(n)
 
+	i2 <- 2
+	close(i2)
 	v1 := <-o1
 	v2 := <-o2
 	v3 := <-o3

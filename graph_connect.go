@@ -1,22 +1,9 @@
 package goflow
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 )
-
-// port stores full port information within the network.
-type port struct {
-	// Process name in the network
-	proc string
-	// Port name of the process
-	port string
-	// Actual channel attached
-	channel reflect.Value
-	// Runtime info
-	info PortInfo
-}
 
 // address is a full port accessor including the index part
 type address struct {
@@ -108,7 +95,7 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 	// Check if process exists
 	proc, ok := n.procs[procName]
 	if !ok {
-		return nilValue, fmt.Errorf("process '%s' not found", procName)
+		return nilValue, fmt.Errorf("getProcPort: process '%s' not found", procName)
 	}
 
 	// Check if process is settable
@@ -117,7 +104,7 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 		val = val.Elem()
 	}
 	if !val.CanSet() {
-		return nilValue, fmt.Errorf("process '%s' is not settable", procName)
+		return nilValue, fmt.Errorf("getProcPort: process '%s' is not settable", procName)
 	}
 
 	// Get the port value
@@ -127,24 +114,45 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 	net, ok := val.Interface().(Graph)
 	if ok {
 		// Sender is a net
+		var ports map[string]port
 		if dir == reflect.SendDir {
-			portVal, err = net.getOutPort(portName)
+			ports = net.outPorts
 		} else {
-			portVal, err = net.getInPort(portName)
+			ports = net.inPorts
 		}
+		port, ok := ports[portName]
+		if !ok {
+			return nilValue, fmt.Errorf("getProcPort: subgraph '%s' does not have inport '%s'", procName, portName)
+		}
+		portVal, err = net.getProcPort(port.addr.proc, port.addr.port, dir)
 
 	} else {
 		// Sender is a proc
 		portVal = val.FieldByName(portName)
-		if !portVal.IsValid() {
-			err = errors.New("")
-		}
+	}
+	if err == nil && (!portVal.IsValid()) {
+		err = fmt.Errorf("process '%s' does not have a valid port '%s'", procName, portName)
 	}
 	if err != nil {
-		return nilValue, fmt.Errorf("process '%s' does not have port '%s'", procName, portName)
+		return nilValue, fmt.Errorf("getProcPort: %w", err)
 	}
 
 	return portVal, nil
+}
+
+func (n *Graph) getChan(addr address, dir reflect.ChanDir) (reflect.Value, error) {
+	port, err := n.getProcPort(addr.proc, addr.port, dir)
+	if err != nil {
+		return reflect.ValueOf(nil), err
+	}
+	if addr.key == "" {
+		return port, nil
+	}
+	ch := port.MapIndex(reflect.ValueOf(addr.key))
+	if !ch.IsValid() || ch.IsNil() {
+		return ch, fmt.Errorf("getChan: port '%s.%s' does not have index '%s'", addr.proc, addr.port, addr.key)
+	}
+	return ch, nil
 }
 
 func attachPort(port reflect.Value, addr address, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {

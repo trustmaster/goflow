@@ -47,7 +47,7 @@ func (n *Graph) sendIIPs() error {
 
 		// Try to find it among network inports
 		for _, inPort := range n.inPorts {
-			if inPort.proc == ip.addr.proc && inPort.port == ip.addr.port {
+			if inPort.addr == ip.addr {
 				channel = inPort.channel
 				found = true
 				break
