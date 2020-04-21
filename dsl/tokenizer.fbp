@@ -2,26 +2,25 @@ INPORT=ScanFile.IN:IN
 OUTPORT=Collect.OUT:OUT
 
 # Main tokenizing logic
-ScanFile(dsl/ScanFile) OUT -> IN ScanEOL(dsl/ScanChars) HIT -> IN Collect(dsl/CollectTokens)
-ScanEOL MISS -> IN ScanWhitespace(dsl/ScanChars) HIT -> IN Collect
-ScanWhitespace MISS -> IN ScanInt(dsl/ScanChars) HIT -> IN Collect
-ScanInt MISS -> IN ScanString(dsl/ScanQuoted) HIT -> IN Collect
-ScanString MISS -> IN ScanEq(dsl/ScanKeyword) HIT -> IN Collect
-ScanEq MISS -> IN ScanDot(dsl/ScanKeyword) HIT -> IN Collect
-ScanDot MISS -> IN ScanColon(dsl/ScanKeyword) HIT -> IN Collect
-ScanColon MISS -> IN ScanLParen(dsl/ScanKeyword) HIT -> IN Collect
-ScanLParen MISS -> IN ScanRParen(dsl/ScanKeyword) HIT -> IN Collect
-ScanRParen MISS -> IN ScanArrow(dsl/ScanKeyword) HIT -> IN Collect
-ScanArrow MISS -> IN ScanSlash(dsl/ScanKeyword) HIT -> IN Collect
-ScanSlash MISS -> IN ScanHash(dsl/ScanComment) HIT -> IN Collect
-ScanHash MISS -> IN ScanInport(dsl/ScanKeyword) HIT -> IN Collect
-ScanInport MISS -> IN ScanOutport(dsl/ScanKeyword) HIT -> IN Collect
-ScanOutport MISS -> IN ScanIdent(dsl/ScanChars) HIT -> IN Collect
-# If nothing matched, return an invalid token and end the loop
-ScanIdent MISS -> IN ScanInvalid(dsl/ScanInvalid) TOKEN -> IN Collect
+ScanFile(dsl/ScanFile) OUT -> IN Split(dsl/Split)
+Split OUT[0] -> ScanEOL(dsl/ScanChars) -> IN[0] Collect(dsl/CollectTokens)
+Split OUT[1] -> ScanWhitespace(dsl/ScanChars) -> IN[1] Collect
+Split OUT[2] -> ScanInt(dsl/ScanChars) -> IN[2] Collect
+Split OUT[3] -> ScanString(dsl/ScanQuoted) -> IN[3] Collect
+Split OUT[4] -> ScanEq(dsl/ScanKeyword) -> IN[4] Collect
+Split OUT[5] -> ScanDot(dsl/ScanKeyword) -> IN[5] Collect
+Split OUT[6] -> ScanColon(dsl/ScanKeyword) -> IN[6] Collect
+Split OUT[7] -> ScanLParen(dsl/ScanKeyword) -> IN[7] Collect
+Split OUT[8] -> ScanRParen(dsl/ScanKeyword) -> IN[8] Collect
+Split OUT[9] -> ScanArrow(dsl/ScanKeyword) -> IN[9] Collect
+Split OUT[10] -> ScanSlash(dsl/ScanKeyword) -> IN[10] Collect
+Split OUT[11] -> ScanHash(dsl/ScanComment) -> IN[11] Collect
+Split OUT[12] -> ScanInport(dsl/ScanKeyword) -> IN[12] Collect
+Split OUT[13] -> ScanOutport(dsl/ScanKeyword) -> IN[13] Collect
+Split OUT[14] -> ScanIdent(dsl/ScanChars) -> IN[14] Collect
 
 # Loop to get next token after successful scan
-Collect OUT -> IN ScanEOL
+Collect NEXT -> IN Split
 
 # Setting up the scanners
 '\r\n' -> SET ScanEOL
