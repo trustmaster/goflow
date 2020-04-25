@@ -15,10 +15,8 @@ type Scanner struct {
 	Type <-chan string
 	// In is an incoming empty token
 	In <-chan Token
-	// Hit is a successfully matched token
-	Hit chan<- Token
-	// Miss is the unmodified empty token in case there was no match
-	Miss chan<- Token
+	// Out is a processed token (either valid or invalid)
+	Out chan<- Token
 }
 
 // scanner is used to test Scanner components via common interface
@@ -32,8 +30,7 @@ func (s *Scanner) assign(ports Scanner) {
 	s.Set = ports.Set
 	s.Type = ports.Type
 	s.In = ports.In
-	s.Hit = ports.Hit
-	s.Miss = ports.Miss
+	s.Out = ports.Out
 }
 
 // readIIPs reads configuration ports. Connections have to be buffered to avoid order deadlock
@@ -55,11 +52,10 @@ func (s *Scanner) handleTokens(scan scanTok) {
 	// Read incoming tokens and scan them with a callback
 	for tok := range s.In {
 		t, match := scan(tok)
-		if match {
-			s.Hit <- t
-		} else {
-			s.Miss <- t
+		if !match {
+			t.Type = tokIllegal
 		}
+		s.Out <- t
 	}
 }
 
@@ -243,21 +239,4 @@ func (s *ScanQuoted) Process() {
 		tok.Type = TokenType(tokenType)
 		return tok, true
 	})
-}
-
-// ScanInvalid returns an illegal token
-type ScanInvalid struct {
-	// In is an incoming empty token
-	In <-chan Token
-	// Token returns and invalid token
-	Token chan<- Token
-}
-
-// Process marks all incoming tokens as invalid
-func (s *ScanInvalid) Process() {
-	for tok := range s.In {
-		tok.Type = tokIllegal
-		tok.Value = string(tok.File.Data[tok.Pos])
-		s.Token <- tok
-	}
 }

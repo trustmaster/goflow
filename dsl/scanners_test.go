@@ -269,8 +269,7 @@ func TestScanners(t *testing.T) {
 		set := make(chan string, 1)     // for non-blocking send
 		tokType := make(chan string, 1) // for non-blocking send
 		in := make(chan Token)
-		hit := make(chan Token)
-		miss := make(chan Token)
+		out := make(chan Token)
 
 		f := goflow.NewFactory()
 		if err := RegisterComponents(f); err != nil {
@@ -288,8 +287,7 @@ func TestScanners(t *testing.T) {
 			Set:  set,
 			Type: tokType,
 			In:   in,
-			Hit:  hit,
-			Miss: miss,
+			Out:  out,
 		})
 
 		wait := goflow.Run(s)
@@ -305,11 +303,15 @@ func TestScanners(t *testing.T) {
 		}
 
 		go func() {
-			select {
-			case tok, ok := <-hit:
-				if !ok {
-					return
+			tok, ok := <-out
+			if !ok {
+				return
+			}
+			if tok.Type == tokIllegal {
+				if tc.hit {
+					t.Errorf("Unexpected miss: '%s' at %d", tok.Value, tok.Pos)
 				}
+			} else {
 				if !tc.hit {
 					t.Errorf("Unexpected hit: '%s' at %d", tok.Value, tok.Pos)
 				}
@@ -319,15 +321,7 @@ func TestScanners(t *testing.T) {
 				if tok.Value != tc.value {
 					t.Errorf("Unexpected token value: '%s'", tok.Value)
 				}
-			case tok, ok := <-miss:
-				if !ok {
-					return
-				}
-				if tc.hit {
-					t.Errorf("Unexpected miss: '%s' at %d", tok.Value, tok.Pos)
-				}
 			}
-
 			close(in)
 		}()
 
@@ -340,42 +334,4 @@ func TestScanners(t *testing.T) {
 			runCase(c, t)
 		})
 	}
-}
-
-func TestInvalidToken(t *testing.T) {
-	t.Parallel()
-
-	in := make(chan Token)
-	out := make(chan Token)
-
-	c := new(ScanInvalid)
-	c.In = in
-	c.Token = out
-
-	wait := goflow.Run(c)
-
-	str := "Any token passed to this component will be illegal"
-	in <- Token{
-		File: &File{
-			Name: "test.fbp",
-			Data: []byte(str),
-		},
-		Pos: 0,
-	}
-
-	go func() {
-		tok, ok := <-out
-		if !ok {
-			t.Fail()
-		}
-		if tok.Type != tokIllegal {
-			t.Errorf("Unexpected token type '%s'", tok.Type)
-		}
-		if tok.Value != string(str[0]) {
-			t.Errorf("Unexpected token value '%s'", tok.Value)
-		}
-		close(in)
-	}()
-
-	<-wait
 }
