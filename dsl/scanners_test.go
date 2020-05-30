@@ -62,6 +62,16 @@ func TestScanners(t *testing.T) {
 		},
 		{
 			c:       "dsl/ScanChars",
+			name:    "With an invalid regexp",
+			set:     `[a--]]`,
+			tokType: tokIdent,
+			data:    "allegal",
+			pos:     0,
+			hit:     false,
+			value:   "",
+		},
+		{
+			c:       "dsl/ScanChars",
 			name:    "Matching with non-zero offset",
 			set:     ".",
 			tokType: tokDot,
