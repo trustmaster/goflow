@@ -71,7 +71,7 @@ func TestCollect(t *testing.T) {
 			nextPos:       3,
 		},
 		{
-			name: "Two of three inputs matched correctly",
+			name: "Two of three inputs matched correctly, first match returned",
 			data: "IN Inport(dsl/Collect) OUT",
 			pos:  3,
 			inputs: []input{
