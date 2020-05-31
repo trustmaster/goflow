@@ -1,7 +1,6 @@
 package dsl
 
 import (
-	"bytes"
 	"fmt"
 )
 
@@ -11,7 +10,7 @@ type TokenType string
 const (
 	// Token types
 	tokIllegal    = TokenType("illegal")    // S:Fallback P:9
-	tokBeginFile  = TokenType("beginFile")  // S:Auto
+	tokNewFile    = TokenType("newFile")    // S:Auto
 	tokEOF        = TokenType("eof")        // S:Auto
 	tokWhitespace = TokenType("whitespace") // S:Chars P:1
 	tokEOL        = TokenType("eol")        // S:Chars P:1
@@ -74,39 +73,13 @@ func (c *Tokenizer) Process() {
 		pos := 0
 
 		c.Token <- Token{
-			Type:  tokBeginFile,
+			Type:  tokNewFile,
 			File:  f,
 			Pos:   pos,
 			Value: f.Name,
 		}
 
-		// var t Token
-		// l := 0
-		// fileSize := len(f.Data)
-
-		// for ; pos < fileSize; pos++ {
-		// 	ch := f.Data[pos]
-		// 	if isWhitespace(ch) {
-		// 		t, l = scanByClass(r, ch, WS, pos, isWhitespace)
-		// 	} else if isLineBreak(ch) {
-		// 		t, l = scanByClass(r, ch, EOL, pos, isLineBreak)
-		// 	} else if isLetter(ch) {
-		// 		// Can be a start of an ident or keyword
-		// 		t, l = scanByClass(r, ch, IDENT, pos, isIdent)
-		// 		// Check for keywords
-		// 		val := strings.ToLower(t.Value)
-		// 		switch val {
-		// 		case "inport":
-		// 			t.Type = INPORT
-		// 		case "outport":
-		// 			t.Type = OUTPORT
-		// 		}
-		// 	} else if isDigit(ch) {
-		// 		t, l = scanByClass(r, ch, INT, pos, isDigit)
-		// 	}
-		// 	c.Token <- t
-		// 	pos += l + 1
-		// }
+		// TODO repace this component with a graph
 
 		c.Token <- Token{
 			Type:  tokEOF,
@@ -114,50 +87,4 @@ func (c *Tokenizer) Process() {
 			Value: f.Name,
 		}
 	}
-}
-
-// predicate checks if a char belongs to a class
-type predicate func(ch byte) bool
-
-// scanByClass scans all characters belonging to the same class into a token
-func scanByClass(data []byte, first byte, tt TokenType, pos int, belongs predicate) (Token, int) {
-	buf := bytes.NewBufferString(string(first))
-	len := 0
-	// for ; pos{
-	// 	ch := data[pos]
-	// 	if ch == rune(0) || err != nil {
-	// 		break
-	// 	} else if belongs(ch) {
-	// 		buf.WriteRune(ch)
-	// 		len++
-	// 	} else {
-	// 		r.UnreadRune()
-	// 		break
-	// 	}
-	// }
-	return Token{
-		Type:  tt,
-		Pos:   pos,
-		Value: buf.String(),
-	}, len
-}
-
-func isWhitespace(ch rune) bool {
-	return ch == '\t' || ch == ' '
-}
-
-func isLineBreak(ch rune) bool {
-	return ch == '\r' || ch == '\n'
-}
-
-func isLetter(ch rune) bool {
-	return ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z'
-}
-
-func isDigit(ch rune) bool {
-	return ch >= '0' && ch <= '9'
-}
-
-func isIdent(ch rune) bool {
-	return isLetter(ch) || isDigit(ch) || ch == '_'
 }
