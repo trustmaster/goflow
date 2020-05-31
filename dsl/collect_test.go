@@ -95,11 +95,22 @@ func TestCollect(t *testing.T) {
 		},
 	}
 
+	f := goflow.NewFactory()
+	if err := RegisterComponents(f); err != nil {
+		t.Error(err)
+		return
+	}
+
 	t.Parallel()
 	for _, c := range cases {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
-			collect := new(Collect)
+			i, err := f.Create("dsl/Collect")
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			collect := i.(*Collect)
 
 			ins := make([](chan Token), len(c.inputs))
 			out := make(chan Token)
