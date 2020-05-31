@@ -36,5 +36,15 @@ func RegisterComponents(f *goflow.Factory) error {
 	}); err != nil {
 		return err
 	}
+	if err := f.Register("dsl/Split", func() (interface{}, error) {
+		return new(Split), nil
+	}); err != nil {
+		return err
+	}
+	if err := f.Register("dsl/Collect", func() (interface{}, error) {
+		return new(Collect), nil
+	}); err != nil {
+		return err
+	}
 	return nil
 }

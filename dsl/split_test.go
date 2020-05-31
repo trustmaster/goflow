@@ -32,7 +32,18 @@ func TestSplit(t *testing.T) {
 		},
 	}
 
-	split := new(Split)
+	f := goflow.NewFactory()
+	if err := RegisterComponents(f); err != nil {
+		t.Error(err)
+		return
+	}
+
+	i, err := f.Create("dsl/Split")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	split := i.(*Split)
 
 	in := make(chan Token)
 	outs := make([](chan Token), numOuts)
