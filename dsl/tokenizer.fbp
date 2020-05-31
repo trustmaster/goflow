@@ -1,8 +1,8 @@
-INPORT=ScanFile.IN:IN
+INPORT=StartToken.IN:IN
 OUTPORT=Collect.OUT:OUT
 
 # Main tokenizing logic
-ScanFile(dsl/ScanFile) OUT -> IN Split(dsl/Split)
+StartToken(dsl/StartToken) OUT -> IN Split(dsl/Split)
 Split OUT[0] -> ScanEOL(dsl/ScanChars) -> IN[0] Collect(dsl/CollectTokens)
 Split OUT[1] -> ScanWhitespace(dsl/ScanChars) -> IN[1] Collect
 Split OUT[2] -> ScanInt(dsl/ScanChars) -> IN[2] Collect
