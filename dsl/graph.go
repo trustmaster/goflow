@@ -46,5 +46,10 @@ func RegisterComponents(f *goflow.Factory) error {
 	}); err != nil {
 		return err
 	}
+	if err := f.Register("dsl/StartToken", func() (interface{}, error) {
+		return new(StartToken), nil
+	}); err != nil {
+		return err
+	}
 	return nil
 }
