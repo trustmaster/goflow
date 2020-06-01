@@ -51,5 +51,10 @@ func RegisterComponents(f *goflow.Factory) error {
 	}); err != nil {
 		return err
 	}
+	if err := f.Register("dsl/Merge", func() (interface{}, error) {
+		return new(Merge), nil
+	}); err != nil {
+		return err
+	}
 	return nil
 }
