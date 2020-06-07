@@ -1,4 +1,4 @@
-INPORT=StartToken.IN:IN
+INPORT=StartToken.FILE:IN
 OUTPORT=Merge.OUT:OUT
 
 # Send first token to the output

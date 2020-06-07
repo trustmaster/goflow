@@ -195,7 +195,7 @@ func NewTokenizer(f *goflow.Factory) (*goflow.Graph, error) {
 		}
 	}
 
-	n.MapInPort("In", "StartToken", "In")
+	n.MapInPort("In", "StartToken", "File")
 	n.MapOutPort("Out", "Merge", "Out")
 
 	return n, nil
