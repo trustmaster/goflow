@@ -12,7 +12,7 @@ func RegisterComponents(f *goflow.Factory) error {
 		return err
 	}
 	if err := f.Register("dsl/Tokenizer", func() (interface{}, error) {
-		return new(Tokenizer), nil
+		return NewTokenizer(f)
 	}); err != nil {
 		return err
 	}

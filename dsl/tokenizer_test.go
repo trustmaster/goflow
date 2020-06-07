@@ -9,7 +9,6 @@ import (
 func TestTokenizer(t *testing.T) {
 	in := make(chan *File)
 	out := make(chan Token)
-	e := make(chan LexError)
 
 	f := goflow.NewFactory()
 	if err := RegisterComponents(f); err != nil {
@@ -22,8 +21,13 @@ func TestTokenizer(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	c := i.(*Tokenizer)
-	c.File = in
-	c.Token = out
-	c.Err = e
+	n := i.(*goflow.Graph)
+	if err := n.SetInPort("In", in); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := n.SetOutPort("Out", out); err != nil {
+		t.Error(err)
+		return
+	}
 }
