@@ -89,6 +89,11 @@ func (n *Graph) Add(name string, c interface{}) error {
 	return nil
 }
 
+// Get a component by name
+func (n *Graph) Get(name string) interface{} {
+	return n.procs[name]
+}
+
 // AddGraph adds a new blank graph instance to a network. That instance can
 // be modified then at run-time.
 func (n *Graph) AddGraph(name string) error {
