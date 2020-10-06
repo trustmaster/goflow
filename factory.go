@@ -95,6 +95,11 @@ func (f *Factory) Create(componentName string) (interface{}, error) {
 	return nil, fmt.Errorf("Factory error: component '%s' does not exist", componentName)
 }
 
+//Size returns number of objects in factory
+func (f *Factory) Size() int {
+	return len(f.registry)
+}
+
 // // UpdateComponentInfo extracts run-time information about a
 // // component and its ports. It is called when an FBP protocol client
 // // requests component information.

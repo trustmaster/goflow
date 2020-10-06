@@ -1,8 +1,8 @@
 package goflow
 
 import (
+	"fmt"
 	"io/ioutil"
-	"log"
 	"path"
 	"plugin"
 	"strings"
@@ -13,7 +13,27 @@ const plugInSuffix = `_goplug.so`
 //PlugIn something
 type PlugIn interface {
 	Component
-	Info() map[string]string
+	SetParams(params map[string]interface{}) error
+	GetParams() map[string]interface{}
+	GetParam(param string) interface{}
+}
+
+//PlugInS something
+type PlugInS struct {
+	params map[string]interface{}
+}
+
+func (s *PlugInS) SetParams(params map[string]interface{}) error {
+	s.params = params
+	return nil
+}
+
+func (s *PlugInS) GetParams() map[string]interface{} {
+	return s.params
+}
+
+func (s *PlugInS) GetParam(param string) interface{} {
+	return s.params[param]
 }
 
 // LoadComponents goes through all paths, opens all plugins in those paths
@@ -26,7 +46,7 @@ func LoadComponents(paths []string, factory *Factory) ([]string, error) {
 		//fmt.Println("Loading plugins at", apath)
 		files, err := ioutil.ReadDir(apath)
 		if err != nil {
-			log.Printf("Path %s not found, error=%s.", apath, err.Error())
+			fmt.Printf("Path %s not found, error=%s.", apath, err.Error())
 			continue
 		}
 		for _, file := range files {
@@ -34,20 +54,20 @@ func LoadComponents(paths []string, factory *Factory) ([]string, error) {
 				plugpath := path.Join(apath, file.Name())
 				plug, err := plugin.Open(plugpath)
 				if err != nil {
-					log.Printf("Can't open plugin %s, error=%s.", plugpath, err.Error())
+					fmt.Printf("Can't open plugin %s, error=%s.", plugpath, err.Error())
 					continue
 				}
 				//get name from name - _goplug.so and register with contructor
 				name := strings.TrimSuffix(file.Name(), plugInSuffix)
 				symbol, err := plug.Lookup(name)
 				if err != nil {
-					log.Printf("Can't find symbol %s in plugin %s, error=%s.", name, plugpath, err.Error())
+					fmt.Printf("Can't find symbol %s in plugin %s, error=%s.", name, plugpath, err.Error())
 					continue
 				}
 				constructor := symbol.(func() (interface{}, error))
 				anerr := factory.Register(name, constructor)
 				if anerr != nil {
-					log.Printf("Failed to register plugin %s, error=%s.", plugpath, err.Error())
+					fmt.Printf("Failed to register plugin %s, error=%s.", plugpath, err.Error())
 					continue
 				}
 				loaded = append(loaded, name)

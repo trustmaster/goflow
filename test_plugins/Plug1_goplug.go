@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/dahvid/goflow"
 )
 
 // RandomNumberGenerator Listen for ssh connection
 type RandomNumberGenerator struct {
 	Generator *rand.Rand
-	meta      map[string]string
 	Out       chan<- int //output
+	goflow.PlugInS
 }
 
 // Process listen
@@ -22,18 +24,11 @@ func (c *RandomNumberGenerator) Process() {
 	}
 }
 
-//Info something
-func (c *RandomNumberGenerator) Info() map[string]string {
-	return c.meta
-}
-
 //Plug1 something
 func Plug1() (interface{}, error) {
 	seed := rand.NewSource(time.Now().UnixNano())
 	gen := rand.New(seed)
 	r := new(RandomNumberGenerator)
 	r.Generator = gen
-	r.meta = make(map[string]string)
-	r.meta["One"] = "Two"
 	return r, nil
 }

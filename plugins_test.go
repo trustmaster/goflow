@@ -40,13 +40,18 @@ func createFactory(t *testing.T) *Factory {
 
 func TestOpening(t *testing.T) {
 	factory := createFactory(t)
+	if factory.Size() != 3 {
+		t.Error("Wrong number of plugins in factory")
+	}
 	any, err := factory.Create("Plug1")
 	if err != nil {
 		t.Error("Failed to create object Plug1", err)
 	}
 	plug1 := any.(PlugIn)
-	recieved := plug1.Info()
-	expected := map[string]string{"One": "Two"}
+	expected := make(map[string]interface{})
+	expected["inputs"] = [5]int{1, 2, 3, 4, 5}
+	plug1.SetParams(expected)
+	recieved := plug1.GetParams()
 
 	if !reflect.DeepEqual(recieved, expected) {
 		t.Error("Recieved bad meta data expected", expected, "got", recieved)
@@ -60,10 +65,16 @@ var testJSON = `{
 	},
 	"processes": {
 		"gen1": {
-			"component": "NGen"
+			"component": "NGen",
+			"Parameters" : {
+				"inputs" : [1,2,3,4,5,6,7,8,9,10]
+			}
 		},
 		"gen2": {
-			"component": "NGen"
+			"component": "NGen",
+			"Parameters" : {
+				"inputs" : [10,20,30,40,50,60,70,80,90,100]
+			}
 		},
 		"adder": {
 			"component": "Adder"
@@ -107,14 +118,6 @@ var testJSON = `{
 		{
 			"private": "adder.Out",
 			"public": "Out"
-		},
-		{
-			"private": "gen1.Init",
-			"public" : "In1"
-		},
-		{
-			"private": "gen2.Init",
-			"public" : "In2"
 		}
 	]
 }`
@@ -127,24 +130,11 @@ func TestLoadGraph(t *testing.T) {
 		t.Error("Could not load JSON")
 	}
 
-	in1 := make(chan [10]int)
-	in2 := make(chan [10]int)
 	out := make(chan int)
 
-	net.SetInPort("In1", in1)
-	net.SetInPort("In2", in2)
 	net.SetOutPort("Out", out)
 
 	Run(net)
-
-	in1 <- [10]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	in2 <- [10]int{10, 20, 30, 40, 50, 60, 70, 80, 90, 100}
-
-	// Wait for the network setup
-	//<-net.Ready()
-
-	// Close start to halt it normally
-	//close(start)
 
 	test := [10]int{11, 22, 33, 44, 55, 66, 77, 88, 99, 110}
 

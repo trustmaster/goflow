@@ -1,9 +1,14 @@
 package main
 
+import (
+	"github.com/dahvid/goflow"
+)
+
 type adder struct {
 	Left  <-chan int
 	Right <-chan int
 	Out   chan<- int
+	goflow.PlugInS
 }
 
 func (c *adder) Process() {
