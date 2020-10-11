@@ -122,11 +122,13 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 		} else {
 			ports = net.inPorts
 		}
-		port, ok := ports[portName]
+
+		p, ok := ports[portName]
 		if !ok {
 			return nilValue, fmt.Errorf("getProcPort: subgraph '%s' does not have inport '%s'", procName, portName)
 		}
-		portVal, err = net.getProcPort(port.addr.proc, port.addr.port, dir)
+
+		portVal, err = net.getProcPort(p.addr.proc, p.addr.port, dir)
 
 	} else {
 		// Sender is a proc
@@ -274,15 +276,15 @@ func capitalizePortName(name string) string {
 func (n *Graph) findExistingChan(addr address, dir reflect.ChanDir) reflect.Value {
 	var channel reflect.Value
 	// Find existing channel attached to the receiver
-	for _, conn := range n.connections {
+	for i := range n.connections {
 		var a address
 		if dir == reflect.SendDir {
-			a = conn.src
+			a = n.connections[i].src
 		} else {
-			a = conn.tgt
+			a = n.connections[i].tgt
 		}
 		if a == addr {
-			channel = conn.channel
+			channel = n.connections[i].channel
 			break
 		}
 	}
@@ -313,7 +315,7 @@ func (n *Graph) decChanListenersCount(c reflect.Value) bool {
 	ptr := c.Pointer()
 	cnt := n.chanListenersCount[ptr]
 	if cnt == 0 {
-		return true //yes you may try to close a nonexistant channel, see what happens...
+		return true // yes you may try to close a nonexistant channel, see what happens...
 	}
 	cnt--
 	n.chanListenersCount[ptr] = cnt

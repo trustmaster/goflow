@@ -346,8 +346,9 @@ linters-settings:
 linters:
   enable:
     - megacheck
-  disable:
     - govet
+    - gocritic
+  disable:
     - errcheck
     - deadcode
     - unused
