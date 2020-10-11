@@ -168,7 +168,11 @@ func (n *Graph) Remove(processName string) error {
 
 // Process runs the network
 func (n *Graph) Process() {
-	n.sendIIPs()
+	err := n.sendIIPs()
+	if err != nil {
+		// TODO provide a nicer way to handle graph errors
+		panic(err)
+	}
 	for _, i := range n.procs {
 		c, ok := i.(Component)
 		if !ok {
