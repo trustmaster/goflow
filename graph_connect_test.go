@@ -75,6 +75,37 @@ func TestConnectInvalidParams(t *testing.T) {
 	}
 }
 
+func TestPortNameCapitalization(t *testing.T) {
+	n := NewGraph()
+
+	n.Add("e1", new(echo))
+	n.Add("e2", new(echo))
+
+	cases := []struct {
+		scenario string
+		err      error
+	}{
+		{
+			"Capitalize lowercase port names",
+			n.Connect("e1", "out", "e2", "in"),
+		},
+		{
+			"Capitalize uppercase port names",
+			n.Connect("e1", "OUT", "e2", "IN"),
+		},
+	}
+
+	for _, item := range cases {
+		c := item
+		t.Run(c.scenario, func(t *testing.T) {
+			t.Parallel()
+			if c.err != nil {
+				t.Error(c.err)
+			}
+		})
+	}
+}
+
 func TestSubgraphSender(t *testing.T) {
 	sub, err := newDoubleEcho()
 	if err != nil {

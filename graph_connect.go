@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 // address is a full port accessor including the index part
@@ -245,6 +246,7 @@ func parseAddress(proc, port string) address {
 			key = port[keyPos:i]
 		}
 	}
+	n.port = capitalizePortName(n.port)
 	if key == "" {
 		return n
 	}
@@ -255,6 +257,17 @@ func parseAddress(proc, port string) address {
 	}
 	n.key = key
 	return n
+}
+
+// capitalizePortName contains port names defined in UPPER or lower case to Title case,
+// which is more common for structs in Go
+func capitalizePortName(name string) string {
+	lower := strings.ToLower(name)
+	upper := strings.ToUpper(name)
+	if name == lower || name == upper {
+		return strings.Title(lower)
+	}
+	return name
 }
 
 // findExistingChan returns a channel attached to receiver if it already exists among connections
