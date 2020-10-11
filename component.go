@@ -8,7 +8,7 @@ type Component interface {
 // Done notifies that the process is finished
 type Done struct{}
 
-// Wait is a channel signalling of a completion
+// Wait is a channel signaling of a completion
 type Wait chan struct{}
 
 // Run the component process

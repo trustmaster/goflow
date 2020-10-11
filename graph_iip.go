@@ -40,7 +40,7 @@ func (n *Graph) sendIIPs() error {
 	// Send initial IPs
 	for i := range n.iips {
 		ip := n.iips[i]
-		// Get the reciever port channel
+		// Get the receiver port channel
 		var channel reflect.Value
 		found := false
 		shouldClose := false

@@ -348,13 +348,59 @@ linters:
     - megacheck
     - govet
     - gocritic
+    - gosec
+    - golint
+    - gochecknoglobals
+    - gochecknoinits
+    - gofmt
+    - asciicheck
+    - bodyclose
+    - depguard
+    - dogsled
+    - exhaustive
+    - exportloopref
+    - funlen
+    - gci
+    - goconst
+    - goheader
+    - goimports
+    - gomodguard
+    - goprintffuncname
+    - interfacer
+    - maligned
+    - misspell
+    - nakedret
+    - noctx
+    - nolintlint
+    - prealloc
+    - rowserrcheck
+    - scopelint
+    - sqlclosecheck
+    - unconvert
+    - unparam
+    - whitespace
   disable:
-    - errcheck
     - deadcode
-    - unused
+    - dupl
+    - errcheck
+    - gocognit
+    - gocyclo
+    - godot
+    - godox
+    - goerr113
+    - gofumpt
+    - gomnd
     - ineffassign
-    - structcheck
+    - lll
+    - nestif
+    - nlreturn
     - staticcheck
+    - structcheck
+    - stylecheck
+    - testpackage
+    - unused
+    - wsl
+
   disable-all: false
   # presets:
   #   - bugs
@@ -425,10 +471,9 @@ issues:
   new: false
 
   # Show only new issues created after git revision `REV`
-  new-from-rev: REV
-
+  # new-from-rev: REV
   # Show only new issues created in git patch with set file path.
-  new-from-patch: path/to/patch/file
+  # new-from-patch: path/to/patch/file
 
 severity:
   # Default value is empty string.

@@ -129,7 +129,6 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 		}
 
 		portVal, err = net.getProcPort(p.addr.proc, p.addr.port, dir)
-
 	} else {
 		// Sender is a proc
 		portVal = val.FieldByName(portName)
