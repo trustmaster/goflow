@@ -14,7 +14,7 @@ func (s *StartToken) Process() {
 			Type:  tokNewFile,
 			File:  f,
 			Pos:   0,
-			Value: "",
+			Value: f.Name,
 		}
 		// Send to Init, which should go directly to Tokenizer output
 		s.Init <- t

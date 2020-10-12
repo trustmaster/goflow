@@ -48,6 +48,9 @@ func (c *Collect) Process() {
 			t.Pos += len(t.Value)
 			if t.Pos < len(t.File.Data) {
 				c.Next <- t
+			} else {
+				// FIXME how to process multiple files in the same network and provide graceful shutdown?
+				return
 			}
 		} else {
 			// Nothing matched, it's an error
