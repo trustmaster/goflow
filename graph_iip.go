@@ -25,8 +25,8 @@ func (n *Graph) AddIIP(processName, portName string, data interface{}) error {
 // RemoveIIP detaches an IIP from specific process and port
 func (n *Graph) RemoveIIP(processName, portName string) error {
 	addr := parseAddress(processName, portName)
-	for i, p := range n.iips {
-		if p.addr == addr {
+	for i := range n.iips {
+		if n.iips[i].addr == addr {
 			// Remove item from the slice
 			n.iips[len(n.iips)-1], n.iips[i], n.iips = iip{}, n.iips[len(n.iips)-1], n.iips[:len(n.iips)-1]
 			return nil
@@ -38,17 +38,17 @@ func (n *Graph) RemoveIIP(processName, portName string) error {
 // sendIIPs sends Initial Information Packets upon network start
 func (n *Graph) sendIIPs() error {
 	// Send initial IPs
-	for _, ip := range n.iips {
-		ip := ip
-		// Get the reciever port channel
+	for i := range n.iips {
+		ip := n.iips[i]
+		// Get the receiver port channel
 		var channel reflect.Value
 		found := false
 		shouldClose := false
 
 		// Try to find it among network inports
-		for _, inPort := range n.inPorts {
-			if inPort.addr == ip.addr {
-				channel = inPort.channel
+		for j := range n.inPorts {
+			if n.inPorts[j].addr == ip.addr {
+				channel = n.inPorts[j].channel
 				found = true
 				break
 			}
@@ -56,9 +56,9 @@ func (n *Graph) sendIIPs() error {
 
 		if !found {
 			// Try to find among connections
-			for _, conn := range n.connections {
-				if conn.tgt == ip.addr {
-					channel = conn.channel
+			for j := range n.connections {
+				if n.connections[j].tgt == ip.addr {
+					channel = n.connections[j].channel
 					found = true
 					break
 				}

@@ -182,8 +182,8 @@ func newFanOutFanIn() (*Graph, error) {
 		{"d3", "Out", "e2", "In"},
 	}
 
-	for _, c := range connections {
-		if err := n.Connect(c.sn, c.sp, c.rn, c.rp); err != nil {
+	for i := range connections {
+		if err := n.Connect(connections[i].sn, connections[i].sp, connections[i].rn, connections[i].rp); err != nil {
 			return nil, err
 		}
 	}
@@ -262,8 +262,8 @@ func newMapPorts() (*Graph, error) {
 		{"r", "Out[e1]", "e11", "In"},
 	}
 
-	for _, c := range connections {
-		if err := n.Connect(c.sn, c.sp, c.rn, c.rp); err != nil {
+	for i := range connections {
+		if err := n.Connect(connections[i].sn, connections[i].sp, connections[i].rn, connections[i].rp); err != nil {
 			return nil, err
 		}
 	}
@@ -276,8 +276,8 @@ func newMapPorts() (*Graph, error) {
 		{"r", "In[e3]", 3},
 	}
 
-	for _, p := range iips {
-		if err := n.AddIIP(p.proc, p.port, p.v); err != nil {
+	for i := range iips {
+		if err := n.AddIIP(iips[i].proc, iips[i].port, iips[i].v); err != nil {
 			return nil, err
 		}
 	}
@@ -290,8 +290,8 @@ func newMapPorts() (*Graph, error) {
 		{"r", "Out[e3]", "O3"},
 	}
 
-	for _, p := range outPorts {
-		n.MapOutPort(p.name, p.pn, p.pp)
+	for i := range outPorts {
+		n.MapOutPort(outPorts[i].name, outPorts[i].pn, outPorts[i].pp)
 	}
 
 	return n, nil
@@ -361,8 +361,8 @@ func newArrayPorts() (*Graph, error) {
 		{"r", "Out[0]", "e00", "In"},
 	}
 
-	for _, c := range connections {
-		if err := n.Connect(c.sn, c.sp, c.rn, c.rp); err != nil {
+	for i := range connections {
+		if err := n.Connect(connections[i].sn, connections[i].sp, connections[i].rn, connections[i].rp); err != nil {
 			return nil, err
 		}
 	}
@@ -375,8 +375,8 @@ func newArrayPorts() (*Graph, error) {
 		{"r", "In[2]", 3},
 	}
 
-	for _, p := range iips {
-		if err := n.AddIIP(p.proc, p.port, p.v); err != nil {
+	for i := range iips {
+		if err := n.AddIIP(iips[i].proc, iips[i].port, iips[i].v); err != nil {
 			return nil, err
 		}
 	}
@@ -389,8 +389,8 @@ func newArrayPorts() (*Graph, error) {
 		{"r", "Out[2]", "O2"},
 	}
 
-	for _, p := range outPorts {
-		n.MapOutPort(p.name, p.pn, p.pp)
+	for i := range outPorts {
+		n.MapOutPort(outPorts[i].name, outPorts[i].pn, outPorts[i].pp)
 	}
 
 	return n, nil
