@@ -170,7 +170,7 @@ func (n *Graph) Remove(processName string) error {
 func (n *Graph) Process() {
 	err := n.sendIIPs()
 	if err != nil {
-		// TODO provide a nicer way to handle graph errors
+		// TODO provide a nice way to handle graph errors
 		panic(err)
 	}
 	for _, i := range n.procs {
