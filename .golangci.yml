@@ -357,6 +357,7 @@ linters:
     - bodyclose
     - depguard
     - dogsled
+    - errcheck
     - exhaustive
     - exportloopref
     - funlen
@@ -366,6 +367,7 @@ linters:
     - goimports
     - gomodguard
     - goprintffuncname
+    - ineffassign
     - interfacer
     - maligned
     - misspell
@@ -382,7 +384,6 @@ linters:
   disable:
     - deadcode
     - dupl
-    - errcheck
     - gocognit
     - gocyclo
     - godot
@@ -390,7 +391,6 @@ linters:
     - goerr113
     - gofumpt
     - gomnd
-    - ineffassign
     - lll
     - nestif
     - nlreturn
@@ -421,7 +421,7 @@ issues:
     - path: _test\.go
       linters:
         # - gocyclo
-        # - errcheck
+        - errcheck
         # - dupl
         - gosec
 

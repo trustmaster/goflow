@@ -39,15 +39,13 @@ func (n *Graph) RemoveIIP(processName, portName string) error {
 func (n *Graph) sendIIPs() error {
 	// Send initial IPs
 	for i := range n.iips {
-		ip := n.iips[i]
 		// Get the receiver port channel
 		var channel reflect.Value
-		found := false
-		shouldClose := false
+		var found bool
 
 		// Try to find it among network inports
 		for j := range n.inPorts {
-			if n.inPorts[j].addr == ip.addr {
+			if n.inPorts[j].addr == n.iips[i].addr {
 				channel = n.inPorts[j].channel
 				found = true
 				break
@@ -57,7 +55,7 @@ func (n *Graph) sendIIPs() error {
 		if !found {
 			// Try to find among connections
 			for j := range n.connections {
-				if n.connections[j].tgt == ip.addr {
+				if n.connections[j].tgt == n.iips[i].addr {
 					channel = n.connections[j].channel
 					found = true
 					break
@@ -65,29 +63,35 @@ func (n *Graph) sendIIPs() error {
 			}
 		}
 
+		var shouldClose bool
+
 		if !found {
 			// Try to find a proc and attach a new channel to it
-			recvPort, err := n.getProcPort(ip.addr.proc, ip.addr.port, reflect.RecvDir)
+			recvPort, err := n.getProcPort(n.iips[i].addr.proc, n.iips[i].addr.port, reflect.RecvDir)
 			if err != nil {
 				return err
 			}
 
-			channel, err = attachPort(recvPort, ip.addr, reflect.RecvDir, reflect.ValueOf(nil), n.conf.BufferSize)
+			channel, err = attachPort(recvPort, n.iips[i].addr, reflect.RecvDir, reflect.ValueOf(nil), n.conf.BufferSize)
+			if err != nil {
+				return err
+			}
+
 			found = true
 			shouldClose = true
 		}
 
-		if found {
-			// Send data to the port
-			go func() {
-				channel.Send(reflect.ValueOf(ip.data))
-				if shouldClose {
-					channel.Close()
-				}
-			}()
-		} else {
-			return fmt.Errorf("IIP target not found: '%s'", ip.addr)
+		if !found {
+			return fmt.Errorf("IIP target not found: '%s'", n.iips[i].addr)
 		}
+
+		// Send data to the port
+		go func(channel, data reflect.Value, close bool) {
+			channel.Send(data)
+			if close {
+				channel.Close()
+			}
+		}(channel, reflect.ValueOf(n.iips[i].data), shouldClose)
 	}
 	return nil
 }
