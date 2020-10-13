@@ -43,7 +43,7 @@ func (n *Graph) sendIIPs() error {
 
 		// Get the receiver port channel
 		var channel reflect.Value
-		var found bool
+		found := false
 
 		// Try to find it among network inports
 		for j := range n.inPorts {
@@ -65,7 +65,7 @@ func (n *Graph) sendIIPs() error {
 			}
 		}
 
-		var shouldClose bool
+		shouldClose := false
 
 		if !found {
 			// Try to find a proc and attach a new channel to it
