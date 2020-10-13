@@ -40,10 +40,10 @@ func (n *Graph) sendIIPs() error {
 	// Send initial IPs
 	for i := range n.iips {
 		ip := n.iips[i]
+
 		// Get the receiver port channel
 		var channel reflect.Value
 		found := false
-		shouldClose := false
 
 		// Try to find it among network inports
 		for j := range n.inPorts {
@@ -65,6 +65,8 @@ func (n *Graph) sendIIPs() error {
 			}
 		}
 
+		shouldClose := false
+
 		if !found {
 			// Try to find a proc and attach a new channel to it
 			recvPort, err := n.getProcPort(ip.addr.proc, ip.addr.port, reflect.RecvDir)
@@ -73,21 +75,26 @@ func (n *Graph) sendIIPs() error {
 			}
 
 			channel, err = attachPort(recvPort, ip.addr, reflect.RecvDir, reflect.ValueOf(nil), n.conf.BufferSize)
+			if err != nil {
+				return err
+			}
+
 			found = true
 			shouldClose = true
 		}
 
-		if found {
-			// Send data to the port
-			go func() {
-				channel.Send(reflect.ValueOf(ip.data))
-				if shouldClose {
-					channel.Close()
-				}
-			}()
-		} else {
+		if !found {
 			return fmt.Errorf("IIP target not found: '%s'", ip.addr)
 		}
+
+		// Send data to the port
+		go func(channel, data reflect.Value, close bool) {
+			channel.Send(data)
+			if close {
+				channel.Close()
+			}
+		}(channel, reflect.ValueOf(ip.data), shouldClose)
 	}
+
 	return nil
 }
