@@ -75,6 +75,11 @@ func TestTokenizer(t *testing.T) {
 			Pos:   35,
 			Value: "Merge",
 		},
+		{
+			Type:  tokEOF,
+			Pos:   40,
+			Value: "test.fbp",
+		},
 	}
 	in := make(chan *File)
 	out := make(chan Token)

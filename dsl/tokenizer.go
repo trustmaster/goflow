@@ -154,42 +154,42 @@ func NewTokenizer(f *goflow.Factory) (*goflow.Graph, error) {
 
 	iips := []struct {
 		proc, port string
-		val        string
+		val        TokenType
 	}{
 		{"ScanEOL", "SET", "\r\n"},
-		{"ScanEOL", "TYPE", "eol"},
+		{"ScanEOL", "TYPE", tokEOL},
 		{"ScanWhitespace", "SET", "\t "},
-		{"ScanWhitespace", "TYPE", "whitespace"},
+		{"ScanWhitespace", "TYPE", tokWhitespace},
 		{"ScanInt", "SET", "0123456789"},
-		{"ScanInt", "TYPE", "int"},
+		{"ScanInt", "TYPE", tokInt},
 		{"ScanString", "SET", "\"'"},
-		{"ScanString", "TYPE", "quotedStr"},
+		{"ScanString", "TYPE", tokQuotedStr},
 		{"ScanEq", "SET", "="},
-		{"ScanEq", "TYPE", "eq"},
+		{"ScanEq", "TYPE", tokEqual},
 		{"ScanDot", "SET", "."},
-		{"ScanDot", "TYPE", "dot"},
+		{"ScanDot", "TYPE", tokDot},
 		{"ScanColon", "SET", ":"},
-		{"ScanColon", "TYPE", "colon"},
+		{"ScanColon", "TYPE", tokColon},
 		{"ScanLParen", "SET", "("},
-		{"ScanLParen", "TYPE", "lparen"},
+		{"ScanLParen", "TYPE", tokLparen},
 		{"ScanRParen", "SET", ")"},
-		{"ScanRParen", "TYPE", "rparen"},
+		{"ScanRParen", "TYPE", tokRparen},
 		{"ScanArrow", "SET", "->"},
-		{"ScanArrow", "TYPE", "arrow"},
+		{"ScanArrow", "TYPE", tokArrow},
 		{"ScanSlash", "SET", "/"},
-		{"ScanSlash", "TYPE", "slash"},
+		{"ScanSlash", "TYPE", tokSlash},
 		{"ScanHash", "SET", "#"},
-		{"ScanHash", "TYPE", "comment"},
+		{"ScanHash", "TYPE", tokComment},
 		{"ScanInport", "SET", "INPORT"},
-		{"ScanInport", "TYPE", "inport"},
+		{"ScanInport", "TYPE", tokInport},
 		{"ScanOutport", "SET", "OUTPORT"},
-		{"ScanOutport", "TYPE", "outport"},
+		{"ScanOutport", "TYPE", tokOutport},
 		{"ScanIdent", "SET", "[\\w_]"},
-		{"ScanIdent", "TYPE", "ident"},
+		{"ScanIdent", "TYPE", tokIdent},
 	}
 
 	for _, iip := range iips {
-		err := n.AddIIP(iip.proc, iip.port, iip.val)
+		err := n.AddIIP(iip.proc, iip.port, string(iip.val))
 		if err != nil {
 			return n, err
 		}
