@@ -15,10 +15,12 @@ type iip struct {
 // AddIIP adds an Initial Information packet to the network
 func (n *Graph) AddIIP(processName, portName string, data interface{}) error {
 	addr := parseAddress(processName, portName)
+
 	if _, exists := n.procs[processName]; exists {
 		n.iips = append(n.iips, iip{data: data, addr: addr})
 		return nil
 	}
+
 	return fmt.Errorf("AddIIP: could not find '%s'", addr)
 }
 
@@ -32,6 +34,7 @@ func (n *Graph) RemoveIIP(processName, portName string) error {
 			return nil
 		}
 	}
+
 	return fmt.Errorf("RemoveIIP: could not find IIP for '%s'", addr)
 }
 
@@ -42,27 +45,10 @@ func (n *Graph) sendIIPs() error {
 		ip := n.iips[i]
 
 		// Get the receiver port channel
-		var channel reflect.Value
-		found := false
-
-		// Try to find it among network inports
-		for j := range n.inPorts {
-			if n.inPorts[j].addr == ip.addr {
-				channel = n.inPorts[j].channel
-				found = true
-				break
-			}
-		}
+		channel, found := n.channelByInPortAddr(ip.addr)
 
 		if !found {
-			// Try to find among connections
-			for j := range n.connections {
-				if n.connections[j].tgt == ip.addr {
-					channel = n.connections[j].channel
-					found = true
-					break
-				}
-			}
+			channel, found = n.channelByConnectionAddr(ip.addr)
 		}
 
 		shouldClose := false
@@ -90,6 +76,7 @@ func (n *Graph) sendIIPs() error {
 		// Send data to the port
 		go func(channel, data reflect.Value, close bool) {
 			channel.Send(data)
+
 			if close {
 				channel.Close()
 			}
@@ -97,4 +84,26 @@ func (n *Graph) sendIIPs() error {
 	}
 
 	return nil
+}
+
+// channelByInPortAddr returns a channel by address from the network inports
+func (n *Graph) channelByInPortAddr(addr address) (channel reflect.Value, found bool) {
+	for i := range n.inPorts {
+		if n.inPorts[i].addr == addr {
+			return n.inPorts[i].channel, true
+		}
+	}
+
+	return reflect.Value{}, false
+}
+
+// channelByConnectionAddr returns a channel by address from connections
+func (n *Graph) channelByConnectionAddr(addr address) (channel reflect.Value, found bool) {
+	for i := range n.connections {
+		if n.connections[i].tgt == addr {
+			return n.connections[i].channel, true
+		}
+	}
+
+	return reflect.Value{}, false
 }

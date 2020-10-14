@@ -79,8 +79,11 @@ func (n *Graph) SetOutPort(name string, channel interface{}) error {
 }
 
 func (n *Graph) setGraphPort(name string, channel interface{}, dir reflect.ChanDir) error {
-	var ports map[string]port
-	var dirDescr string
+	var (
+		ports    map[string]port
+		dirDescr string
+	)
+
 	if dir == reflect.SendDir {
 		ports = n.outPorts
 		dirDescr = "out"
@@ -88,22 +91,26 @@ func (n *Graph) setGraphPort(name string, channel interface{}, dir reflect.ChanD
 		ports = n.inPorts
 		dirDescr = "in"
 	}
+
 	p, ok := ports[name]
 	if !ok {
 		return fmt.Errorf("setGraphPort: %s port '%s' not defined", dirDescr, name)
 	}
+
 	// Try to attach it
 	port, err := n.getProcPort(p.addr.proc, p.addr.port, dir)
 	if err != nil {
 		return fmt.Errorf("setGraphPort: cannot set %s port '%s': %w", dirDescr, name, err)
 	}
-	_, err = attachPort(port, p.addr, dir, reflect.ValueOf(channel), n.conf.BufferSize)
-	if err != nil {
+
+	if _, err = attachPort(port, p.addr, dir, reflect.ValueOf(channel), n.conf.BufferSize); err != nil {
 		return fmt.Errorf("setGraphPort: cannot attach %s port '%s': %w", dirDescr, name, err)
 	}
+
 	// Save it in inPorts to be used with IIPs if needed
 	p.channel = reflect.ValueOf(channel)
 	ports[name] = p
+
 	return nil
 }
 

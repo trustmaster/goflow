@@ -381,6 +381,7 @@ linters:
     - unconvert
     - unparam
     - whitespace
+    - wsl
   disable:
     - deadcode
     - dupl
@@ -399,7 +400,6 @@ linters:
     - stylecheck
     - testpackage
     - unused
-    - wsl
 
   disable-all: false
   # presets:

@@ -16,6 +16,7 @@ func TestSimpleComponent(t *testing.T) {
 	wait := Run(c)
 
 	in <- 12
+
 	res := <-out
 
 	if res != 24 {
@@ -43,6 +44,7 @@ func TestSimpleLongRunningComponent(t *testing.T) {
 
 	for src, expected := range data {
 		in <- src
+
 		actual := <-out
 
 		if actual != expected {
@@ -71,6 +73,7 @@ func TestComponentWithTwoInputs(t *testing.T) {
 		for _, n := range op1 {
 			in1 <- n
 		}
+
 		close(in1)
 	}()
 
@@ -78,12 +81,14 @@ func TestComponentWithTwoInputs(t *testing.T) {
 		for _, n := range op2 {
 			in2 <- n
 		}
+
 		close(in2)
 	}()
 
 	for i := 0; i < len(sums); i++ {
 		actual := <-out
 		expected := sums[i]
+
 		if actual != expected {
 			t.Errorf("%d != %d", actual, expected)
 		}
