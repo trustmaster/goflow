@@ -56,12 +56,14 @@ func (f *Factory) Register(componentName string, constructor Constructor) error 
 	if _, exists := f.registry[componentName]; exists {
 		return fmt.Errorf("Registry error: component '%s' already registered", componentName)
 	}
+
 	f.registry[componentName] = registryEntry{
 		Constructor: constructor,
 		Info: ComponentInfo{
 			Name: componentName,
 		},
 	}
+
 	return nil
 }
 
@@ -70,10 +72,12 @@ func (f *Factory) Annotate(componentName string, annotation Annotation) error {
 	if _, exists := f.registry[componentName]; !exists {
 		return fmt.Errorf("Registry annotation error: component '%s' is not registered", componentName)
 	}
+
 	entry := f.registry[componentName]
 	entry.Info.Description = annotation.Description
 	entry.Info.Icon = annotation.Icon
 	f.registry[componentName] = entry
+
 	return nil
 }
 
@@ -84,6 +88,7 @@ func (f *Factory) Unregister(componentName string) error {
 		delete(f.registry, componentName)
 		return nil
 	}
+
 	return fmt.Errorf("Registry error: component '%s' is not registered", componentName)
 }
 
@@ -92,6 +97,7 @@ func (f *Factory) Create(componentName string) (interface{}, error) {
 	if info, exists := f.registry[componentName]; exists {
 		return info.Constructor()
 	}
+
 	return nil, fmt.Errorf("Factory error: component '%s' does not exist", componentName)
 }
 

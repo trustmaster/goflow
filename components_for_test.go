@@ -119,6 +119,7 @@ func (c *repeater) repeat(word string, times int) {
 	if word == "" || times <= 0 {
 		return
 	}
+
 	for i := 0; i < times; i++ {
 		c.Words <- word
 	}
@@ -134,18 +135,23 @@ type router struct {
 // outport key as the inport key they arrived at
 func (c *router) Process() {
 	wg := new(sync.WaitGroup)
+
 	for k, ch := range c.In {
 		k := k
 		ch := ch
+
 		wg.Add(1)
+
 		go func() {
 			for n := range ch {
 				c.Out[k] <- n
 			}
+
 			close(c.Out[k])
 			wg.Done()
 		}()
 	}
+
 	wg.Wait()
 }
 
@@ -159,18 +165,23 @@ type irouter struct {
 // outport key as the inport key they arrived at
 func (c *irouter) Process() {
 	wg := new(sync.WaitGroup)
+
 	for k, ch := range c.In {
 		k := k
 		ch := ch
+
 		wg.Add(1)
+
 		go func() {
 			for n := range ch {
 				c.Out[k] <- n
 			}
+
 			close(c.Out[k])
 			wg.Done()
 		}()
 	}
+
 	wg.Wait()
 }
 
@@ -203,6 +214,7 @@ func RegisterTestComponents(f *Factory) error {
 		Description: "Sums integers coming to its inports",
 		Icon:        "plus-circle",
 	})
+
 	return nil
 }
 

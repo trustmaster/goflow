@@ -8,16 +8,18 @@ type Component interface {
 // Done notifies that the process is finished
 type Done struct{}
 
-// Wait is a channel signalling of a completion
+// Wait is a channel signaling of a completion
 type Wait chan struct{}
 
 // Run the component process
 func Run(c Component) Wait {
 	wait := make(Wait)
+
 	go func() {
 		c.Process()
 		wait <- Done{}
 	}()
+
 	return wait
 }
 
@@ -33,6 +35,7 @@ func NewInputGuard(ports ...string) *InputGuard {
 	for _, p := range ports {
 		portMap[p] = false
 	}
+
 	return &InputGuard{portMap, 0}
 }
 
@@ -42,5 +45,6 @@ func (g *InputGuard) Complete(port string) bool {
 		g.ports[port] = true
 		g.complete++
 	}
+
 	return g.complete >= len(g.ports)
 }

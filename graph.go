@@ -81,11 +81,13 @@ func (n *Graph) Add(name string, c interface{}) error {
 	// c should be either graph or a component
 	_, isComponent := c.(Component)
 	_, isGraph := c.(Graph)
+
 	if !isComponent && !isGraph {
 		return fmt.Errorf("Could not add process '%s': instance is neither Component nor Graph", name)
 	}
 	// Add to the map of processes
 	n.procs[name] = c
+
 	return nil
 }
 
@@ -101,6 +103,7 @@ func (n *Graph) AddNew(processName string, componentName string, f *Factory) err
 	if err != nil {
 		return err
 	}
+
 	return n.Add(processName, proc)
 }
 
@@ -111,7 +114,9 @@ func (n *Graph) Remove(processName string) error {
 	if _, exists := n.procs[processName]; !exists {
 		return fmt.Errorf("Could not remove process: '%s' does not exist", processName)
 	}
+
 	delete(n.procs, processName)
+
 	return nil
 }
 
@@ -173,20 +178,25 @@ func (n *Graph) Process() {
 		// TODO provide a nice way to handle graph errors
 		panic(err)
 	}
+
 	for _, i := range n.procs {
 		c, ok := i.(Component)
 		if !ok {
 			continue
 		}
+
 		n.waitGrp.Add(1)
+
 		w := Run(c)
 		proc := i
+
 		go func() {
 			<-w
 			n.closeProcOuts(proc)
 			n.waitGrp.Done()
 		}()
 	}
+
 	n.waitGrp.Wait()
 }
 
@@ -195,10 +205,12 @@ func (n *Graph) closeProcOuts(proc interface{}) {
 	for i := 0; i < val.NumField(); i++ {
 		field := val.Field(i)
 		fieldType := field.Type()
+
 		if !(field.IsValid() && field.Kind() == reflect.Chan && field.CanSet() &&
 			fieldType.ChanDir()&reflect.SendDir != 0 && fieldType.ChanDir()&reflect.RecvDir == 0) {
 			continue
 		}
+
 		if n.decChanListenersCount(field) {
 			field.Close()
 		}

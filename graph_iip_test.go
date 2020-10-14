@@ -25,6 +25,7 @@ func TestBasicIIP(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
 	if err := n.AddIIP("r", "Times", qty); err != nil {
 		t.Error(err)
 		return
@@ -40,6 +41,7 @@ func TestBasicIIP(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
 	if err := n.SetOutPort("Words", out); err != nil {
 		t.Error(err)
 		return
@@ -53,6 +55,7 @@ func TestBasicIIP(t *testing.T) {
 	}()
 
 	i := 0
+
 	for actual := range out {
 		expected := output[i]
 		if actual != expected {
@@ -60,6 +63,7 @@ func TestBasicIIP(t *testing.T) {
 		}
 		i++
 	}
+
 	if i != qty {
 		t.Errorf("Returned %d words instead of %d", i, qty)
 	}
@@ -82,8 +86,6 @@ func newRepeatGraph2Ins() (*Graph, error) {
 }
 
 func TestGraphInportIIP(t *testing.T) {
-	qty := 5
-
 	n, err := newRepeatGraph2Ins()
 	if err != nil {
 		t.Error(err)
@@ -92,6 +94,7 @@ func TestGraphInportIIP(t *testing.T) {
 
 	input := "hello"
 	output := []string{"hello", "hello", "hello", "hello", "hello"}
+	qty := len(output)
 
 	in := make(chan string)
 	times := make(chan int)
@@ -101,14 +104,17 @@ func TestGraphInportIIP(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
 	if err := n.SetInPort("Times", times); err != nil {
 		t.Error(err)
 		return
 	}
+
 	if err := n.SetOutPort("Words", out); err != nil {
 		t.Error(err)
 		return
 	}
+
 	if err := n.AddIIP("r", "Times", qty); err != nil {
 		t.Error(err)
 		return
@@ -127,12 +133,13 @@ func TestGraphInportIIP(t *testing.T) {
 			// The graph inport needs to be closed once the IIP is sent
 			close(times)
 		}
-		expected := output[i]
-		if actual != expected {
+
+		if expected := output[i]; actual != expected {
 			t.Errorf("%s != %s", actual, expected)
 		}
 		i++
 	}
+
 	if i != qty {
 		t.Errorf("Returned %d words instead of %d", i, qty)
 	}
@@ -164,6 +171,7 @@ func TestInternalConnectionIIP(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
 	if err := n.SetOutPort("Out", out); err != nil {
 		t.Error(err)
 		return
@@ -177,6 +185,7 @@ func TestInternalConnectionIIP(t *testing.T) {
 	}()
 
 	i := 0
+
 	for actual := range out {
 		// The order of output is not guaranteed in this case
 		if actual != output[0] && actual != output[1] {
@@ -184,6 +193,7 @@ func TestInternalConnectionIIP(t *testing.T) {
 		}
 		i++
 	}
+
 	if i != qty {
 		t.Errorf("Returned %d words instead of %d", i, qty)
 	}

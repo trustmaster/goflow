@@ -15,55 +15,43 @@ type iip struct {
 // AddIIP adds an Initial Information packet to the network
 func (n *Graph) AddIIP(processName, portName string, data interface{}) error {
 	addr := parseAddress(processName, portName)
+
 	if _, exists := n.procs[processName]; exists {
 		n.iips = append(n.iips, iip{data: data, addr: addr})
 		return nil
 	}
+
 	return fmt.Errorf("AddIIP: could not find '%s'", addr)
 }
 
 // RemoveIIP detaches an IIP from specific process and port
 func (n *Graph) RemoveIIP(processName, portName string) error {
 	addr := parseAddress(processName, portName)
-	for i, p := range n.iips {
-		if p.addr == addr {
+	for i := range n.iips {
+		if n.iips[i].addr == addr {
 			// Remove item from the slice
 			n.iips[len(n.iips)-1], n.iips[i], n.iips = iip{}, n.iips[len(n.iips)-1], n.iips[:len(n.iips)-1]
 			return nil
 		}
 	}
+
 	return fmt.Errorf("RemoveIIP: could not find IIP for '%s'", addr)
 }
 
 // sendIIPs sends Initial Information Packets upon network start
 func (n *Graph) sendIIPs() error {
 	// Send initial IPs
-	for _, ip := range n.iips {
-		ip := ip
-		// Get the reciever port channel
-		var channel reflect.Value
-		found := false
-		shouldClose := false
+	for i := range n.iips {
+		ip := n.iips[i]
 
-		// Try to find it among network inports
-		for _, inPort := range n.inPorts {
-			if inPort.addr == ip.addr {
-				channel = inPort.channel
-				found = true
-				break
-			}
-		}
+		// Get the receiver port channel
+		channel, found := n.channelByInPortAddr(ip.addr)
 
 		if !found {
-			// Try to find among connections
-			for _, conn := range n.connections {
-				if conn.tgt == ip.addr {
-					channel = conn.channel
-					found = true
-					break
-				}
-			}
+			channel, found = n.channelByConnectionAddr(ip.addr)
 		}
+
+		shouldClose := false
 
 		if !found {
 			// Try to find a proc and attach a new channel to it
@@ -73,21 +61,49 @@ func (n *Graph) sendIIPs() error {
 			}
 
 			channel, err = attachPort(recvPort, ip.addr, reflect.RecvDir, reflect.ValueOf(nil), n.conf.BufferSize)
+			if err != nil {
+				return err
+			}
+
 			found = true
 			shouldClose = true
 		}
 
-		if found {
-			// Send data to the port
-			go func() {
-				channel.Send(reflect.ValueOf(ip.data))
-				if shouldClose {
-					channel.Close()
-				}
-			}()
-		} else {
+		if !found {
 			return fmt.Errorf("IIP target not found: '%s'", ip.addr)
 		}
+
+		// Send data to the port
+		go func(channel, data reflect.Value, close bool) {
+			channel.Send(data)
+
+			if close {
+				channel.Close()
+			}
+		}(channel, reflect.ValueOf(ip.data), shouldClose)
 	}
+
 	return nil
+}
+
+// channelByInPortAddr returns a channel by address from the network inports
+func (n *Graph) channelByInPortAddr(addr address) (channel reflect.Value, found bool) {
+	for i := range n.inPorts {
+		if n.inPorts[i].addr == addr {
+			return n.inPorts[i].channel, true
+		}
+	}
+
+	return reflect.Value{}, false
+}
+
+// channelByConnectionAddr returns a channel by address from connections
+func (n *Graph) channelByConnectionAddr(addr address) (channel reflect.Value, found bool) {
+	for i := range n.connections {
+		if n.connections[i].tgt == addr {
+			return n.connections[i].channel, true
+		}
+	}
+
+	return reflect.Value{}, false
 }

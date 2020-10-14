@@ -7,6 +7,7 @@ import (
 func TestFactoryCreate(t *testing.T) {
 	f := NewFactory()
 	err := RegisterTestComponents(f)
+
 	if err != nil {
 		t.Error(err)
 		return
@@ -17,7 +18,9 @@ func TestFactoryCreate(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
 	c, ok := instance.(Component)
+
 	if !ok {
 		t.Errorf("%+v is not a Component", c)
 		return
@@ -68,34 +71,35 @@ func TestFactoryRegistration(t *testing.T) {
 
 func TestFactoryGraph(t *testing.T) {
 	f := NewFactory()
-	err := RegisterTestComponents(f)
-	if err != nil {
+
+	if err := RegisterTestComponents(f); err != nil {
 		t.Error(err)
 		return
 	}
-	err = RegisterTestGraph(f)
-	if err != nil {
+
+	if err := RegisterTestGraph(f); err != nil {
 		t.Error(err)
 		return
 	}
 
 	n := NewGraph()
 
-	if err = n.AddNew("de", "doubleEcho", f); err != nil {
-		t.Error(err)
-		return
-	}
-	if err = n.AddNew("e", "echo", f); err != nil {
+	if err := n.AddNew("de", "doubleEcho", f); err != nil {
 		t.Error(err)
 		return
 	}
 
-	if err = n.AddNew("notfound", "notfound", f); err == nil {
+	if err := n.AddNew("e", "echo", f); err != nil {
+		t.Error(err)
+		return
+	}
+
+	if err := n.AddNew("notfound", "notfound", f); err == nil {
 		t.Errorf("Expected an error")
 		return
 	}
 
-	if err = n.Connect("de", "Out", "e", "In"); err != nil {
+	if err := n.Connect("de", "Out", "e", "In"); err != nil {
 		t.Error(err)
 		return
 	}

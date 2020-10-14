@@ -346,14 +346,61 @@ linters-settings:
 linters:
   enable:
     - megacheck
-  disable:
     - govet
+    - gocritic
+    - gosec
+    - golint
+    - gochecknoglobals
+    - gochecknoinits
+    - gofmt
+    - asciicheck
+    - bodyclose
+    - depguard
+    - dogsled
     - errcheck
-    - deadcode
-    - unused
+    - exhaustive
+    - exportloopref
+    - funlen
+    - gci
+    - goconst
+    - goheader
+    - goimports
+    - gomodguard
+    - goprintffuncname
     - ineffassign
-    - structcheck
+    - interfacer
+    - maligned
+    - misspell
+    - nakedret
+    - noctx
+    - nolintlint
+    - prealloc
+    - rowserrcheck
+    - scopelint
+    - sqlclosecheck
+    - unconvert
+    - unparam
+    - whitespace
+    - wsl
+  disable:
+    - deadcode
+    - dupl
+    - gocognit
+    - gocyclo
+    - godot
+    - godox
+    - goerr113
+    - gofumpt
+    - gomnd
+    - lll
+    - nestif
+    - nlreturn
     - staticcheck
+    - structcheck
+    - stylecheck
+    - testpackage
+    - unused
+
   disable-all: false
   # presets:
   #   - bugs
@@ -374,7 +421,7 @@ issues:
     - path: _test\.go
       linters:
         # - gocyclo
-        # - errcheck
+        - errcheck
         # - dupl
         - gosec
 
@@ -424,10 +471,9 @@ issues:
   new: false
 
   # Show only new issues created after git revision `REV`
-  new-from-rev: REV
-
+  # new-from-rev: REV
   # Show only new issues created in git patch with set file path.
-  new-from-patch: path/to/patch/file
+  # new-from-patch: path/to/patch/file
 
 severity:
   # Default value is empty string.
