@@ -118,6 +118,7 @@ func TestSubgraphSender(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
 	n.Add("e3", new(echo))
 
 	if err := n.Connect("sub", "Out", "e3", "In"); err != nil {
@@ -143,6 +144,7 @@ func TestSubgraphReceiver(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
 	n.Add("e3", new(echo))
 
 	if err := n.Connect("e3", "Out", "sub", "In"); err != nil {
@@ -206,6 +208,7 @@ func TestFanOutFanIn(t *testing.T) {
 
 	in := make(chan int)
 	out := make(chan int)
+
 	n.SetInPort("In", in)
 	n.SetOutPort("Out", out)
 
@@ -215,18 +218,23 @@ func TestFanOutFanIn(t *testing.T) {
 		for _, n := range inData {
 			in <- n
 		}
+
 		close(in)
 	}()
 
 	i := 0
+
 	for actual := range out {
 		found := false
+
 		for j := 0; j < len(outData); j++ {
 			if outData[j] == actual {
 				found = true
+
 				outData = append(outData[:j], outData[j+1:]...)
 			}
 		}
+
 		if !found {
 			t.Errorf("%d not found in expected data", actual)
 		}
@@ -308,12 +316,15 @@ func TestMapPorts(t *testing.T) {
 	o1 := make(chan int)
 	o2 := make(chan int)
 	o3 := make(chan int)
+
 	if err := n.SetInPort("I2", i2); err != nil {
 		t.Error(err)
 		return
 	}
+
 	n.SetOutPort("O1", o1)
 	n.SetOutPort("O2", o2)
+
 	if err := n.SetOutPort("O3", o3); err != nil {
 		t.Error(err)
 		return
@@ -323,6 +334,7 @@ func TestMapPorts(t *testing.T) {
 
 	i2 <- 2
 	close(i2)
+
 	v1 := <-o1
 	v2 := <-o2
 	v3 := <-o3
@@ -407,12 +419,15 @@ func TestArrayPorts(t *testing.T) {
 	o0 := make(chan int)
 	o1 := make(chan int)
 	o2 := make(chan int)
+
 	if err := n.SetInPort("I1", i1); err != nil {
 		t.Error(err)
 		return
 	}
+
 	n.SetOutPort("O0", o0)
 	n.SetOutPort("O1", o1)
+
 	if err := n.SetOutPort("O2", o2); err != nil {
 		t.Error(err)
 		return
@@ -422,6 +437,7 @@ func TestArrayPorts(t *testing.T) {
 
 	i1 <- 2
 	close(i1)
+
 	v0 := <-o0
 	v1 := <-o1
 	v2 := <-o2

@@ -14,6 +14,7 @@ func TestOutportNotFound(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
 	n.Add("e3", new(echo))
 
 	if err := n.Connect("sub", "NoOut", "e3", "In"); err == nil {
@@ -33,6 +34,7 @@ func TestInPortNotFound(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
 	n.Add("e3", new(echo))
 
 	if err := n.Connect("e3", "Out", "sub", "NotIn"); err == nil {
