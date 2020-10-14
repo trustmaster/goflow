@@ -2,7 +2,7 @@ package dsl
 
 // Collect gathers tokens processed in parallel, returns a matched one,
 // and moves pointer to the next potential token in the Next output.
-// If end of data is reached, or an error occured, only Out is returned.
+// If end of data is reached, or an error occurred, only Out is returned.
 // Collect expects all connected inputs to provide data, otherwise
 // it will deadlock.
 type Collect struct {
@@ -20,13 +20,17 @@ type Collect struct {
 func (c *Collect) Process() {
 	insCount := len(c.In)
 	closedCount := 0
+
 	for closedCount < insCount {
 		var res, last Token // first matched token
+
 		matched := false
+
 		for i := 0; i < insCount; i++ {
 			i := i
 			ch := c.In[i]
 			t, ok := <-ch
+
 			if ok {
 				if t.Type != tokIllegal && !matched {
 					res = t
@@ -38,14 +42,17 @@ func (c *Collect) Process() {
 				closedCount++
 			}
 		}
+
 		if closedCount == insCount {
 			// It was a round of close signals
 			return
 		}
+
 		if matched {
 			c.Out <- res
 			t := res // makes a copy
 			t.Pos += len(t.Value)
+
 			if t.Pos < len(t.File.Data) {
 				c.Next <- t
 			} else {

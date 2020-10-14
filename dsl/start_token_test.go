@@ -22,6 +22,7 @@ func TestStartToken(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
 	start := i.(*StartToken)
 
 	in := make(chan *File)
@@ -42,9 +43,11 @@ func TestStartToken(t *testing.T) {
 	if tok.Type != tokNewFile {
 		t.Errorf("unexpected token type %s", tok.Type)
 	}
+
 	if tok.File != file {
 		t.Errorf("unexpected file")
 	}
+
 	t2 := <-next
 	if t2 != tok {
 		t.Errorf("Init and Next tokens are not equal")

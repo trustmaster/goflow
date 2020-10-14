@@ -38,9 +38,11 @@ func (s *Scanner) readIIPs() (set string, tokenType string, ok bool) {
 	if set, ok = <-s.Set; !ok {
 		return
 	}
+
 	if tokenType, ok = <-s.Type; !ok {
 		return
 	}
+
 	return
 }
 
@@ -70,6 +72,7 @@ func (s *ScanChars) Process() {
 	if !ok {
 		return
 	}
+
 	matcher := s.matcher(set)
 	s.handleTokens(func(tok Token) (Token, bool) {
 		buf := bytes.NewBufferString("")
@@ -91,15 +94,20 @@ func (s *ScanChars) Process() {
 func (s *ScanChars) matcher(set string) func(r rune) bool {
 	if set[0] == '[' && set[len(set)-1] == ']' {
 		// A regexp class
-		var reg *regexp.Regexp
-		var err error
+		var (
+			reg *regexp.Regexp
+			err error
+		)
+
 		reg, err = regexp.Compile(set)
+
 		if err != nil {
 			// TODO error handling
 			return func(r rune) bool {
 				return false
 			}
 		}
+
 		return func(r rune) bool {
 			return reg.Match([]byte{byte(r)})
 		}
@@ -108,6 +116,7 @@ func (s *ScanChars) matcher(set string) func(r rune) bool {
 	set = strings.ReplaceAll(set, `\t`, "\t")
 	set = strings.ReplaceAll(set, `\r`, "\r")
 	set = strings.ReplaceAll(set, `\n`, "\n")
+
 	return func(r rune) bool {
 		return strings.ContainsRune(set, r)
 	}
@@ -126,12 +135,14 @@ func (s *ScanKeyword) Process() {
 	if !ok {
 		return
 	}
+
 	word = strings.ToUpper(word)
 	wordLen := len(word)
 
 	identReg := regexp.MustCompile(`[\w_]`)
 	shouldNotBeFollowedBy := identReg
 	isIdent := identReg.MatchString(word)
+
 	if !isIdent {
 		shouldNotBeFollowedBy = regexp.MustCompile(`[^\w\s]`)
 	}
@@ -173,6 +184,7 @@ func (s *ScanComment) Process() {
 	if !ok {
 		return
 	}
+
 	s.handleTokens(func(tok Token) (Token, bool) {
 		if tok.File.Data[tok.Pos] != prefix[0] {
 			return tok, false
@@ -204,6 +216,7 @@ func (s *ScanQuoted) Process() {
 	if !ok {
 		return
 	}
+
 	s.handleTokens(func(tok Token) (Token, bool) {
 		// Find the quote char
 		var q rune = 0

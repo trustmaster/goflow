@@ -22,6 +22,7 @@ func TestReader(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
 	c := i.(*Reader)
 	c.Name = in
 	c.File = out
@@ -48,10 +49,12 @@ func TestReader(t *testing.T) {
 					t.Errorf("Expected file '%s', got '%s'", name, f.Name)
 					break
 				}
+
 				if expected == "error" {
 					t.Errorf("Unexpected File")
 					break
 				}
+
 				if len(f.Data) == 0 {
 					t.Errorf("Read data is empty")
 					break
@@ -61,6 +64,7 @@ func TestReader(t *testing.T) {
 					t.Errorf("Expected file '%s', got '%s'", name, fe.Name)
 					break
 				}
+
 				if expected == "data" {
 					t.Errorf("Unexpected error: %s", fe.Err.Error())
 					break

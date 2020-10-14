@@ -29,7 +29,7 @@ const (
 	tokColon  = TokenType("colon")  // : S:Keyword P:2
 	tokLparen = TokenType("lparen") // ( S:Keyword P:2
 	tokRparen = TokenType("rparen") // ) S:Keyword P:2
-	tokArrow  = TokenType("arrow")  //", "S:Keyword P:2
+	tokArrow  = TokenType("arrow")  // ", "S:Keyword P:2
 	tokSlash  = TokenType("slash")  // / S:Keyword P:2
 
 	// Keywords
@@ -143,9 +143,11 @@ func NewTokenizer(f *goflow.Factory) (*goflow.Graph, error) {
 		if c.srcPort == "" {
 			c.srcPort = "Out"
 		}
+
 		if c.tgtPort == "" {
 			c.tgtPort = "In"
 		}
+
 		err := n.Connect(c.srcName, c.srcPort, c.tgtName, c.tgtPort)
 		if err != nil {
 			return n, err

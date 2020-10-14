@@ -9,6 +9,7 @@ type Split struct {
 // Process copies incoming tokens to the outputs
 func (s *Split) Process() {
 	outsCount := len(s.Out)
+
 	for tok := range s.In {
 		for i := 0; i < outsCount; i++ {
 			tokCopy := tok

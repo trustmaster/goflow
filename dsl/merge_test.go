@@ -42,6 +42,7 @@ func TestMerge(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
 	merge := i.(*Merge)
 
 	in := make(chan Token, 3)
@@ -55,6 +56,7 @@ func TestMerge(t *testing.T) {
 		for _, t := range tokens {
 			in <- t
 		}
+
 		close(in)
 	}()
 

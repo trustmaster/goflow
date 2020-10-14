@@ -6,7 +6,7 @@ import (
 	"github.com/trustmaster/goflow"
 )
 
-//StartToken(dsl/StartToken) INIT -> Merge
+// StartToken(dsl/StartToken) INIT -> Merge
 func TestTokenizer(t *testing.T) {
 	fbpData := "StartToken(dsl/StartToken) INIT -> Merge"
 	expected := []Token{
@@ -95,11 +95,13 @@ func TestTokenizer(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
 	n := i.(*goflow.Graph)
 	if err := n.SetInPort("In", in); err != nil {
 		t.Error(err)
 		return
 	}
+
 	if err := n.SetOutPort("Out", out); err != nil {
 		t.Error(err)
 		return
@@ -118,12 +120,14 @@ func TestTokenizer(t *testing.T) {
 	}()
 
 	j := 0
+
 	for tok := range out {
 		if !tokEql(tok, expected[j]) {
 			t.Errorf("Expected '%s': '%s' at %d, got '%s': '%s' at %d", expected[j].Type, expected[j].Value, expected[j].Pos, tok.Type, tok.Value, tok.Pos)
 		}
 		j++
 	}
+
 	if j != len(expected) {
 		t.Errorf("Expected %d tokens, got %d", len(expected), j)
 	}

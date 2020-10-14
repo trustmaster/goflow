@@ -230,6 +230,7 @@ func (p *pipeline) ok(f func() error) *pipeline {
 	}
 
 	p.err = f()
+
 	return p
 }
 
@@ -243,5 +244,6 @@ func (p *pipeline) fails(f func() error) *pipeline {
 	if err == nil {
 		p.err = fmt.Errorf("Expected an error")
 	}
+
 	return p
 }
