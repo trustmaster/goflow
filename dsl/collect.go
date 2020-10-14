@@ -49,6 +49,9 @@ func (c *Collect) Process() {
 			if t.Pos < len(t.File.Data) {
 				c.Next <- t
 			} else {
+				t.Type = tokEOF
+				t.Value = t.File.Name
+				c.Out <- t
 				// FIXME how to process multiple files in the same network and provide graceful shutdown?
 				return
 			}
