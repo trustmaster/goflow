@@ -43,6 +43,7 @@ func TestSplit(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
 	split := i.(*Split)
 
 	in := make(chan Token)
@@ -61,6 +62,7 @@ func TestSplit(t *testing.T) {
 		for _, t := range tokens {
 			in <- t
 		}
+
 		close(in)
 	}()
 

@@ -292,6 +292,7 @@ func TestScanners(t *testing.T) {
 			t.Error(err)
 			return
 		}
+
 		s := i.(scanner)
 		s.assign(Scanner{
 			Set:  set,
@@ -317,6 +318,7 @@ func TestScanners(t *testing.T) {
 			if !ok {
 				return
 			}
+
 			if tok.Type == tokIllegal {
 				if tc.hit {
 					t.Errorf("Unexpected miss: '%s' at %d", tok.Value, tok.Pos)
@@ -332,6 +334,7 @@ func TestScanners(t *testing.T) {
 					t.Errorf("Unexpected token value: '%s'", tok.Value)
 				}
 			}
+
 			close(in)
 		}()
 
@@ -339,6 +342,7 @@ func TestScanners(t *testing.T) {
 	}
 
 	t.Parallel()
+
 	for _, c := range cases {
 		t.Run(c.c+": "+c.name, func(t *testing.T) {
 			runCase(c, t)

@@ -38,15 +38,19 @@ func (c *Reader) Process() {
 				Name: name,
 				Err:  err,
 			}
+
 			return false
 		}
+
 		return true
 	}
+
 	for name := range c.Name {
 		r, err := os.Open(name)
 		if !check(err, name) {
 			continue
 		}
+
 		data, err := ioutil.ReadAll(r)
 		if !check(err, name) {
 			continue
