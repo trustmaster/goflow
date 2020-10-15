@@ -90,7 +90,8 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 		src:     sendAddr,
 		tgt:     recvAddr,
 		channel: ch,
-		buffer:  bufferSize})
+		buffer:  bufferSize,
+	})
 
 	return nil
 }

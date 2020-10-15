@@ -6,9 +6,8 @@ import (
 
 func TestFactoryCreate(t *testing.T) {
 	f := NewFactory()
-	err := RegisterTestComponents(f)
 
-	if err != nil {
+	if err := RegisterTestComponents(f); err != nil {
 		t.Error(err)
 		return
 	}

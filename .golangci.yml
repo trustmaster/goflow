@@ -348,6 +348,7 @@ linters:
     - megacheck
     - govet
     - gocritic
+    - gofumpt
     - gosec
     - golint
     - gochecknoglobals
@@ -390,7 +391,6 @@ linters:
     - godot
     - godox
     - goerr113
-    - gofumpt
     - gomnd
     - lll
     - nestif
