@@ -90,8 +90,8 @@ func NewTokenizer(f *goflow.Factory) (*goflow.Graph, error) {
 		{"ScanIdent", "dsl/ScanChars"},
 	}
 
-	for _, p := range procs {
-		err := n.AddNew(p.name, p.component, f)
+	for i := range procs {
+		err := n.AddNew(procs[i].name, procs[i].component, f)
 		if err != nil {
 			return n, err
 		}
@@ -139,16 +139,16 @@ func NewTokenizer(f *goflow.Factory) (*goflow.Graph, error) {
 		{"ScanIdent", "", "Collect", "In[14]"},
 	}
 
-	for _, c := range conns {
-		if c.srcPort == "" {
-			c.srcPort = "Out"
+	for i := range conns {
+		if conns[i].srcPort == "" {
+			conns[i].srcPort = "Out"
 		}
 
-		if c.tgtPort == "" {
-			c.tgtPort = "In"
+		if conns[i].tgtPort == "" {
+			conns[i].tgtPort = "In"
 		}
 
-		err := n.Connect(c.srcName, c.srcPort, c.tgtName, c.tgtPort)
+		err := n.Connect(conns[i].srcName, conns[i].srcPort, conns[i].tgtName, conns[i].tgtPort)
 		if err != nil {
 			return n, err
 		}
@@ -190,8 +190,8 @@ func NewTokenizer(f *goflow.Factory) (*goflow.Graph, error) {
 		{"ScanIdent", "TYPE", tokIdent},
 	}
 
-	for _, iip := range iips {
-		err := n.AddIIP(iip.proc, iip.port, string(iip.val))
+	for i := range iips {
+		err := n.AddIIP(iips[i].proc, iips[i].port, string(iips[i].val))
 		if err != nil {
 			return n, err
 		}

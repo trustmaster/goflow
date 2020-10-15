@@ -8,7 +8,7 @@ import (
 
 func TestSplit(t *testing.T) {
 	data := "ScanFile(dsl/ScanFile) OUT -> IN Split(dsl/Split)"
-	fname := "tokenizer.fbp"
+	fname := "split.fbp"
 	file := &File{Name: fname, Data: []byte(data)}
 	numOuts := 3
 	tokens := []Token{

@@ -7,8 +7,8 @@ import (
 )
 
 func TestMerge(t *testing.T) {
-	data := "ScanFile(dsl/ScanFile) OUT -> IN Split(dsl/Split)"
-	fname := "tokenizer.fbp"
+	data := "ScanFile(dsl/ScanFile) OUT -> IN Merge(dsl/Merge)"
+	fname := "merge.fbp"
 	file := &File{Name: fname, Data: []byte(data)}
 	tokens := []Token{
 		{
