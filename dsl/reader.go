@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 // File represents a source file
@@ -46,7 +47,7 @@ func (c *Reader) Process() {
 	}
 
 	for name := range c.Name {
-		r, err := os.Open(name)
+		r, err := os.Open(filepath.Clean(name))
 		if !check(err, name) {
 			continue
 		}

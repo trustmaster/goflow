@@ -343,7 +343,8 @@ func TestScanners(t *testing.T) {
 
 	t.Parallel()
 
-	for _, c := range cases {
+	for i := range cases {
+		c := cases[i]
 		t.Run(c.c+": "+c.name, func(t *testing.T) {
 			runCase(c, t)
 		})

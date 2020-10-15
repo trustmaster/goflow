@@ -8,7 +8,7 @@ import (
 
 func TestStartToken(t *testing.T) {
 	data := "ScanFile(dsl/ScanFile) OUT -> IN Split(dsl/Split)"
-	fname := "tokenizer.fbp"
+	fname := "start_token.fbp"
 	file := &File{Name: fname, Data: []byte(data)}
 
 	f := goflow.NewFactory()
