@@ -44,7 +44,6 @@ func TestMerge(t *testing.T) {
 	}
 
 	merge := i.(*Merge)
-
 	in := make(chan Token, 3)
 	out := make(chan Token)
 	merge.In = in
