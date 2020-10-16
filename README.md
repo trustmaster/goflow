@@ -131,7 +131,7 @@ Here are some Flow-based programming terms used in GoFlow:
 * Port - is a property of a Component or Graph through which it communicates with the outer world. There are input ports (Inports) and output ports (Outports). For GoFlow components it is a channel field.
 * Process - is a Component instance running in memory. In OOP terms a Process is an object of Component class.
 
-More terms can be found in [flowbased terms](http://flowbased.org/terms) and [FBP wiki](http://www.jpaulmorrison.com/cgi-bin/wiki.pl?action=index).
+More terms can be found in [Flow-based Wiki Terms](https://github.com/flowbased/flowbased.org/wiki/Terminology) and [FBP wiki](http://www.jpaulmorrison.com/cgi-bin/wiki.pl?action=index).
 
 ## Documentation
 
@@ -158,7 +158,7 @@ godoc github.com/trustmaster/goflow
 Here are related projects and resources:
 
 * [Flowbased.org](https://github.com/flowbased/flowbased.org/wiki), specifications and recommendations for FBP systems.
-* [J. Paul Morrison's Flow-Based Programming](http://www.jpaulmorrison.com/fbp/), the origin of FBP, [JavaFBP](https://github.com/jpaulm/javafbp), [C#FBP](https://github.com/jpaulm/csharpfbp) and [DrawFBP](https://github.com/jpaulm/drawfbp) diagramming tool.
+* [J. Paul Morrison's Flow-Based Programming](https://jpaulm.github.io/fbp/index.html), the origin of FBP, [JavaFBP](https://github.com/jpaulm/javafbp), [C#FBP](https://github.com/jpaulm/csharpfbp) and [DrawFBP](https://github.com/jpaulm/drawfbp) diagramming tool.
 * [NoFlo](http://noflojs.org/), FBP for JavaScript and Node.js
 * [Go](http://golang.org/), the Go programming language
 
