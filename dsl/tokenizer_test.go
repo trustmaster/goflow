@@ -10,79 +10,21 @@ import (
 func TestTokenizer(t *testing.T) {
 	fbpData := "StartToken(dsl/StartToken) INIT -> Merge"
 	expected := []Token{
-		{
-			Type:  tokNewFile,
-			Pos:   0,
-			Value: "test.fbp",
-		},
-		{
-			Type:  tokIdent,
-			Pos:   0,
-			Value: "StartToken",
-		},
-		{
-			Type:  tokLparen,
-			Pos:   10,
-			Value: "(",
-		},
-		{
-			Type:  tokIdent,
-			Pos:   11,
-			Value: "dsl",
-		},
-		{
-			Type:  tokSlash,
-			Pos:   14,
-			Value: "/",
-		},
-		{
-			Type:  tokIdent,
-			Pos:   15,
-			Value: "StartToken",
-		},
-		{
-			Type:  tokRparen,
-			Pos:   25,
-			Value: ")",
-		},
-		{
-			Type:  tokWhitespace,
-			Pos:   26,
-			Value: " ",
-		},
-		{
-			Type:  tokIdent,
-			Pos:   27,
-			Value: "INIT",
-		},
-		{
-			Type:  tokWhitespace,
-			Pos:   31,
-			Value: " ",
-		},
-		{
-			Type:  tokArrow,
-			Pos:   32,
-			Value: "->",
-		},
-		{
-			Type:  tokWhitespace,
-			Pos:   34,
-			Value: " ",
-		},
-		{
-			Type:  tokIdent,
-			Pos:   35,
-			Value: "Merge",
-		},
-		{
-			Type:  tokEOF,
-			Pos:   40,
-			Value: "test.fbp",
-		},
+		{Type: tokNewFile, Pos: 0, Value: "test.fbp"},
+		{Type: tokIdent, Pos: 0, Value: "StartToken"},
+		{Type: tokLparen, Pos: 10, Value: "("},
+		{Type: tokIdent, Pos: 11, Value: "dsl"},
+		{Type: tokSlash, Pos: 14, Value: "/"},
+		{Type: tokIdent, Pos: 15, Value: "StartToken"},
+		{Type: tokRparen, Pos: 25, Value: ")"},
+		{Type: tokWhitespace, Pos: 26, Value: " "},
+		{Type: tokIdent, Pos: 27, Value: "INIT"},
+		{Type: tokWhitespace, Pos: 31, Value: " "},
+		{Type: tokArrow, Pos: 32, Value: "->"},
+		{Type: tokWhitespace, Pos: 34, Value: " "},
+		{Type: tokIdent, Pos: 35, Value: "Merge"},
+		{Type: tokEOF, Pos: 40, Value: "test.fbp"},
 	}
-	in := make(chan *File)
-	out := make(chan Token)
 
 	f := goflow.NewFactory()
 	if err := RegisterComponents(f); err != nil {
@@ -97,6 +39,14 @@ func TestTokenizer(t *testing.T) {
 	}
 
 	n := i.(*goflow.Graph)
+
+	runTokenizerTestCase(t, n, fbpData, expected)
+}
+
+func runTokenizerTestCase(t *testing.T, n *goflow.Graph, fbpData string, expected []Token) {
+	in := make(chan *File)
+	out := make(chan Token)
+
 	if err := n.SetInPort("In", in); err != nil {
 		t.Error(err)
 		return

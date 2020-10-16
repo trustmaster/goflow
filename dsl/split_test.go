@@ -46,6 +46,10 @@ func TestSplit(t *testing.T) {
 
 	split := i.(*Split)
 
+	runSplitTestCase(t, split, numOuts, tokens)
+}
+
+func runSplitTestCase(t *testing.T, split *Split, numOuts int, tokens []Token) {
 	in := make(chan Token)
 	outs := make([](chan Token), numOuts)
 	split.In = in
@@ -59,8 +63,8 @@ func TestSplit(t *testing.T) {
 	wait := goflow.Run(split)
 
 	go func() {
-		for _, t := range tokens {
-			in <- t
+		for i := range tokens {
+			in <- tokens[i]
 		}
 
 		close(in)

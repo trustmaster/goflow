@@ -65,6 +65,25 @@ func (e LexError) Error() string {
 func NewTokenizer(f *goflow.Factory) (*goflow.Graph, error) {
 	n := goflow.NewGraph()
 
+	if err := defineTokenizerProcs(n, f); err != nil {
+		return n, err
+	}
+
+	if err := defineTokenizerConns(n); err != nil {
+		return n, err
+	}
+
+	if err := defineTokenizerIIPs(n); err != nil {
+		return n, err
+	}
+
+	n.MapInPort("In", "StartToken", "File")
+	n.MapOutPort("Out", "Merge", "Out")
+
+	return n, nil
+}
+
+func defineTokenizerProcs(n *goflow.Graph, f *goflow.Factory) error {
 	procs := []struct {
 		name      string
 		component string
@@ -93,10 +112,14 @@ func NewTokenizer(f *goflow.Factory) (*goflow.Graph, error) {
 	for i := range procs {
 		err := n.AddNew(procs[i].name, procs[i].component, f)
 		if err != nil {
-			return n, err
+			return err
 		}
 	}
 
+	return nil
+}
+
+func defineTokenizerConns(n *goflow.Graph) error {
 	conns := []struct {
 		srcName string
 		srcPort string
@@ -150,10 +173,14 @@ func NewTokenizer(f *goflow.Factory) (*goflow.Graph, error) {
 
 		err := n.Connect(conns[i].srcName, conns[i].srcPort, conns[i].tgtName, conns[i].tgtPort)
 		if err != nil {
-			return n, err
+			return err
 		}
 	}
 
+	return nil
+}
+
+func defineTokenizerIIPs(n *goflow.Graph) error {
 	iips := []struct {
 		proc, port string
 		val        TokenType
@@ -193,12 +220,9 @@ func NewTokenizer(f *goflow.Factory) (*goflow.Graph, error) {
 	for i := range iips {
 		err := n.AddIIP(iips[i].proc, iips[i].port, string(iips[i].val))
 		if err != nil {
-			return n, err
+			return err
 		}
 	}
 
-	n.MapInPort("In", "StartToken", "File")
-	n.MapOutPort("Out", "Merge", "Out")
-
-	return n, nil
+	return nil
 }
