@@ -138,11 +138,9 @@ More terms can be found in [flowbased terms](http://flowbased.org/terms) and [FB
 ### Contents
 
 1. [Components](https://github.com/trustmaster/goflow/wiki/Components)
-    1. [Ports, Events and Handlers](https://github.com/trustmaster/goflow/wiki/Components#ports-events-and-handlers)
-    2. [Processes and their lifetime](https://github.com/trustmaster/goflow/wiki/Components#processes-and-their-lifetime)
+    1. [Ports and Events](https://github.com/trustmaster/goflow/wiki/Components#ports-and-events)
+    2. [Process](https://github.com/trustmaster/goflow/wiki/Components#process)
     3. [State](https://github.com/trustmaster/goflow/wiki/Components#state)
-    4. [Concurrency](https://github.com/trustmaster/goflow/wiki/Components#concurrency)
-    5. [Internal state and Thread-safety](https://github.com/trustmaster/goflow/wiki/Components#internal-state-and-thread-safety)
 2. [Graphs](https://github.com/trustmaster/goflow/wiki/Graphs)
     1. [Structure definition](https://github.com/trustmaster/goflow/wiki/Graphs#structure-definition)
     2. [Behavior](https://github.com/trustmaster/goflow/wiki/Graphs#behavior)
