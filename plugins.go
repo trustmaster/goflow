@@ -20,11 +20,36 @@ type PlugIn interface {
 
 //PlugInS something
 type PlugInS struct {
-	params map[string]interface{}
+	params  map[string]interface{}
+	persist bool
+}
+
+func processForever(c Component) {
+	for {
+		c.Process()
+	}
+}
+
+func process(c Component) {
+	c.Process()
+}
+
+func (s *PlugInS) Process() {
+	if s.persist {
+		processForever(s)
+	} else {
+		process(s)
+	}
 }
 
 func (s *PlugInS) SetParams(params map[string]interface{}) error {
 	s.params = params
+	value, ok := params["persist"].(bool)
+	if ok {
+		s.persist = value
+	} else {
+		s.persist = false
+	}
 	return nil
 }
 
