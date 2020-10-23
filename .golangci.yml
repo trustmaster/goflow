@@ -379,6 +379,8 @@ linters:
     - rowserrcheck
     - scopelint
     - sqlclosecheck
+    - staticcheck
+    - stylecheck
     - unconvert
     - unparam
     - whitespace
@@ -395,9 +397,7 @@ linters:
     - lll
     - nestif
     - nlreturn
-    - staticcheck
     - structcheck
-    - stylecheck
     - testpackage
     - unused
 
