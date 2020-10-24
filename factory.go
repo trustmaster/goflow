@@ -54,7 +54,7 @@ func NewFactory(config ...FactoryConfig) *Factory {
 // Register registers a component so that it can be instantiated at run-time
 func (f *Factory) Register(componentName string, constructor Constructor) error {
 	if _, exists := f.registry[componentName]; exists {
-		return fmt.Errorf("Registry error: component '%s' already registered", componentName)
+		return fmt.Errorf("registry error: component '%s' already registered", componentName)
 	}
 
 	f.registry[componentName] = registryEntry{
@@ -70,7 +70,7 @@ func (f *Factory) Register(componentName string, constructor Constructor) error 
 // Annotate adds human-readable documentation for a component to the runtime
 func (f *Factory) Annotate(componentName string, annotation Annotation) error {
 	if _, exists := f.registry[componentName]; !exists {
-		return fmt.Errorf("Registry annotation error: component '%s' is not registered", componentName)
+		return fmt.Errorf("registry annotation error: component '%s' is not registered", componentName)
 	}
 
 	entry := f.registry[componentName]
@@ -89,7 +89,7 @@ func (f *Factory) Unregister(componentName string) error {
 		return nil
 	}
 
-	return fmt.Errorf("Registry error: component '%s' is not registered", componentName)
+	return fmt.Errorf("registry error: component '%s' is not registered", componentName)
 }
 
 // Create creates a new instance of a component registered under a specific name.
@@ -98,7 +98,7 @@ func (f *Factory) Create(componentName string) (interface{}, error) {
 		return info.Constructor()
 	}
 
-	return nil, fmt.Errorf("Factory error: component '%s' does not exist", componentName)
+	return nil, fmt.Errorf("factory error: component '%s' does not exist", componentName)
 }
 
 // // UpdateComponentInfo extracts run-time information about a

@@ -1,3 +1,4 @@
+// Package goflow implements a dataflow and flow-based programming library for Go.
 package goflow
 
 import (
@@ -83,7 +84,7 @@ func (n *Graph) Add(name string, c interface{}) error {
 	_, isGraph := c.(Graph)
 
 	if !isComponent && !isGraph {
-		return fmt.Errorf("Could not add process '%s': instance is neither Component nor Graph", name)
+		return fmt.Errorf("could not add process '%s': instance is neither Component nor Graph", name)
 	}
 	// Add to the map of processes
 	n.procs[name] = c
@@ -112,7 +113,7 @@ func (n *Graph) AddNew(processName string, componentName string, f *Factory) err
 // the graph. Then it drops the process itself.
 func (n *Graph) Remove(processName string) error {
 	if _, exists := n.procs[processName]; !exists {
-		return fmt.Errorf("Could not remove process: '%s' does not exist", processName)
+		return fmt.Errorf("could not remove process: '%s' does not exist", processName)
 	}
 
 	delete(n.procs, processName)
