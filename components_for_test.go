@@ -35,8 +35,6 @@ type adder struct {
 }
 
 func (c *adder) Process() {
-	guard := NewInputGuard("op1", "op2")
-
 	op1Buf := make([]int, 0, 10)
 	op2Buf := make([]int, 0, 10)
 	addOp := func(op int, buf, otherBuf *[]int) {
@@ -49,21 +47,22 @@ func (c *adder) Process() {
 		}
 	}
 
-	for {
+	for c.Op1 != nil || c.Op2 != nil {
 		select {
 		case op1, ok := <-c.Op1:
-			if ok {
-				addOp(op1, &op1Buf, &op2Buf)
-			} else if guard.Complete("op1") {
-				return
+			if !ok {
+				c.Op1 = nil
+				break
 			}
 
+			addOp(op1, &op1Buf, &op2Buf)
 		case op2, ok := <-c.Op2:
-			if ok {
-				addOp(op2, &op2Buf, &op1Buf)
-			} else if guard.Complete("op2") {
-				return
+			if !ok {
+				c.Op2 = nil
+				break
 			}
+
+			addOp(op2, &op2Buf, &op1Buf)
 		}
 	}
 }
@@ -89,27 +88,27 @@ type repeater struct {
 }
 
 func (c *repeater) Process() {
-	guard := NewInputGuard("word", "times")
-
 	times := 0
 	word := ""
 
-	for {
+	for c.Times != nil || c.Word != nil {
 		select {
 		case t, ok := <-c.Times:
-			if ok {
-				times = t
-				c.repeat(word, times)
-			} else if guard.Complete("times") {
-				return
+			if !ok {
+				c.Times = nil
+				break
 			}
+
+			times = t
+			c.repeat(word, times)
 		case w, ok := <-c.Word:
-			if ok {
-				word = w
-				c.repeat(word, times)
-			} else if guard.Complete("word") {
-				return
+			if !ok {
+				c.Word = nil
+				break
 			}
+
+			word = w
+			c.repeat(word, times)
 		}
 	}
 }
