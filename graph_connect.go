@@ -31,7 +31,7 @@ type connection struct {
 	buffer  int
 }
 
-// Connect connects a sender to a receiver and creates a channel between them using BufferSize configuratio nof the graph.
+// Connect a sender to a receiver and create a channel between them using BufferSize graph configuration.
 // Normally such a connection is unbuffered but you can change by setting flow.DefaultBufferSize > 0 or
 // by using ConnectBuf() function instead.
 // It returns true on success or panics and returns false if error occurs.
