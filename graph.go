@@ -7,45 +7,27 @@ import (
 	"sync"
 )
 
-// GraphConfig sets up properties for a graph
+// GraphConfig sets up properties for a graph.
 type GraphConfig struct {
-	Capacity   uint
 	BufferSize int
-}
-
-// defaultGraphConfig provides defaults for GraphConfig
-func defaultGraphConfig() GraphConfig {
-	return GraphConfig{
-		Capacity:   32,
-		BufferSize: 0,
-	}
 }
 
 // Graph represents a graph of processes connected with packet channels.
 type Graph struct {
-	// Configuration for the graph
-	conf GraphConfig
-	// Wait is used for graceful network termination.
-	waitGrp *sync.WaitGroup
-	// procs contains the processes of the network.
-	procs map[string]interface{}
-	// inPorts maps network incoming ports to component ports.
-	inPorts map[string]port
-	// outPorts maps network outgoing ports to component ports.
-	outPorts map[string]port
-	// connections contains graph edges and channels.
-	connections []connection
-	// chanListenersCount tracks how many outports use the same channel
-	chanListenersCount map[uintptr]uint
-	// chanListenersCountLock is used to synchronize operations on the chanListenersCount map.
-	chanListenersCountLock sync.Locker
-	// iips contains initial IPs attached to the network
-	iips []iip
+	conf                   GraphConfig            // Graph configuration
+	waitGrp                *sync.WaitGroup        // Wait group for a graceful termination
+	procs                  map[string]interface{} // Network processes
+	inPorts                map[string]port        // Map of network incoming ports to component ports
+	outPorts               map[string]port        // Map of network outgoing ports to component ports
+	connections            []connection           // Network graph edges (inter-process connections)
+	chanListenersCount     map[uintptr]uint       // Tracks how many outports use the same channel
+	chanListenersCountLock sync.Locker            // Used to synchronize operations on the chanListenersCount map
+	iips                   []iip                  // Initial Information Packets to be sent to the network on start
 }
 
-// NewGraph returns a new initialized empty graph instance
+// NewGraph returns a new initialized empty graph instance.
 func NewGraph(config ...GraphConfig) *Graph {
-	conf := defaultGraphConfig()
+	conf := GraphConfig{}
 	if len(config) == 1 {
 		conf = config[0]
 	}
@@ -53,17 +35,15 @@ func NewGraph(config ...GraphConfig) *Graph {
 	return &Graph{
 		conf:                   conf,
 		waitGrp:                new(sync.WaitGroup),
-		procs:                  make(map[string]interface{}, conf.Capacity),
-		inPorts:                make(map[string]port, conf.Capacity),
-		outPorts:               make(map[string]port, conf.Capacity),
-		connections:            make([]connection, 0, conf.Capacity),
-		chanListenersCount:     make(map[uintptr]uint, conf.Capacity),
+		procs:                  make(map[string]interface{}),
+		inPorts:                make(map[string]port),
+		outPorts:               make(map[string]port),
+		chanListenersCount:     make(map[uintptr]uint),
 		chanListenersCountLock: new(sync.Mutex),
-		iips:                   make([]iip, 0, conf.Capacity),
 	}
 }
 
-// NewDefaultGraph is a ComponentConstructor for the factory
+// NewDefaultGraph is a ComponentConstructor for the factory.
 func NewDefaultGraph() interface{} {
 	return NewGraph()
 }
@@ -172,7 +152,7 @@ func (n *Graph) Remove(processName string) error {
 // 	return n.waitGrp
 // }
 
-// Process runs the network
+// Process runs the network.
 func (n *Graph) Process() {
 	err := n.sendIIPs()
 	if err != nil {

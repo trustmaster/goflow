@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// Test a simple component that runs only once
+// Test a simple component that runs only once.
 func TestSimpleComponent(t *testing.T) {
 	in := make(chan int)
 	out := make(chan int)
@@ -26,7 +26,7 @@ func TestSimpleComponent(t *testing.T) {
 	<-wait
 }
 
-// Test a simple long running component with one input
+// Test a simple long running component with one input.
 func TestSimpleLongRunningComponent(t *testing.T) {
 	data := map[int]int{
 		12:  24,

@@ -2,11 +2,10 @@ package goflow
 
 import "fmt"
 
-// Constructor is used to create a component instance at run-time
+// Constructor is used to create a component instance at run-time.
 type Constructor func() (interface{}, error)
 
-// Annotation provides reference information about a component
-// to graph designers and operators
+// Annotation provides reference information about a component to graph designers and operators.
 type Annotation struct {
 	// Description tells what the component does
 	Description string
@@ -14,7 +13,7 @@ type Annotation struct {
 	Icon string
 }
 
-// registryEntry contains runtime information about a component
+// registryEntry contains runtime information about a component.
 type registryEntry struct {
 	// Constructor is a function that creates a component instance.
 	// It is required for the factory to add components at run-time.
@@ -23,7 +22,7 @@ type registryEntry struct {
 	Info ComponentInfo
 }
 
-// FactoryConfig sets up properties of a Factory
+// FactoryConfig sets up properties of a Factory.
 type FactoryConfig struct {
 	RegistryCapacity uint
 }
@@ -34,12 +33,12 @@ func defaultFactoryConfig() FactoryConfig {
 	}
 }
 
-// Factory registers components and creates their instances at run-time
+// Factory registers components and creates their instances at run-time.
 type Factory struct {
 	registry map[string]registryEntry
 }
 
-// NewFactory creates a new component Factory instance
+// NewFactory creates a new component Factory instance.
 func NewFactory(config ...FactoryConfig) *Factory {
 	conf := defaultFactoryConfig()
 	if len(config) == 1 {
@@ -51,7 +50,7 @@ func NewFactory(config ...FactoryConfig) *Factory {
 	}
 }
 
-// Register registers a component so that it can be instantiated at run-time
+// Register registers a component so that it can be instantiated at run-time.
 func (f *Factory) Register(componentName string, constructor Constructor) error {
 	if _, exists := f.registry[componentName]; exists {
 		return fmt.Errorf("registry error: component '%s' already registered", componentName)
@@ -67,7 +66,7 @@ func (f *Factory) Register(componentName string, constructor Constructor) error 
 	return nil
 }
 
-// Annotate adds human-readable documentation for a component to the runtime
+// Annotate adds human-readable documentation for a component to the runtime.
 func (f *Factory) Annotate(componentName string, annotation Annotation) error {
 	if _, exists := f.registry[componentName]; !exists {
 		return fmt.Errorf("registry annotation error: component '%s' is not registered", componentName)

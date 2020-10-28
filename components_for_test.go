@@ -4,7 +4,7 @@ import (
 	"sync"
 )
 
-// doubler doubles its input
+// doubler doubles its input.
 type doubler struct {
 	In  <-chan int
 	Out chan<- int
@@ -16,7 +16,7 @@ func (c *doubler) Process() {
 	}
 }
 
-// doubleOnce is a non-resident version of doubler
+// doubleOnce is a non-resident version of doubler.
 type doubleOnce struct {
 	In  <-chan int
 	Out chan<- int
@@ -27,7 +27,7 @@ func (c *doubleOnce) Process() {
 	c.Out <- 2 * i
 }
 
-// A component with two inputs and one output
+// A component with two inputs and one output.
 type adder struct {
 	Op1 <-chan int
 	Op2 <-chan int
@@ -67,7 +67,7 @@ func (c *adder) Process() {
 	}
 }
 
-// echo passes input to the output
+// echo passes input to the output.
 type echo struct {
 	In  <-chan int
 	Out chan<- int
@@ -79,7 +79,7 @@ func (c *echo) Process() {
 	}
 }
 
-// repeater repeats an input string a given number of times
+// repeater repeats an input string a given number of times.
 type repeater struct {
 	Word  <-chan string
 	Times <-chan int
@@ -123,14 +123,14 @@ func (c *repeater) repeat(word string, times int) {
 	}
 }
 
-// router routes input map port to output
+// router routes input map port to output.
 type router struct {
 	In  map[string]<-chan int
 	Out map[string]chan<- int
 }
 
 // Process routes incoming packets to the output by sending them to the same
-// outport key as the inport key they arrived at
+// outport key as the inport key they arrived at.
 func (c *router) Process() {
 	wg := new(sync.WaitGroup)
 
@@ -153,14 +153,14 @@ func (c *router) Process() {
 	wg.Wait()
 }
 
-// irouter routes input array port to output
+// irouter routes input array port to output.
 type irouter struct {
 	In  [](<-chan int)
 	Out [](chan<- int)
 }
 
 // Process routes incoming packets to the output by sending them to the same
-// outport key as the inport key they arrived at
+// outport key as the inport key they arrived at.
 func (c *irouter) Process() {
 	wg := new(sync.WaitGroup)
 
