@@ -51,8 +51,6 @@ func (n *Graph) sendIIPs() error {
 			channel, found = n.channelByConnectionAddr(ip.addr)
 		}
 
-		shouldClose := false
-
 		if !found {
 			// Try to find a proc and attach a new channel to it
 			recvPort, err := n.getProcPort(ip.addr.proc, ip.addr.port, reflect.RecvDir)
@@ -66,21 +64,23 @@ func (n *Graph) sendIIPs() error {
 			}
 
 			found = true
-			shouldClose = true
 		}
 
 		if !found {
 			return fmt.Errorf("IIP target not found: '%s'", ip.addr)
 		}
 
+		// Increase reference count for the channel
+		n.incChanListenersCount(channel)
+
 		// Send data to the port
-		go func(channel, data reflect.Value, close bool) {
+		go func(channel, data reflect.Value) {
 			channel.Send(data)
 
-			if close {
+			if n.decChanListenersCount(channel) {
 				channel.Close()
 			}
-		}(channel, reflect.ValueOf(ip.data), shouldClose)
+		}(channel, reflect.ValueOf(ip.data))
 	}
 
 	return nil

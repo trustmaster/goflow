@@ -1,6 +1,7 @@
 package goflow
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -85,7 +86,7 @@ func newRepeatGraph2Ins() (*Graph, error) {
 	return n, nil
 }
 
-func TestGraphInportIIP(t *testing.T) {
+func TestGraphInportIIP(t *testing.T) { //nolint:funlen
 	n, err := newRepeatGraph2Ins()
 	if err != nil {
 		t.Error(err)
@@ -127,9 +128,14 @@ func TestGraphInportIIP(t *testing.T) {
 		close(in)
 	}()
 
+	// As times channel is referenced from both IIP and external connection,
+	// it needs reference counting to avoid data race when closing
+	vTimes := reflect.ValueOf(times)
+	n.incChanListenersCount(vTimes)
+
 	i := 0
 	for actual := range out {
-		if i == 0 {
+		if i == 0 && n.decChanListenersCount(vTimes) {
 			// The graph inport needs to be closed once the IIP is sent
 			close(times)
 		}
