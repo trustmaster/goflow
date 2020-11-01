@@ -5,14 +5,11 @@ import (
 	"reflect"
 )
 
-// port stores full port information within the network.
+// port within the network.
 type port struct {
-	// Address of the port in the graph
-	addr address
-	// Actual channel attached
-	channel reflect.Value
-	// Runtime info
-	info PortInfo
+	addr    address       // Address of the port in the graph
+	channel reflect.Value // Actual channel attached
+	info    PortInfo      // Runtime info
 }
 
 // MapInPort adds an inport to the net and maps it to a contained proc's port.

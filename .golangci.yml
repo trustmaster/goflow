@@ -348,6 +348,7 @@ linters:
     - megacheck
     - govet
     - gocritic
+    - godot
     - gofumpt
     - gosec
     - golint
@@ -391,7 +392,6 @@ linters:
     - dupl
     - gocognit
     - gocyclo
-    - godot
     - godox
     - goerr113
     - gomnd

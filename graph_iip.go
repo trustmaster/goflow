@@ -5,14 +5,14 @@ import (
 	"reflect"
 )
 
-// iip stands for Initial Information Packet representation
-// within the network.
+// iip is the Initial Information Packet.
+// IIPs are delivered to process input ports on the network start.
 type iip struct {
 	data interface{}
 	addr address
 }
 
-// AddIIP adds an Initial Information packet to the network
+// AddIIP adds an Initial Information packet to the network.
 func (n *Graph) AddIIP(processName, portName string, data interface{}) error {
 	addr := parseAddress(processName, portName)
 
@@ -24,7 +24,7 @@ func (n *Graph) AddIIP(processName, portName string, data interface{}) error {
 	return fmt.Errorf("AddIIP: could not find '%s'", addr)
 }
 
-// RemoveIIP detaches an IIP from specific process and port
+// RemoveIIP detaches an IIP from specific process and port.
 func (n *Graph) RemoveIIP(processName, portName string) error {
 	addr := parseAddress(processName, portName)
 	for i := range n.iips {
@@ -38,7 +38,7 @@ func (n *Graph) RemoveIIP(processName, portName string) error {
 	return fmt.Errorf("RemoveIIP: could not find IIP for '%s'", addr)
 }
 
-// sendIIPs sends Initial Information Packets upon network start
+// sendIIPs sends Initial Information Packets upon network start.
 func (n *Graph) sendIIPs() error {
 	// Send initial IPs
 	for i := range n.iips {
@@ -86,7 +86,7 @@ func (n *Graph) sendIIPs() error {
 	return nil
 }
 
-// channelByInPortAddr returns a channel by address from the network inports
+// channelByInPortAddr returns a channel by address from the network inports.
 func (n *Graph) channelByInPortAddr(addr address) (channel reflect.Value, found bool) {
 	for i := range n.inPorts {
 		if n.inPorts[i].addr == addr {
@@ -97,7 +97,7 @@ func (n *Graph) channelByInPortAddr(addr address) (channel reflect.Value, found 
 	return reflect.Value{}, false
 }
 
-// channelByConnectionAddr returns a channel by address from connections
+// channelByConnectionAddr returns a channel by address from connections.
 func (n *Graph) channelByConnectionAddr(addr address) (channel reflect.Value, found bool) {
 	for i := range n.connections {
 		if n.connections[i].tgt == addr {
