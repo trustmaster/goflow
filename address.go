@@ -17,38 +17,37 @@ type address struct {
 // noIndex is a "zero" index value. Not a `0` since 0 is a valid array index.
 const noIndex = -1
 
-// addressKind defines the kind of the addressed port.
-type addressKind uint
+type portKind uint
 
 const (
-	addressKindNone addressKind = iota
-	addressKindChan
-	addressKindArray
-	addressKindMap
+	portKindNone portKind = iota
+	portKindChan
+	portKindArray
+	portKindMap
 )
 
-func (a address) kind() addressKind {
+func (a address) kind() portKind {
 	switch {
 	case len(a.proc) == 0 || len(a.port) == 0:
-		return addressKindNone
+		return portKindNone
 	case a.index != noIndex:
-		return addressKindArray
+		return portKindArray
 	case len(a.key) != 0:
-		return addressKindMap
+		return portKindMap
 	default:
-		return addressKindChan
+		return portKindChan
 	}
 }
 
 func (a address) String() string {
 	switch a.kind() {
-	case addressKindChan:
+	case portKindChan:
 		return fmt.Sprintf("%s.%s", a.proc, a.port)
-	case addressKindArray:
+	case portKindArray:
 		return fmt.Sprintf("%s.%s[%d]", a.proc, a.port, a.index)
-	case addressKindMap:
+	case portKindMap:
 		return fmt.Sprintf("%s.%s[%s]", a.proc, a.port, a.key)
-	case addressKindNone: // makes go-lint happy
+	case portKindNone: // makes go-lint happy
 	}
 
 	return "<none>"

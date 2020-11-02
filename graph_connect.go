@@ -137,13 +137,13 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 
 func attachPort(port reflect.Value, addr address, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
 	switch addr.kind() {
-	case addressKindChan:
+	case portKindChan:
 		return attachChanPort(port, dir, ch, bufSize)
-	case addressKindArray:
+	case portKindArray:
 		return attachArrayPort(port, addr.index, dir, ch, bufSize)
-	case addressKindMap:
+	case portKindMap:
 		return attachMapPort(port, addr.key, dir, ch, bufSize)
-	case addressKindNone: // makes go-lint happy
+	case portKindNone: // makes go-lint happy
 	}
 
 	return reflect.Value{}, fmt.Errorf("invalid address %v", addr)
