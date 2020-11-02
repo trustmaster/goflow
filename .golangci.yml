@@ -367,6 +367,7 @@ linters:
     - goconst
     - goheader
     - goimports
+    - gomnd
     - gomodguard
     - goprintffuncname
     - ineffassign
@@ -394,7 +395,6 @@ linters:
     - gocyclo
     - godox
     - goerr113
-    - gomnd
     - nestif
     - nlreturn
     - structcheck

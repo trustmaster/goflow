@@ -3,25 +3,7 @@ package goflow
 import (
 	"fmt"
 	"reflect"
-	"strconv"
-	"strings"
 )
-
-// address is a full port accessor including the index part.
-type address struct {
-	proc  string // Process name
-	port  string // Component port name
-	key   string // Port key (only for map ports)
-	index int    // Port index (only for array ports)
-}
-
-func (a address) String() string {
-	if a.key != "" {
-		return fmt.Sprintf("%s.%s[%s]", a.proc, a.port, a.key)
-	}
-
-	return fmt.Sprintf("%s.%s", a.proc, a.port)
-}
 
 // connection stores information about a connection within the net.
 type connection struct {
@@ -98,11 +80,10 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 
 // getProcPort finds an assignable port field in one of the subprocesses.
 func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (reflect.Value, error) {
-	nilValue := reflect.ValueOf(nil)
 	// Check if process exists
 	proc, ok := n.procs[procName]
 	if !ok {
-		return nilValue, fmt.Errorf("getProcPort: process '%s' not found", procName)
+		return reflect.Value{}, fmt.Errorf("getProcPort: process '%s' not found", procName)
 	}
 
 	// Check if process is settable
@@ -112,7 +93,7 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 	}
 
 	if !val.CanSet() {
-		return nilValue, fmt.Errorf("getProcPort: process '%s' is not settable", procName)
+		return reflect.Value{}, fmt.Errorf("getProcPort: process '%s' is not settable", procName)
 	}
 
 	// Get the port value
@@ -134,7 +115,7 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 
 		p, ok := ports[portName]
 		if !ok {
-			return nilValue, fmt.Errorf("getProcPort: subgraph '%s' does not have inport '%s'", procName, portName)
+			return reflect.Value{}, fmt.Errorf("getProcPort: subgraph '%s' does not have inport '%s'", procName, portName)
 		}
 
 		portVal, err = net.getProcPort(p.addr.proc, p.addr.port, dir)
@@ -148,22 +129,24 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 	}
 
 	if err != nil {
-		return nilValue, fmt.Errorf("getProcPort: %w", err)
+		return reflect.Value{}, fmt.Errorf("getProcPort: %w", err)
 	}
 
 	return portVal, nil
 }
 
 func attachPort(port reflect.Value, addr address, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
-	if addr.index > -1 {
+	switch addr.kind() {
+	case addressKindChan:
+		return attachChanPort(port, dir, ch, bufSize)
+	case addressKindArray:
 		return attachArrayPort(port, addr.index, dir, ch, bufSize)
-	}
-
-	if addr.key != "" {
+	case addressKindMap:
 		return attachMapPort(port, addr.key, dir, ch, bufSize)
+	case addressKindNone: // makes go-lint happy
 	}
 
-	return attachChanPort(port, dir, ch, bufSize)
+	return reflect.Value{}, fmt.Errorf("invalid address %v", addr)
 }
 
 func attachChanPort(port reflect.Value, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {
@@ -210,8 +193,10 @@ func attachArrayPort(port reflect.Value, key int, dir reflect.ChanDir, ch reflec
 		port.Set(m)
 	}
 
+	const scalingFactor = 2
+
 	if port.Cap() <= key {
-		port.SetCap(2 * key)
+		port.SetCap(scalingFactor * key)
 	}
 
 	if port.Len() <= key {
@@ -246,67 +231,14 @@ func validateCanSet(portVal reflect.Value) error {
 }
 
 func selectOrMakeChan(new, existing reflect.Value, t reflect.Type, bufSize int) reflect.Value {
-	if !new.IsValid() || new.IsNil() {
-		if existing.IsValid() && !existing.IsNil() {
-			return existing
-		}
-
-		chanType := reflect.ChanOf(reflect.BothDir, t)
-		new = reflect.MakeChan(chanType, bufSize)
+	switch {
+	case new.IsValid() && !new.IsNil():
+		return new
+	case existing.IsValid() && !existing.IsNil():
+		return existing
 	}
 
-	return new
-}
-
-// parseAddress unfolds a string port name into parts, including array index or hashmap key.
-func parseAddress(proc, port string) address {
-	n := address{
-		proc:  proc,
-		port:  port,
-		index: -1,
-	}
-	keyPos := 0
-	key := ""
-
-	for i, r := range port {
-		if r == '[' {
-			keyPos = i + 1
-			n.port = port[0:i]
-		}
-
-		if r == ']' {
-			key = port[keyPos:i]
-		}
-	}
-
-	n.port = capitalizePortName(n.port)
-
-	if key == "" {
-		return n
-	}
-
-	if i, err := strconv.Atoi(key); err == nil {
-		n.index = i
-	} else {
-		n.key = key
-	}
-
-	n.key = key
-
-	return n
-}
-
-// capitalizePortName converts port names defined in UPPER or lower case to Title case,
-// which is more common for structs in Go.
-func capitalizePortName(name string) string {
-	lower := strings.ToLower(name)
-	upper := strings.ToUpper(name)
-
-	if name == lower || name == upper {
-		return strings.Title(lower)
-	}
-
-	return name
+	return reflect.MakeChan(reflect.ChanOf(reflect.BothDir, t), bufSize)
 }
 
 // findExistingChan returns a channel attached to receiver if it already exists among connections.
