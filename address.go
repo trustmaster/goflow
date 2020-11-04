@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 // address is a full port accessor including the index part.
@@ -53,42 +54,68 @@ func (a address) String() string {
 	return "<none>"
 }
 
-// parseAddress unfolds a string port name into parts, including array index or hashmap key.
-func parseAddress(proc, port string) address {
-	n := address{
+// parseAddress validates and constructs a port address.
+// port parameter may include an array index ("<port name>[<index>]") or a hashmap key ("<port name>[<key>]").
+func parseAddress(proc, port string) (address, error) {
+	switch {
+	case len(proc) == 0:
+		return address{}, fmt.Errorf("empty process name")
+	case len(port) == 0:
+		return address{}, fmt.Errorf("empty port name")
+	}
+
+	// Validate the proc contents
+	for i, r := range proc {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+			return address{}, fmt.Errorf("unexpected %q at process name index %d", r, i)
+		}
+	}
+
+	keyPos := 0
+	a := address{
 		proc:  proc,
 		port:  port,
 		index: noIndex,
 	}
-	keyPos := 0
-	key := ""
 
+	// Validate and parse the port contents in one scan
 	for i, r := range port {
-		if r == '[' {
+		switch {
+		case r == '[':
+			if i == 0 || keyPos > 0 {
+				// '[' at the very beginning of the port or a second '[' found
+				return address{}, fmt.Errorf("unexpected '[' at port name index %d", i)
+			}
+
 			keyPos = i + 1
-			n.port = port[0:i]
+			a.port = port[:i]
+		case r == ']':
+			switch {
+			case keyPos == 0:
+				// No preceding matching '['
+				return address{}, fmt.Errorf("unexpected ']' at port name index %d", i)
+			case i != len(port)-1:
+				// Closing bracket is not the last rune
+				return address{}, fmt.Errorf("unexpected %q at port name index %d", port[i+1:], i)
+			}
+
+			if idx, err := strconv.Atoi(port[keyPos:i]); err != nil {
+				a.key = port[keyPos:i]
+			} else {
+				a.index = idx
+			}
+		case !unicode.IsLetter(r) && !unicode.IsDigit(r):
+			return address{}, fmt.Errorf("unexpected %q at port name index %d", r, i)
 		}
-
-		if r == ']' {
-			key = port[keyPos:i]
-		}
 	}
 
-	n.port = capitalizePortName(n.port)
-
-	if key == "" {
-		return n
+	if keyPos != 0 && len(a.key) == 0 && a.index == noIndex {
+		return address{}, fmt.Errorf("unmatched '[' at port name index %d", keyPos-1)
 	}
 
-	if i, err := strconv.Atoi(key); err == nil {
-		n.index = i
-	} else {
-		n.key = key
-	}
+	a.port = capitalizePortName(a.port)
 
-	n.key = key
-
-	return n
+	return a, nil
 }
 
 // capitalizePortName converts port names defined in UPPER or lower case to Title case,

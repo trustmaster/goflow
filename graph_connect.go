@@ -24,14 +24,20 @@ func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort strin
 // ConnectBuf connects a sender to a receiver using a channel with a buffer of a given size.
 // It returns true on success or panics and returns false if error occurs.
 func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort string, bufferSize int) error {
-	sendAddr := parseAddress(senderName, senderPort)
+	sendAddr, err := parseAddress(senderName, senderPort)
+	if err != nil {
+		return fmt.Errorf("bad sender address: %w", err)
+	}
 
 	sendPort, err := n.getProcPort(senderName, sendAddr.port, reflect.SendDir)
 	if err != nil {
 		return fmt.Errorf("connect: %w", err)
 	}
 
-	recvAddr := parseAddress(receiverName, receiverPort)
+	recvAddr, err := parseAddress(receiverName, receiverPort)
+	if err != nil {
+		return fmt.Errorf("bad receiver address: %w", err)
+	}
 
 	recvPort, err := n.getProcPort(receiverName, recvAddr.port, reflect.RecvDir)
 	if err != nil {
