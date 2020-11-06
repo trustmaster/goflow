@@ -16,7 +16,6 @@ type connection struct {
 // Connect a sender to a receiver and create a channel between them using BufferSize graph configuration.
 // Normally such a connection is unbuffered but you can change by setting flow.DefaultBufferSize > 0 or
 // by using ConnectBuf() function instead.
-// It returns true on success or panics and returns false if error occurs.
 func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort string) error {
 	return n.ConnectBuf(senderName, senderPort, receiverName, receiverPort, n.conf.BufferSize)
 }
@@ -160,8 +159,8 @@ func attachChanPort(port reflect.Value, dir reflect.ChanDir, ch reflect.Value, b
 		return ch, err
 	}
 
-	if err := validateCanSet(port); err != nil {
-		return ch, err
+	if !port.CanSet() {
+		return ch, fmt.Errorf("port is not assignable")
 	}
 
 	ch = selectOrMakeChan(ch, port, port.Type().Elem(), bufSize)
@@ -194,18 +193,18 @@ func attachArrayPort(port reflect.Value, key int, dir reflect.ChanDir, ch reflec
 		return ch, err
 	}
 
-	if port.IsNil() {
-		m := reflect.MakeSlice(port.Type(), 0, 32)
-		port.Set(m)
-	}
-
 	const scalingFactor = 2
 
-	if port.Cap() <= key {
-		port.SetCap(scalingFactor * key)
-	}
-
-	if port.Len() <= key {
+	switch {
+	case port.IsNil():
+		// Allocate a new slice
+		port.Set(reflect.MakeSlice(port.Type(), key+1, scalingFactor*(key+1)))
+	case port.Cap() <= key:
+		// Allocate a new slice and copy all of the old contents, fallthrough since length is always less than capacity.
+		port.Set(reflect.AppendSlice(reflect.MakeSlice(port.Type(), 0, scalingFactor*(key+1)), port))
+		fallthrough
+	case port.Len() <= key:
+		// Extend the slice
 		port.SetLen(key + 1)
 	}
 
@@ -217,20 +216,11 @@ func attachArrayPort(port reflect.Value, key int, dir reflect.ChanDir, ch reflec
 }
 
 func validateChanDir(portType reflect.Type, dir reflect.ChanDir) error {
-	if portType.Kind() != reflect.Chan {
+	switch {
+	case portType.Kind() != reflect.Chan:
 		return fmt.Errorf("not a channel")
-	}
-
-	if portType.ChanDir()&dir == 0 {
+	case portType.ChanDir()&dir == 0:
 		return fmt.Errorf("channel does not support direction %s", dir.String())
-	}
-
-	return nil
-}
-
-func validateCanSet(portVal reflect.Value) error {
-	if !portVal.CanSet() {
-		return fmt.Errorf("port is not assignable")
 	}
 
 	return nil
@@ -249,23 +239,15 @@ func selectOrMakeChan(new, existing reflect.Value, t reflect.Type, bufSize int) 
 
 // findExistingChan returns a channel attached to receiver if it already exists among connections.
 func (n *Graph) findExistingChan(addr address, dir reflect.ChanDir) reflect.Value {
-	var channel reflect.Value
 	// Find existing channel attached to the receiver
 	for i := range n.connections {
-		var a address
-		if dir == reflect.SendDir {
-			a = n.connections[i].src
-		} else {
-			a = n.connections[i].tgt
-		}
-
-		if a == addr {
-			channel = n.connections[i].channel
-			break
+		if dir == reflect.SendDir && n.connections[i].src == addr ||
+			dir == reflect.RecvDir && n.connections[i].tgt == addr {
+			return n.connections[i].channel
 		}
 	}
 
-	return channel
+	return reflect.Value{}
 }
 
 // incChanListenersCount increments SendChanRefCount.
