@@ -161,7 +161,7 @@ func TestSubgraphReceiver(t *testing.T) {
 func newFanOutFanIn() (*Graph, error) {
 	n := NewGraph()
 
-	components := map[string]interface{}{
+	components := map[string]Component{
 		"e1": new(echo),
 		"d1": new(doubler),
 		"d2": new(doubler),
@@ -251,7 +251,7 @@ func TestFanOutFanIn(t *testing.T) {
 func newMapPorts() (*Graph, error) {
 	n := NewGraph()
 
-	components := map[string]interface{}{
+	components := map[string]Component{
 		"e1":  new(echo),
 		"e11": new(echo),
 		"e22": new(echo),
@@ -354,7 +354,7 @@ func TestMapPorts(t *testing.T) {
 func newArrayPorts() (*Graph, error) {
 	n := NewGraph()
 
-	components := map[string]interface{}{
+	components := map[string]Component{
 		"e0":  new(echo),
 		"e00": new(echo),
 		"e11": new(echo),
