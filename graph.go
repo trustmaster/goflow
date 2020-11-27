@@ -187,7 +187,7 @@ func (n *Graph) closeProcOuts(proc interface{}) {
 		field := val.Field(i)
 		fieldType := field.Type()
 
-		if field.IsNil() || !(field.IsValid() && field.Kind() == reflect.Chan && field.CanSet() &&
+		if !(field.IsValid() && field.Kind() == reflect.Chan && field.CanSet() &&
 			fieldType.ChanDir()&reflect.SendDir != 0 && fieldType.ChanDir()&reflect.RecvDir == 0) {
 			continue
 		}
