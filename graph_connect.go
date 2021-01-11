@@ -7,12 +7,12 @@ import (
 	"strings"
 )
 
-// address is a full port accessor including the index part
+// address is a full port accessor including the index part.
 type address struct {
-	proc  string
-	port  string
-	key   string
-	index int
+	proc  string // Process name
+	port  string // Component port name
+	key   string // Port key (only for map ports)
+	index int    // Port index (only for array ports)
 }
 
 func (a address) String() string {
@@ -31,7 +31,7 @@ type connection struct {
 	buffer  int
 }
 
-// Connect connects a sender to a receiver and creates a channel between them using BufferSize configuratio nof the graph.
+// Connect a sender to a receiver and create a channel between them using BufferSize graph configuration.
 // Normally such a connection is unbuffered but you can change by setting flow.DefaultBufferSize > 0 or
 // by using ConnectBuf() function instead.
 // It returns true on success or panics and returns false if error occurs.
@@ -90,12 +90,13 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 		src:     sendAddr,
 		tgt:     recvAddr,
 		channel: ch,
-		buffer:  bufferSize})
+		buffer:  bufferSize,
+	})
 
 	return nil
 }
 
-// getProcPort finds an assignable port field in one of the subprocesses
+// getProcPort finds an assignable port field in one of the subprocesses.
 func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (reflect.Value, error) {
 	nilValue := reflect.ValueOf(nil)
 	// Check if process exists
@@ -257,7 +258,7 @@ func selectOrMakeChan(new, existing reflect.Value, t reflect.Type, bufSize int) 
 	return new
 }
 
-// parseAddress unfolds a string port name into parts, including array index or hashmap key
+// parseAddress unfolds a string port name into parts, including array index or hashmap key.
 func parseAddress(proc, port string) address {
 	n := address{
 		proc:  proc,
@@ -295,8 +296,8 @@ func parseAddress(proc, port string) address {
 	return n
 }
 
-// capitalizePortName contains port names defined in UPPER or lower case to Title case,
-// which is more common for structs in Go
+// capitalizePortName converts port names defined in UPPER or lower case to Title case,
+// which is more common for structs in Go.
 func capitalizePortName(name string) string {
 	lower := strings.ToLower(name)
 	upper := strings.ToUpper(name)
@@ -308,7 +309,7 @@ func capitalizePortName(name string) string {
 	return name
 }
 
-// findExistingChan returns a channel attached to receiver if it already exists among connections
+// findExistingChan returns a channel attached to receiver if it already exists among connections.
 func (n *Graph) findExistingChan(addr address, dir reflect.ChanDir) reflect.Value {
 	var channel reflect.Value
 	// Find existing channel attached to the receiver
@@ -345,7 +346,7 @@ func (n *Graph) incChanListenersCount(c reflect.Value) {
 }
 
 // decChanListenersCount decrements SendChanRefCount
-// It returns true if the RefCount has reached 0
+// It returns true if the RefCount has reached 0.
 func (n *Graph) decChanListenersCount(c reflect.Value) bool {
 	n.chanListenersCountLock.Lock()
 	defer n.chanListenersCountLock.Unlock()
@@ -354,7 +355,7 @@ func (n *Graph) decChanListenersCount(c reflect.Value) bool {
 	cnt := n.chanListenersCount[ptr]
 
 	if cnt == 0 {
-		return true // yes you may try to close a nonexistant channel, see what happens...
+		return true // yes you may try to close a nonexistent channel, see what happens...
 	}
 
 	cnt--

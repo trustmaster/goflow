@@ -247,9 +247,9 @@ linters-settings:
   lll:
     # max line length, lines longer will be reported. Default is 120.
     # '\t' is counted as 1 character by default, and can be changed with the tab-width option
-    line-length: 120
+    line-length: 160
     # tab width in spaces. Default to 1.
-    tab-width: 1
+    tab-width: 4
   maligned:
     # print struct with more effective memory layout or not, false by default
     suggest-new: true
@@ -348,6 +348,8 @@ linters:
     - megacheck
     - govet
     - gocritic
+    - godot
+    - gofumpt
     - gosec
     - golint
     - gochecknoglobals
@@ -369,6 +371,7 @@ linters:
     - goprintffuncname
     - ineffassign
     - interfacer
+    - lll
     - maligned
     - misspell
     - nakedret
@@ -378,6 +381,8 @@ linters:
     - rowserrcheck
     - scopelint
     - sqlclosecheck
+    - staticcheck
+    - stylecheck
     - unconvert
     - unparam
     - whitespace
@@ -387,17 +392,12 @@ linters:
     - dupl
     - gocognit
     - gocyclo
-    - godot
     - godox
     - goerr113
-    - gofumpt
     - gomnd
-    - lll
     - nestif
     - nlreturn
-    - staticcheck
     - structcheck
-    - stylecheck
     - testpackage
     - unused
 

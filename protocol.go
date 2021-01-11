@@ -1,6 +1,6 @@
 package goflow
 
-// PortInfo represents a port to a runtime client
+// PortInfo represents a port to a runtime client.
 type PortInfo struct {
 	ID          string        `json:"id"`
 	Type        string        `json:"type"`
@@ -11,7 +11,7 @@ type PortInfo struct {
 	Default     interface{}   `json:"default"` // ignored
 }
 
-// ComponentInfo represents a component to a protocol client
+// ComponentInfo represents a component to a protocol client.
 type ComponentInfo struct {
 	Name        string     `json:"name"`
 	Description string     `json:"description"`
@@ -21,7 +21,7 @@ type ComponentInfo struct {
 	OutPorts    []PortInfo `json:"outPorts"`
 }
 
-// Message represents a single FBP protocol message
+// Message represents a single FBP protocol message.
 type Message struct {
 	// Protocol is NoFlo protocol identifier:
 	// "runtime", "component", "graph" or "network"
@@ -32,7 +32,7 @@ type Message struct {
 	Payload interface{} `json:"payload"`
 }
 
-// runtimeInfo message contains response to runtime.getruntime request
+// runtimeInfo message contains response to runtime.getruntime request.
 type runtimeInfo struct {
 	Type         string   `json:"type"`
 	Version      string   `json:"version"`
@@ -46,7 +46,7 @@ type runtimeMessage struct {
 	Payload  runtimeInfo `json:"payload"`
 }
 
-// clearGraph message is sent by client to create a new empty graph
+// clearGraph message is sent by client to create a new empty graph.
 type clearGraph struct {
 	ID          string
 	Name        string `json:",omitempty"` // ignored
@@ -56,7 +56,7 @@ type clearGraph struct {
 	Description string `json:",omitempty"`
 }
 
-// addNode message is sent by client to add a node to a graph
+// addNode message is sent by client to add a node to a graph.
 type addNode struct {
 	ID        string
 	Component string
@@ -64,28 +64,27 @@ type addNode struct {
 	Metadata  map[string]interface{} `json:",omitempty"` // ignored
 }
 
-// removeNode is a client message to remove a node from a graph
+// removeNode is a client message to remove a node from a graph.
 type removeNode struct {
 	ID    string
 	Graph string
 }
 
-// renameNode is a client message to rename a node in a graph
+// renameNode is a client message to rename a node in a graph.
 type renameNode struct {
 	From  string
 	To    string
 	Graph string
 }
 
-// changeNode is a client message to change the metadata
-// associated to a node in the graph
+// changeNode is a client message to change the metadata associated with a node in the graph.
 type changeNode struct { // ignored
 	ID       string
 	Graph    string
 	Metadata map[string]interface{}
 }
 
-// addEdge is a client message to create a connection in a graph
+// addEdge is a client message to create a connection in a graph.
 type addEdge struct {
 	Src struct {
 		Node  string
@@ -101,7 +100,7 @@ type addEdge struct {
 	Metadata map[string]interface{} `json:",omitempty"` // ignored
 }
 
-// removeEdge is a client message to delete a connection from a graph
+// removeEdge is a client message to delete a connection from a graph.
 type removeEdge struct {
 	Src struct {
 		Node string
@@ -114,7 +113,7 @@ type removeEdge struct {
 	Graph string
 }
 
-// changeEdge is a client message to change connection metadata
+// changeEdge is a client message to change connection metadata.
 type changeEdge struct { // ignored
 	Src struct {
 		Node  string
@@ -130,7 +129,7 @@ type changeEdge struct { // ignored
 	Metadata map[string]interface{}
 }
 
-// addInitial is a client message to add an IIP to a graph
+// addInitial is a client message to add an IIP to a graph.
 type addInitial struct {
 	Src struct {
 		Data interface{}
@@ -144,7 +143,7 @@ type addInitial struct {
 	Metadata map[string]interface{} `json:",omitempty"` // ignored
 }
 
-// removeInitial is a client message to remove an IIP from a graph
+// removeInitial is a client message to remove an IIP from a graph.
 type removeInitial struct {
 	Tgt struct {
 		Node  string
@@ -154,7 +153,7 @@ type removeInitial struct {
 	Graph string
 }
 
-// addPort is a client message to add an exported inport/outport to the graph
+// addPort is a client message to add an exported inport/outport to the graph.
 type addPort struct {
 	Public   string
 	Node     string
@@ -163,13 +162,13 @@ type addPort struct {
 	Metadata map[string]interface{} `json:",omitempty"` // ignored
 }
 
-// removePort is a client message to remove an exported inport/outport from the graph
+// removePort is a client message to remove an exported inport/outport from the graph.
 type removePort struct {
 	Public string
 	Graph  string
 }
 
-// renamePort is a client message to rename a port of a graph
+// renamePort is a client message to rename a port of a graph.
 type renamePort struct {
 	From  string
 	To    string

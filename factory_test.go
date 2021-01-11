@@ -6,9 +6,8 @@ import (
 
 func TestFactoryCreate(t *testing.T) {
 	f := NewFactory()
-	err := RegisterTestComponents(f)
 
-	if err != nil {
+	if err := RegisterTestComponents(f); err != nil {
 		t.Error(err)
 		return
 	}
@@ -33,9 +32,7 @@ func TestFactoryCreate(t *testing.T) {
 }
 
 func TestFactoryRegistration(t *testing.T) {
-	f := NewFactory(FactoryConfig{
-		RegistryCapacity: 10,
-	})
+	f := NewFactory()
 
 	if err := RegisterTestComponents(f); err != nil {
 		t.Error(err)
