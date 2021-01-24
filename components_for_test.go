@@ -1,7 +1,6 @@
 package goflow
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -215,34 +214,4 @@ func RegisterTestComponents(f *Factory) error {
 	})
 
 	return nil
-}
-
-// pipeline allows chaining simple calls in tests
-type pipeline struct {
-	err error
-}
-
-// ok asserts that a function does not return an error
-func (p *pipeline) ok(f func() error) *pipeline {
-	if p.err != nil {
-		return p
-	}
-
-	p.err = f()
-
-	return p
-}
-
-// fails asserts that a function returns an error
-func (p *pipeline) fails(f func() error) *pipeline {
-	if p.err != nil {
-		return p
-	}
-
-	err := f()
-	if err == nil {
-		p.err = fmt.Errorf("Expected an error")
-	}
-
-	return p
 }
