@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// Scanner is a unified structure for scanner components which defines their port signature
+// Scanner is a unified structure for scanner components which defines their port signature.
 type Scanner struct {
 	// Set is an IIP that contains valid characters. Supports special characters: \r, \n, \t.
 	// A regular expression character class can be passed like: "[a-zA-Z\s]".
@@ -19,13 +19,13 @@ type Scanner struct {
 	Out chan<- Token
 }
 
-// scanner is used to test Scanner components via common interface
+// scanner is used to test Scanner components via common interface.
 type scanner interface {
 	assign(Scanner)
 	Process()
 }
 
-// assign binds ports for testing
+// assign binds ports for testing.
 func (s *Scanner) assign(ports Scanner) {
 	s.Set = ports.Set
 	s.Type = ports.Type
@@ -33,7 +33,7 @@ func (s *Scanner) assign(ports Scanner) {
 	s.Out = ports.Out
 }
 
-// readIIPs reads configuration ports. Connections have to be buffered to avoid order deadlock
+// readIIPs reads configuration ports. Connections have to be buffered to avoid order deadlock.
 func (s *Scanner) readIIPs() (set string, tokenType string, ok bool) {
 	if set, ok = <-s.Set; !ok {
 		return
@@ -46,10 +46,10 @@ func (s *Scanner) readIIPs() (set string, tokenType string, ok bool) {
 	return
 }
 
-// scanTok is a callback that scans a single token
+// scanTok is a callback that scans a single token.
 type scanTok func(Token) (Token, bool)
 
-// handleTokens reads incoming tokens and applies a scan callback to them
+// handleTokens reads incoming tokens and applies a scan callback to them.
 func (s *Scanner) handleTokens(scan scanTok) {
 	// Read incoming tokens and scan them with a callback
 	for tok := range s.In {
@@ -61,12 +61,12 @@ func (s *Scanner) handleTokens(scan scanTok) {
 	}
 }
 
-// ScanChars scans a token of characters belonging to Set
+// ScanChars scans a token of characters belonging to Set.
 type ScanChars struct {
 	Scanner
 }
 
-// Process reads IIPs and validates incoming tokens
+// Process reads IIPs and validates incoming tokens.
 func (s *ScanChars) Process() {
 	set, tokenType, ok := s.readIIPs()
 	if !ok {
@@ -129,7 +129,7 @@ type ScanKeyword struct {
 	Scanner
 }
 
-// Process reads IIPs and validates incoming tokens
+// Process reads IIPs and validates incoming tokens.
 func (s *ScanKeyword) Process() {
 	word, tokenType, ok := s.readIIPs()
 	if !ok {
@@ -173,12 +173,12 @@ func (s *ScanKeyword) Process() {
 	})
 }
 
-// ScanComment scans a comment from hash till the end of line
+// ScanComment scans a comment from hash till the end of line.
 type ScanComment struct {
 	Scanner
 }
 
-// Process reads IIPs and validates incoming tokens
+// Process reads IIPs and validates incoming tokens.
 func (s *ScanComment) Process() {
 	prefix, tokenType, ok := s.readIIPs()
 	if !ok {
@@ -205,12 +205,12 @@ func (s *ScanComment) Process() {
 	})
 }
 
-// ScanQuoted scans a quoted string
+// ScanQuoted scans a quoted string.
 type ScanQuoted struct {
 	Scanner
 }
 
-// Process scans for quoted strings in the incoming tokens
+// Process scans for quoted strings in the incoming tokens.
 func (s *ScanQuoted) Process() {
 	quotes, tokenType, ok := s.readIIPs()
 	if !ok {

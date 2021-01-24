@@ -1,12 +1,12 @@
 package dsl
 
-// Split copies an incoming token to each of the array outputs
+// Split copies an incoming token to each of the array outputs.
 type Split struct {
 	In  <-chan Token
 	Out [](chan<- Token)
 }
 
-// Process copies incoming tokens to the outputs
+// Process copies incoming tokens to the outputs.
 func (s *Split) Process() {
 	outsCount := len(s.Out)
 

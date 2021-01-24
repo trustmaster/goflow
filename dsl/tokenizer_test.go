@@ -6,7 +6,7 @@ import (
 	"github.com/trustmaster/goflow"
 )
 
-// StartToken(dsl/StartToken) INIT -> Merge
+// StartToken(dsl/StartToken) INIT -> Merge.
 func TestTokenizer(t *testing.T) {
 	fbpData := "StartToken(dsl/StartToken) INIT -> Merge"
 	expected := []Token{

@@ -1,3 +1,4 @@
+// Package dsl implements FBP DSL parser.
 package dsl
 
 import (
@@ -20,7 +21,7 @@ func registerComponentConstructors(f *goflow.Factory, list []componentConstructo
 	return nil
 }
 
-// RegisterComponents adds components of this library to the factory registry
+// RegisterComponents adds components of this library to the factory registry.
 func RegisterComponents(f *goflow.Factory) error {
 	return registerComponentConstructors(f, []componentConstructor{
 		{"dsl/Collect", func() (interface{}, error) {

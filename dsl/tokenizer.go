@@ -6,11 +6,11 @@ import (
 	"github.com/trustmaster/goflow"
 )
 
-// TokenType differentiates tokens
+// TokenType differentiates tokens.
 type TokenType string
 
 const (
-	// Token types
+	// Token types.
 	tokIllegal    = TokenType("illegal")    // S:Fallback P:9
 	tokNewFile    = TokenType("newFile")    // S:Auto
 	tokEOF        = TokenType("eof")        // S:Auto
@@ -18,12 +18,12 @@ const (
 	tokEOL        = TokenType("eol")        // S:Chars P:1
 	tokComment    = TokenType("comment")    // # S:Comment P:2
 
-	// Literals
+	// Literals.
 	tokIdent     = TokenType("ident")     // ProcName S:Chars P:3
 	tokInt       = TokenType("int")       // 123 S:Chars P:2
 	tokQuotedStr = TokenType("quotedStr") // "data" S:Quoted P:2
 
-	// Operators
+	// Operators.
 	tokEqual  = TokenType("equal")  // = S:Keyword P:2
 	tokDot    = TokenType("dot")    // . S:Keyword P:2
 	tokColon  = TokenType("colon")  // : S:Keyword P:2
@@ -32,12 +32,12 @@ const (
 	tokArrow  = TokenType("arrow")  // ", "S:Keyword P:2
 	tokSlash  = TokenType("slash")  // / S:Keyword P:2
 
-	// Keywords
+	// Keywords.
 	tokInport  = TokenType("inport")  // S:Keyword P:2
 	tokOutport = TokenType("outport") // S:Keyword P:2
 )
 
-// Token represents a single lexem in a File
+// Token represents a single lexem in a File.
 type Token struct {
 	Type  TokenType
 	File  *File
@@ -49,19 +49,19 @@ func (t Token) String() string {
 	return t.Value
 }
 
-// LexError is a lexical error
+// LexError is a lexical error.
 type LexError struct {
 	File string
 	Pos  int
 	Err  error
 }
 
-// Error returns an error message
+// Error returns an error message.
 func (e LexError) Error() string {
 	return fmt.Sprintf("Error scanning file '%s' at pos %d: %s", e.File, e.Pos, e.Err.Error())
 }
 
-// NewTokenizer creates a Tokenizer graph
+// NewTokenizer creates a Tokenizer graph.
 func NewTokenizer(f *goflow.Factory) (*goflow.Graph, error) {
 	n := goflow.NewGraph()
 
