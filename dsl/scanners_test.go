@@ -17,7 +17,7 @@ type scannersTestCase struct {
 	pos     int
 }
 
-func TestScanners(t *testing.T) { //nolint:funlen
+func TestScanners(t *testing.T) { //nolint:funlen // table data
 	cases := []scannersTestCase{
 		// ScanChars
 		{
