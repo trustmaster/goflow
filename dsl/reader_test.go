@@ -46,6 +46,7 @@ func TestReader(t *testing.T) {
 }
 
 func readReaderOutput(t *testing.T, expectations []string, fnames []string, out chan *File, e chan FileError) {
+loop:
 	for len(expectations) > 0 {
 		expected := expectations[0]
 		expectations = expectations[1:]
@@ -55,27 +56,27 @@ func readReaderOutput(t *testing.T, expectations []string, fnames []string, out 
 		case f := <-out:
 			if f.Name != name {
 				t.Errorf("Expected file '%s', got '%s'", name, f.Name)
-				break
+				break loop
 			}
 
 			if expected == "error" {
 				t.Errorf("Unexpected File")
-				break
+				break loop
 			}
 
 			if len(f.Data) == 0 {
 				t.Errorf("Read data is empty")
-				break
+				break loop
 			}
 		case fe := <-e:
 			if fe.Name != name {
 				t.Errorf("Expected file '%s', got '%s'", name, fe.Name)
-				break
+				break loop
 			}
 
 			if expected == "data" {
 				t.Errorf("Unexpected error: %s", fe.Err.Error())
-				break
+				break loop
 			}
 		}
 	}
