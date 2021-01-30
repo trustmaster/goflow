@@ -245,6 +245,16 @@ func TestScanners(t *testing.T) { //nolint:funlen // table data
 		},
 		{
 			c:       "dsl/ScanQuoted",
+			name:    "Should not escape other chars",
+			set:     `"`,
+			tokType: tokQuotedStr,
+			data:    `"End\r\n" -> IN Foo`,
+			pos:     0,
+			hit:     true,
+			value:   `"End\r\n"`,
+		},
+		{
+			c:       "dsl/ScanQuoted",
 			name:    "Does not work without quote char",
 			set:     "",
 			tokType: tokQuotedStr,
@@ -338,11 +348,8 @@ func runScannersTestCase(t *testing.T, f *goflow.Factory, tc *scannersTestCase) 
 			if !tc.hit {
 				t.Errorf("Unexpected hit: '%s' at %d", tok.Value, tok.Pos)
 			}
-			if tok.Type != tc.tokType {
-				t.Errorf("Unexpected token type: %s", tok.Type)
-			}
-			if tok.Value != tc.value {
-				t.Errorf("Unexpected token value: '%s'", tok.Value)
+			if tc.tokType != tok.Type || tc.value != tok.Value || tc.pos != tok.Pos {
+				t.Errorf("Unexpected token, expected %s '%s', got %s '%s'", tc.tokType, tc.value, tok.Type, tok.Value)
 			}
 		}
 

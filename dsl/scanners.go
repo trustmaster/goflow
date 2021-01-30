@@ -231,22 +231,31 @@ func (s *ScanQuoted) Process() {
 		}
 
 		var e rune = '\\'
-		escaped := 0
+		escaped := false
 		buf := bytes.NewBufferString(string(q))
 		dataLen := len(tok.File.Data)
 		for i := tok.Pos + 1; i < dataLen; i++ {
 			r := rune(tok.File.Data[i])
 			if r == e {
-				escaped = (escaped + 1) % 2
-				if escaped == 1 {
+				if escaped {
+					buf.Truncate(buf.Len() - 1)
+					escaped = false
+				} else {
+					buf.WriteRune(r)
+					escaped = true
 					continue
 				}
 			}
-			buf.WriteRune(r)
-			if r == q && escaped == 0 {
-				break
+			if r == q {
+				if escaped {
+					buf.Truncate(buf.Len() - 1)
+				} else {
+					buf.WriteRune(r)
+					break
+				}
 			}
-			escaped = 0
+			buf.WriteRune(r)
+			escaped = false
 		}
 		tok.Value = buf.String()
 		tok.Type = TokenType(tokenType)
