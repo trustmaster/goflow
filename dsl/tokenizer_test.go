@@ -6,24 +6,46 @@ import (
 	"github.com/trustmaster/goflow"
 )
 
-// StartToken(dsl/StartToken) INIT -> Merge.
+type tokenizerTestCase struct {
+	fbp    string
+	tokens []Token
+}
+
 func TestTokenizer(t *testing.T) {
-	fbpData := "StartToken(dsl/StartToken) INIT -> Merge"
-	expected := []Token{
-		{Type: tokNewFile, Pos: 0, Value: "test.fbp"},
-		{Type: tokIdent, Pos: 0, Value: "StartToken"},
-		{Type: tokLparen, Pos: 10, Value: "("},
-		{Type: tokIdent, Pos: 11, Value: "dsl"},
-		{Type: tokSlash, Pos: 14, Value: "/"},
-		{Type: tokIdent, Pos: 15, Value: "StartToken"},
-		{Type: tokRparen, Pos: 25, Value: ")"},
-		{Type: tokWhitespace, Pos: 26, Value: " "},
-		{Type: tokIdent, Pos: 27, Value: "INIT"},
-		{Type: tokWhitespace, Pos: 31, Value: " "},
-		{Type: tokArrow, Pos: 32, Value: "->"},
-		{Type: tokWhitespace, Pos: 34, Value: " "},
-		{Type: tokIdent, Pos: 35, Value: "Merge"},
-		{Type: tokEOF, Pos: 40, Value: "test.fbp"},
+	cases := []tokenizerTestCase{
+		{
+			fbp: "StartToken(dsl/StartToken) INIT -> Merge",
+			tokens: []Token{
+				{Type: tokNewFile, Pos: 0, Value: "test.fbp"},
+				{Type: tokIdent, Pos: 0, Value: "StartToken"},
+				{Type: tokLparen, Pos: 10, Value: "("},
+				{Type: tokIdent, Pos: 11, Value: "dsl"},
+				{Type: tokSlash, Pos: 14, Value: "/"},
+				{Type: tokIdent, Pos: 15, Value: "StartToken"},
+				{Type: tokRparen, Pos: 25, Value: ")"},
+				{Type: tokWhitespace, Pos: 26, Value: " "},
+				{Type: tokIdent, Pos: 27, Value: "INIT"},
+				{Type: tokWhitespace, Pos: 31, Value: " "},
+				{Type: tokArrow, Pos: 32, Value: "->"},
+				{Type: tokWhitespace, Pos: 34, Value: " "},
+				{Type: tokIdent, Pos: 35, Value: "Merge"},
+				{Type: tokEOF, Pos: 40, Value: "test.fbp"},
+			},
+		},
+		{
+			fbp: `'\r\n' -> SET ScanEOL`,
+			tokens: []Token{
+				{Type: tokNewFile, Pos: 0, Value: "test.fbp"},
+				{Type: tokQuotedStr, Pos: 0, Value: `'\r\n'`},
+				{Type: tokWhitespace, Pos: 6, Value: " "},
+				{Type: tokArrow, Pos: 7, Value: "->"},
+				{Type: tokWhitespace, Pos: 9, Value: " "},
+				{Type: tokIdent, Pos: 10, Value: "SET"},
+				{Type: tokWhitespace, Pos: 13, Value: " "},
+				{Type: tokIdent, Pos: 14, Value: "ScanEOL"},
+				{Type: tokEOF, Pos: 21, Value: "test.fbp"},
+			},
+		},
 	}
 
 	f := goflow.NewFactory()
@@ -32,18 +54,22 @@ func TestTokenizer(t *testing.T) {
 		return
 	}
 
-	i, err := f.Create("dsl/Tokenizer")
-	if err != nil {
-		t.Error(err)
-		return
+	for i := range cases {
+		c := cases[i]
+
+		ni, err := f.Create("dsl/Tokenizer")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		n := ni.(*goflow.Graph)
+
+		runTokenizerTestCase(t, n, &c)
 	}
-
-	n := i.(*goflow.Graph)
-
-	runTokenizerTestCase(t, n, fbpData, expected)
 }
 
-func runTokenizerTestCase(t *testing.T, n *goflow.Graph, fbpData string, expected []Token) {
+func runTokenizerTestCase(t *testing.T, n *goflow.Graph, c *tokenizerTestCase) {
 	in := make(chan *File)
 	out := make(chan Token)
 
@@ -59,7 +85,7 @@ func runTokenizerTestCase(t *testing.T, n *goflow.Graph, fbpData string, expecte
 
 	file := &File{
 		Name: "test.fbp",
-		Data: []byte(fbpData),
+		Data: []byte(c.fbp),
 	}
 
 	wait := goflow.Run(n)
@@ -72,14 +98,14 @@ func runTokenizerTestCase(t *testing.T, n *goflow.Graph, fbpData string, expecte
 	j := 0
 
 	for tok := range out {
-		if !tokEql(tok, expected[j]) {
-			t.Errorf("Expected '%s': '%s' at %d, got '%s': '%s' at %d", expected[j].Type, expected[j].Value, expected[j].Pos, tok.Type, tok.Value, tok.Pos)
+		if !tokEql(tok, c.tokens[j]) {
+			t.Errorf("Expected '%s': '%s' at %d, got '%s': '%s' at %d", c.tokens[j].Type, c.tokens[j].Value, c.tokens[j].Pos, tok.Type, tok.Value, tok.Pos)
 		}
 		j++
 	}
 
-	if j != len(expected) {
-		t.Errorf("Expected %d tokens, got %d", len(expected), j)
+	if j != len(c.tokens) {
+		t.Errorf("Expected %d tokens, got %d", len(c.tokens), j)
 	}
 
 	<-wait
