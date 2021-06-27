@@ -184,30 +184,25 @@ func (c *irouter) Process() {
 }
 
 func RegisterTestComponents(f *Factory) error {
-	f.Register("echo", func() (interface{}, error) {
-		return new(echo), nil
-	})
+	f.Register("echo", func() (Component, error) { return new(echo), nil })
 	f.Annotate("echo", Annotation{
 		Description: "Passes an int from in to out without changing it",
 		Icon:        "arrow-right",
 	})
-	f.Register("doubler", func() (interface{}, error) {
-		return new(doubler), nil
-	})
+
+	f.Register("doubler", func() (Component, error) { return new(doubler), nil })
 	f.Annotate("doubler", Annotation{
 		Description: "Doubles its input",
 		Icon:        "times-circle",
 	})
-	f.Register("repeater", func() (interface{}, error) {
-		return new(repeater), nil
-	})
+
+	f.Register("repeater", func() (Component, error) { return new(repeater), nil })
 	f.Annotate("repeater", Annotation{
 		Description: "Repeats Word given numer of Times",
 		Icon:        "times-circle",
 	})
-	f.Register("adder", func() (interface{}, error) {
-		return new(adder), nil
-	})
+
+	f.Register("adder", func() (Component, error) { return new(adder), nil })
 	f.Annotate("adder", Annotation{
 		Description: "Sums integers coming to its inports",
 		Icon:        "plus-circle",

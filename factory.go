@@ -15,7 +15,7 @@ type registryEntry struct {
 }
 
 // Constructor is used to create a component instance at run-time.
-type Constructor func() (interface{}, error)
+type Constructor func() (Component, error)
 
 // NewFactory creates a new component Factory instance.
 func NewFactory() *Factory {
@@ -73,7 +73,7 @@ func (f *Factory) Unregister(componentName string) error {
 }
 
 // Create creates a new instance of a component registered under a specific name.
-func (f *Factory) Create(componentName string) (interface{}, error) {
+func (f *Factory) Create(componentName string) (Component, error) {
 	info, exists := f.registry[componentName]
 	if !exists {
 		return nil, fmt.Errorf("factory error: component '%s' does not exist", componentName)

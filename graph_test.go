@@ -72,12 +72,14 @@ func testGraphWithNumberSequence(n *Graph, t *testing.T) {
 	<-wait
 }
 
-func TestAddInvalidProcess(t *testing.T) {
-	s := struct{ Name string }{"This is not a Component"}
+func TestAddDuplicateProcess(t *testing.T) {
 	n := NewGraph()
-	err := n.Add("wrong", s)
 
-	if err == nil {
+	if err := n.Add("echo", new(echo)); err != nil {
+		t.Error(err)
+	}
+
+	if err := n.Add("echo", new(echo)); err == nil {
 		t.Errorf("Expected an error")
 	}
 }
@@ -103,7 +105,7 @@ func TestRemove(t *testing.T) {
 }
 
 func RegisterTestGraph(f *Factory) error {
-	f.Register("doubleEcho", func() (interface{}, error) {
+	f.Register("doubleEcho", func() (Component, error) {
 		return newDoubleEcho()
 	})
 

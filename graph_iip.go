@@ -14,7 +14,10 @@ type iip struct {
 
 // AddIIP adds an Initial Information packet to the network.
 func (n *Graph) AddIIP(processName, portName string, data interface{}) error {
-	addr := parseAddress(processName, portName)
+	addr, err := parseAddress(processName, portName)
+	if err != nil {
+		return fmt.Errorf("bad address: %w", err)
+	}
 
 	if _, exists := n.procs[processName]; exists {
 		n.iips = append(n.iips, iip{data: data, addr: addr})
@@ -26,7 +29,11 @@ func (n *Graph) AddIIP(processName, portName string, data interface{}) error {
 
 // RemoveIIP detaches an IIP from specific process and port.
 func (n *Graph) RemoveIIP(processName, portName string) error {
-	addr := parseAddress(processName, portName)
+	addr, err := parseAddress(processName, portName)
+	if err != nil {
+		return fmt.Errorf("bad address: %w", err)
+	}
+
 	for i := range n.iips {
 		if n.iips[i].addr == addr {
 			// Remove item from the slice
