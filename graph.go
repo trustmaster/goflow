@@ -192,7 +192,7 @@ func (n *Graph) closeProcOuts(proc interface{}) {
 			continue
 		}
 
-		if n.decChanListenersCount(field) {
+		if !field.IsNil() && n.decChanListenersCount(field) {
 			field.Close()
 		}
 	}
