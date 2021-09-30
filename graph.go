@@ -14,15 +14,15 @@ type GraphConfig struct {
 
 // Graph represents a graph of processes connected with packet channels.
 type Graph struct {
-	conf                   GraphConfig            // Graph configuration
-	waitGrp                *sync.WaitGroup        // Wait group for a graceful termination
-	procs                  map[string]interface{} // Network processes
-	inPorts                map[string]port        // Map of network incoming ports to component ports
-	outPorts               map[string]port        // Map of network outgoing ports to component ports
-	connections            []connection           // Network graph edges (inter-process connections)
-	chanListenersCount     map[uintptr]uint       // Tracks how many outports use the same channel
-	chanListenersCountLock sync.Locker            // Used to synchronize operations on the chanListenersCount map
-	iips                   []iip                  // Initial Information Packets to be sent to the network on start
+	conf                   GraphConfig          // Graph configuration
+	waitGrp                *sync.WaitGroup      // Wait group for a graceful termination
+	procs                  map[string]Component // Network processes
+	inPorts                map[string]port      // Map of network incoming ports to component ports
+	outPorts               map[string]port      // Map of network outgoing ports to component ports
+	connections            []connection         // Network graph edges (inter-process connections)
+	chanListenersCount     map[uintptr]uint     // Tracks how many outports use the same channel
+	chanListenersCountLock sync.Locker          // Used to synchronize operations on the chanListenersCount map
+	iips                   []iip                // Initial Information Packets to be sent to the network on start
 }
 
 // NewGraph returns a new initialized empty graph instance.
@@ -35,7 +35,7 @@ func NewGraph(config ...GraphConfig) *Graph {
 	return &Graph{
 		conf:                   conf,
 		waitGrp:                new(sync.WaitGroup),
-		procs:                  make(map[string]interface{}),
+		procs:                  make(map[string]Component),
 		inPorts:                make(map[string]port),
 		outPorts:               make(map[string]port),
 		chanListenersCount:     make(map[uintptr]uint),
@@ -44,9 +44,7 @@ func NewGraph(config ...GraphConfig) *Graph {
 }
 
 // NewDefaultGraph is a ComponentConstructor for the factory.
-func NewDefaultGraph() interface{} {
-	return NewGraph()
-}
+func NewDefaultGraph() *Graph { return NewGraph() }
 
 // // Register an empty graph component in the registry
 // func init() {
@@ -58,15 +56,11 @@ func NewDefaultGraph() interface{} {
 // }
 
 // Add adds a new process with a given name to the network.
-func (n *Graph) Add(name string, c interface{}) error {
-	// c should be either graph or a component
-	_, isComponent := c.(Component)
-	_, isGraph := c.(Graph)
-
-	if !isComponent && !isGraph {
-		return fmt.Errorf("could not add process '%s': instance is neither Component nor Graph", name)
+func (n *Graph) Add(name string, c Component) error {
+	if _, found := n.procs[name]; found {
+		return fmt.Errorf("could not add process %q: already added", name)
 	}
-	// Add to the map of processes
+
 	n.procs[name] = c
 
 	return nil

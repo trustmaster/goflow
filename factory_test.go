@@ -39,9 +39,7 @@ func TestFactoryRegistration(t *testing.T) {
 		return
 	}
 
-	err := f.Register("echo", func() (interface{}, error) {
-		return new(echo), nil
-	})
+	err := f.Register("echo", func() (Component, error) { return new(echo), nil })
 	if err == nil {
 		t.Errorf("Expected an error")
 		return
