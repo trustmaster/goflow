@@ -1,0 +1,73 @@
+INPORT=StartToken.FILE:IN
+OUTPORT=Merge.OUT:OUT
+
+# Send first token to the output
+StartToken(dsl/StartToken) INIT -> IN Merge(dsl/Merge)
+
+# Main tokenizing logic
+StartToken NEXT -> IN Split(dsl/Split)
+Split OUT[0] -> ScanEOL(dsl/ScanChars) -> IN[0] Collect(dsl/CollectTokens)
+Split OUT[1] -> ScanWhitespace(dsl/ScanChars) -> IN[1] Collect
+Split OUT[2] -> ScanInt(dsl/ScanChars) -> IN[2] Collect
+Split OUT[3] -> ScanString(dsl/ScanQuoted) -> IN[3] Collect
+Split OUT[4] -> ScanEq(dsl/ScanKeyword) -> IN[4] Collect
+Split OUT[5] -> ScanDot(dsl/ScanKeyword) -> IN[5] Collect
+Split OUT[6] -> ScanColon(dsl/ScanKeyword) -> IN[6] Collect
+Split OUT[7] -> ScanLParen(dsl/ScanKeyword) -> IN[7] Collect
+Split OUT[8] -> ScanRParen(dsl/ScanKeyword) -> IN[8] Collect
+Split OUT[9] -> ScanArrow(dsl/ScanKeyword) -> IN[9] Collect
+Split OUT[10] -> ScanSlash(dsl/ScanKeyword) -> IN[10] Collect
+Split OUT[11] -> ScanHash(dsl/ScanComment) -> IN[11] Collect
+Split OUT[12] -> ScanInport(dsl/ScanKeyword) -> IN[12] Collect
+Split OUT[13] -> ScanOutport(dsl/ScanKeyword) -> IN[13] Collect
+Split OUT[14] -> ScanIdent(dsl/ScanChars) -> IN[14] Collect
+
+# Loop to get next token after successful scan
+Collect NEXT -> IN Split
+Collect OUT -> IN Merge
+
+# Setting up the scanners
+'\r\n' -> SET ScanEOL
+'eol' -> TYPE ScanEOL
+
+'\t ' -> SET ScanWhitespace
+'whitespace' -> TYPE ScanWhitespace
+
+'0123456789' -> SET ScanInt
+'int' -> TYPE ScanInt
+
+'"\'' -> SET ScanString
+'quotedStr' -> TYPE ScanString
+
+'=' -> SET ScanEq
+'eq' -> TYPE ScanEq
+
+'.' -> SET ScanDot
+'dot' -> TYPE ScanDot
+
+':' -> SET ScanColon
+'colon' -> TYPE ScanColon
+
+'(' -> SET ScanLParen
+'lparen' -> TYPE ScanLParen
+
+')' -> SET ScanRParen
+'rparen' -> TYPE ScanRParen
+
+'->' -> SET ScanArrow
+'arrow' -> TYPE ScanArrow
+
+'/' -> SET ScanSlash
+'slash' -> TYPE ScanSlash
+
+'#' -> SET ScanHash
+'comment' -> TYPE ScanHash
+
+'INPORT' -> SET ScanInport
+'inport' -> TYPE ScanInport
+
+'OUTPORT' -> SET ScanOutport
+'outport' -> TYPE ScanOutport
+
+'[\w_]' -> SET ScanIdent
+'ident' -> TYPE ScanIdent
