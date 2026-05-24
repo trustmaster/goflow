@@ -62,7 +62,7 @@ func NewDefaultGraph() interface{} {
 func (n *Graph) Add(name string, c interface{}) error {
 	// c should be either graph or a component
 	_, isComponent := c.(Component)
-	_, isGraph := c.(Graph)
+	_, isGraph := c.(*Graph)
 
 	if !isComponent && !isGraph {
 		return fmt.Errorf("could not add process '%s': instance is neither Component nor Graph", name)

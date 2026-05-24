@@ -122,10 +122,8 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 		err     error
 	)
 
-	// Check if sender is a net
-	net, ok := val.Interface().(Graph)
-	if ok {
-		// Sender is a net
+	// Check if sender is a sub-graph
+	if net, ok := proc.(*Graph); ok {
 		var ports map[string]port
 		if dir == reflect.SendDir {
 			ports = net.outPorts
