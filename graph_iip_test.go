@@ -62,6 +62,7 @@ func TestBasicIIP(t *testing.T) {
 		if actual != expected {
 			t.Errorf("%s != %s", actual, expected)
 		}
+
 		i++
 	}
 
@@ -143,6 +144,7 @@ func TestGraphInportIIP(t *testing.T) { //nolint:funlen // long setup
 		if expected := output[i]; actual != expected {
 			t.Errorf("%s != %s", actual, expected)
 		}
+
 		i++
 	}
 
@@ -197,6 +199,7 @@ func TestInternalConnectionIIP(t *testing.T) {
 		if actual != output[0] && actual != output[1] {
 			t.Errorf("Unexpected value %d", actual)
 		}
+
 		i++
 	}
 

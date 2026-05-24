@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 // address is a full port accessor including the index part.
@@ -98,7 +99,7 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 
 // getProcPort finds an assignable port field in one of the subprocesses.
 func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (reflect.Value, error) {
-	nilValue := reflect.ValueOf(nil)
+	var nilValue reflect.Value
 	// Check if process exists
 	proc, ok := n.procs[procName]
 	if !ok {
@@ -107,7 +108,7 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 
 	// Check if process is settable
 	val := reflect.ValueOf(proc)
-	if val.Kind() == reflect.Ptr && val.IsValid() {
+	if val.Kind() == reflect.Pointer && val.IsValid() {
 		val = val.Elem()
 	}
 
@@ -121,10 +122,8 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 		err     error
 	)
 
-	// Check if sender is a net
-	net, ok := val.Interface().(Graph)
-	if ok {
-		// Sender is a net
+	// Check if sender is a sub-graph
+	if net, ok := proc.(*Graph); ok {
 		var ports map[string]port
 		if dir == reflect.SendDir {
 			ports = net.outPorts
@@ -303,7 +302,12 @@ func capitalizePortName(name string) string {
 	upper := strings.ToUpper(name)
 
 	if name == lower || name == upper {
-		return strings.Title(lower)
+		runes := []rune(lower)
+		if len(runes) > 0 {
+			runes[0] = unicode.ToUpper(runes[0])
+		}
+
+		return string(runes)
 	}
 
 	return name

@@ -73,7 +73,7 @@ func (f *Factory) Unregister(componentName string) error {
 }
 
 // Create creates a new instance of a component registered under a specific name.
-func (f *Factory) Create(componentName string) (interface{}, error) {
+func (f *Factory) Create(componentName string) (any, error) {
 	info, exists := f.registry[componentName]
 	if !exists {
 		return nil, fmt.Errorf("factory error: component '%s' does not exist", componentName)

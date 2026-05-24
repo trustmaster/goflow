@@ -85,7 +85,7 @@ func TestComponentWithTwoInputs(t *testing.T) {
 		close(in2)
 	}()
 
-	for i := 0; i < len(sums); i++ {
+	for i := range len(sums) {
 		actual := <-out
 		expected := sums[i]
 

@@ -1,10 +1,11 @@
+//go:build ignore
 // +build ignore
 
 package goflow
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"strings"
 )
@@ -121,7 +122,7 @@ func ParseJSON(js []byte) *Graph {
 // LoadJSON loads a JSON graph definition file into
 // a flow.Graph object that can be run or used in other networks
 func LoadJSON(filename string) *Graph {
-	js, err := ioutil.ReadFile(filename)
+	js, err := os.ReadFile(filename)
 	if err != nil {
 		return nil
 	}

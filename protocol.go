@@ -2,13 +2,13 @@ package goflow
 
 // PortInfo represents a port to a runtime client.
 type PortInfo struct {
-	ID          string        `json:"id"`
-	Type        string        `json:"type"`
-	Description string        `json:"description"`
-	Addressable bool          `json:"addressable"` // ignored
-	Required    bool          `json:"required"`
-	Values      []interface{} `json:"values"`  // ignored
-	Default     interface{}   `json:"default"` // ignored
+	ID          string `json:"id"`
+	Type        string `json:"type"`
+	Description string `json:"description"`
+	Addressable bool   `json:"addressable"` // ignored
+	Required    bool   `json:"required"`
+	Values      []any  `json:"values"`  // ignored
+	Default     any    `json:"default"` // ignored
 }
 
 // ComponentInfo represents a component to a protocol client.
@@ -29,7 +29,7 @@ type Message struct {
 	// Command is a command to be executed within the protocol
 	Command string `json:"command"`
 	// Payload is JSON-encoded body of the message
-	Payload interface{} `json:"payload"`
+	Payload any `json:"payload"`
 }
 
 // runtimeInfo message contains response to runtime.getruntime request.
@@ -61,7 +61,7 @@ type addNode struct {
 	ID        string
 	Component string
 	Graph     string
-	Metadata  map[string]interface{} `json:",omitempty"` // ignored
+	Metadata  map[string]any `json:",omitempty"` // ignored
 }
 
 // removeNode is a client message to remove a node from a graph.
@@ -81,7 +81,7 @@ type renameNode struct {
 type changeNode struct { // ignored
 	ID       string
 	Graph    string
-	Metadata map[string]interface{}
+	Metadata map[string]any
 }
 
 // addEdge is a client message to create a connection in a graph.
@@ -97,7 +97,7 @@ type addEdge struct {
 		Index int `json:",omitempty"` // ignored
 	}
 	Graph    string
-	Metadata map[string]interface{} `json:",omitempty"` // ignored
+	Metadata map[string]any `json:",omitempty"` // ignored
 }
 
 // removeEdge is a client message to delete a connection from a graph.
@@ -126,13 +126,13 @@ type changeEdge struct { // ignored
 		Index int `json:",omitempty"`
 	}
 	Graph    string
-	Metadata map[string]interface{}
+	Metadata map[string]any
 }
 
 // addInitial is a client message to add an IIP to a graph.
 type addInitial struct {
 	Src struct {
-		Data interface{}
+		Data any
 	}
 	Tgt struct {
 		Node  string
@@ -140,7 +140,7 @@ type addInitial struct {
 		Index int `json:",omitempty"` // ignored
 	}
 	Graph    string
-	Metadata map[string]interface{} `json:",omitempty"` // ignored
+	Metadata map[string]any `json:",omitempty"` // ignored
 }
 
 // removeInitial is a client message to remove an IIP from a graph.
@@ -159,7 +159,7 @@ type addPort struct {
 	Node     string
 	Port     string
 	Graph    string
-	Metadata map[string]interface{} `json:",omitempty"` // ignored
+	Metadata map[string]any `json:",omitempty"` // ignored
 }
 
 // removePort is a client message to remove an exported inport/outport from the graph.

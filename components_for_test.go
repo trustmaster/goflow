@@ -41,6 +41,7 @@ func (c *adder) Process() {
 		if len(*otherBuf) > 0 {
 			otherOp := (*otherBuf)[0]
 			*otherBuf = (*otherBuf)[1:]
+
 			c.Sum <- (op + otherOp)
 		} else {
 			*buf = append(*buf, op)
@@ -65,6 +66,17 @@ func (c *adder) Process() {
 			addOp(op2, &op2Buf, &op1Buf)
 		}
 	}
+}
+
+// singleShot reads one value from In, sends it to Out, then exits.
+// Used in tests where senders must terminate (triggering closeProcOuts).
+type singleShot struct {
+	In  <-chan int
+	Out chan<- int
+}
+
+func (c *singleShot) Process() {
+	c.Out <- <-c.In
 }
 
 // echo passes input to the output.
@@ -118,7 +130,7 @@ func (c *repeater) repeat(word string, times int) {
 		return
 	}
 
-	for i := 0; i < times; i++ {
+	for range times {
 		c.Words <- word
 	}
 }
@@ -135,9 +147,6 @@ func (c *router) Process() {
 	wg := new(sync.WaitGroup)
 
 	for k, ch := range c.In {
-		k := k
-		ch := ch
-
 		wg.Add(1)
 
 		go func() {
@@ -165,9 +174,6 @@ func (c *irouter) Process() {
 	wg := new(sync.WaitGroup)
 
 	for k, ch := range c.In {
-		k := k
-		ch := ch
-
 		wg.Add(1)
 
 		go func() {
@@ -184,28 +190,28 @@ func (c *irouter) Process() {
 }
 
 func RegisterTestComponents(f *Factory) error {
-	f.Register("echo", func() (interface{}, error) {
+	f.Register("echo", func() (any, error) {
 		return new(echo), nil
 	})
 	f.Annotate("echo", Annotation{
 		Description: "Passes an int from in to out without changing it",
 		Icon:        "arrow-right",
 	})
-	f.Register("doubler", func() (interface{}, error) {
+	f.Register("doubler", func() (any, error) {
 		return new(doubler), nil
 	})
 	f.Annotate("doubler", Annotation{
 		Description: "Doubles its input",
 		Icon:        "times-circle",
 	})
-	f.Register("repeater", func() (interface{}, error) {
+	f.Register("repeater", func() (any, error) {
 		return new(repeater), nil
 	})
 	f.Annotate("repeater", Annotation{
 		Description: "Repeats Word given numer of Times",
 		Icon:        "times-circle",
 	})
-	f.Register("adder", func() (interface{}, error) {
+	f.Register("adder", func() (any, error) {
 		return new(adder), nil
 	})
 	f.Annotate("adder", Annotation{

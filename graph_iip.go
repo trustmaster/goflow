@@ -8,12 +8,12 @@ import (
 // iip is the Initial Information Packet.
 // IIPs are delivered to process input ports on the network start.
 type iip struct {
-	data interface{}
+	data any
 	addr address
 }
 
 // AddIIP adds an Initial Information packet to the network.
-func (n *Graph) AddIIP(processName, portName string, data interface{}) error {
+func (n *Graph) AddIIP(processName, portName string, data any) error {
 	addr := parseAddress(processName, portName)
 
 	if _, exists := n.procs[processName]; exists {
@@ -58,7 +58,7 @@ func (n *Graph) sendIIPs() error {
 				return err
 			}
 
-			channel, err = attachPort(recvPort, ip.addr, reflect.RecvDir, reflect.ValueOf(nil), n.conf.BufferSize)
+			channel, err = attachPort(recvPort, ip.addr, reflect.RecvDir, reflect.Value{}, n.conf.BufferSize)
 			if err != nil {
 				return err
 			}
@@ -78,7 +78,7 @@ func (n *Graph) sendIIPs() error {
 			channel.Send(data)
 
 			if n.decChanListenersCount(channel) {
-				channel.Close()
+				n.closeChan(channel)
 			}
 		}(channel, reflect.ValueOf(ip.data))
 	}

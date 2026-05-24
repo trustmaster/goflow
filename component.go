@@ -17,6 +17,7 @@ func Run(c Component) Wait {
 
 	go func() {
 		c.Process()
+
 		wait <- Done{}
 	}()
 
