@@ -58,7 +58,7 @@ func (n *Graph) sendIIPs() error {
 				return err
 			}
 
-			channel, err = attachPort(recvPort, ip.addr, reflect.RecvDir, reflect.ValueOf(nil), n.conf.BufferSize)
+			channel, err = attachPort(recvPort, ip.addr, reflect.RecvDir, reflect.Value{}, n.conf.BufferSize)
 			if err != nil {
 				return err
 			}
