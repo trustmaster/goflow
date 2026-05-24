@@ -1,161 +1,27 @@
-# This file contains all available configuration options
-# with their default values.
-
-# options for analysis running
+version: "2"
 run:
   concurrency: 4
-  timeout: 1m
   issues-exit-code: 1
   tests: true
-  build-tags: []
   allow-parallel-runners: false
-
-# output configuration options
 output:
-  formats:
-    - format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
   path-prefix: ""
-
-# all available settings of specific linters
-linters-settings:
-  dogsled:
-    max-blank-identifiers: 2
-  dupl:
-    threshold: 100
-  errcheck:
-    check-type-assertions: false
-    check-blank: false
-    exclude-functions:
-      - fmt:.*
-      - io/ioutil:^Read.*
-  exhaustive:
-    default-signifies-exhaustive: false
-  funlen:
-    lines: 60
-    statements: 40
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(github.com/org/project)
-  gocognit:
-    min-complexity: 10
-  nestif:
-    min-complexity: 4
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-  gocritic:
-    enabled-checks: []
-    disabled-checks:
-      - regexpMust
-    enabled-tags:
-      - performance
-    disabled-tags:
-      - experimental
-    settings:
-      captLocal:
-        paramsOnly: true
-      rangeValCopy:
-        sizeThreshold: 32
-  gocyclo:
-    min-complexity: 10
-  godox:
-    keywords: []
-  gofmt:
-    simplify: true
-  goimports:
-    local-prefixes: github.com/org/project
-  gomodguard:
-    allowed:
-      modules: []
-      domains: []
-    blocked:
-      modules: []
-      versions: []
-  govet:
-    settings:
-      printf:
-        funcs:
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
-    enable:
-      - atomicalign
-    enable-all: false
-    disable:
-      - shadow
-    disable-all: false
-  lll:
-    line-length: 160
-    tab-width: 4
-  misspell:
-    locale: US
-    ignore-words:
-      - someword
-  nakedret:
-    max-func-lines: 30
-  prealloc:
-    simple: true
-    range-loops: true
-    for-loops: false
-  nolintlint:
-    allow-unused: false
-    allow-no-explanation: []
-    require-explanation: true
-    require-specific: true
-  rowserrcheck:
-    packages:
-      - github.com/jmoiron/sqlx
-  testpackage:
-    skip-regexp: (export|internal)_test\.go
-  unparam:
-    check-exported: false
-  whitespace:
-    multi-if: false
-    multi-func: false
-  wsl:
-    strict-append: true
-    allow-assign-and-call: true
-    allow-multiline-assign: true
-    allow-cuddle-declarations: false
-    allow-trailing-comment: false
-    force-case-trailing-whitespace: 0
-    force-err-cuddling: false
-    allow-separated-leading-comment: false
-  gofumpt:
-    extra-rules: false
-  errorlint:
-    errorf: true
-
 linters:
   enable:
-    - gosimple
-    - staticcheck
-    - govet
-    - gocritic
-    - gofumpt
-    - gosec
-    - gochecknoglobals
-    - gochecknoinits
-    - gofmt
     - asciicheck
     - bodyclose
+    - copyloopvar
     - depguard
     - dogsled
-    - errcheck
     - exhaustive
-    - copyloopvar
     - funlen
-    - gci
+    - gochecknoglobals
+    - gochecknoinits
     - goconst
-    - goimports
+    - gocritic
     - gomodguard
     - goprintffuncname
-    - ineffassign
+    - gosec
     - lll
     - misspell
     - nakedret
@@ -167,44 +33,154 @@ linters:
     - unconvert
     - unparam
     - whitespace
-    - wsl
+    - wsl_v5
+    - gomodguard_v2
   disable:
     - dupl
+    - err113
     - gocognit
     - gocyclo
     - godox
-    - err113
+    - gomodguard
     - nestif
     - nlreturn
     - testpackage
     - unused
-  disable-all: false
-  fast: false
+    - wsl
+  settings:
+    dogsled:
+      max-blank-identifiers: 2
+    dupl:
+      threshold: 100
+    errcheck:
+      check-type-assertions: false
+      check-blank: false
+      exclude-functions:
+        - fmt:.*
+        - io/ioutil:^Read.*
+    errorlint:
+      errorf: true
+    exhaustive:
+      default-signifies-exhaustive: false
+    funlen:
+      lines: 60
+      statements: 40
+    gocognit:
+      min-complexity: 10
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    gocritic:
+      disabled-checks:
+        - regexpMust
+      enabled-tags:
+        - performance
+      disabled-tags:
+        - experimental
+      settings:
+        captLocal:
+          paramsOnly: true
+        rangeValCopy:
+          sizeThreshold: 32
+    gocyclo:
+      min-complexity: 10
+    govet:
+      enable:
+        - atomicalign
+      disable:
+        - shadow
+      enable-all: false
+      disable-all: false
+      settings:
+        printf:
+          funcs:
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+    lll:
+      line-length: 160
+      tab-width: 4
+    misspell:
+      locale: US
+      ignore-rules:
+        - someword
+    nakedret:
+      max-func-lines: 30
+    nestif:
+      min-complexity: 4
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: false
+    rowserrcheck:
+      packages:
+        - github.com/jmoiron/sqlx
+    testpackage:
+      skip-regexp: (export|internal)_test\.go
+    unparam:
+      check-exported: false
+    whitespace:
+      multi-if: false
+      multi-func: false
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
 
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - errcheck
+          - gosec
+          - goconst
+          - wsl_v5
+        path: _test\.go
+      - linters:
+          - lll
+        source: "^//go:generate "
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  uniq-by-line: true
-  exclude: []
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gosec
-    - linters:
-        - lll
-      source: "^//go:generate "
-  exclude-use-default: false
-  exclude-dirs-use-default: true
-  exclude-case-sensitive: false
-  include:
-    - EXC0002
   max-issues-per-linter: 0
   max-same-issues: 0
+  uniq-by-line: true
   new: false
-
 severity:
-  default-severity: error
-  case-sensitive: false
+  default: error
   rules:
     - linters:
         - dupl
       severity: info
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/org/project)
+    gofmt:
+      simplify: true
+    gofumpt:
+      extra-rules: false
+    goimports:
+      local-prefixes:
+        - github.com/org/project
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

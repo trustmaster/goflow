@@ -41,6 +41,7 @@ func (c *adder) Process() {
 		if len(*otherBuf) > 0 {
 			otherOp := (*otherBuf)[0]
 			*otherBuf = (*otherBuf)[1:]
+
 			c.Sum <- (op + otherOp)
 		} else {
 			*buf = append(*buf, op)
