@@ -1,6 +1,7 @@
 package goflow
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -102,8 +103,142 @@ func TestRemove(t *testing.T) {
 	}
 }
 
+// TestFanInCloseRace verifies that when multiple senders share an output
+// channel (fan-in), no data race or double-close panic occurs when their
+// closeProcOuts goroutines run concurrently. Regression test for the
+// channel close race guarded by Graph.closeChan.
+func TestFanInCloseRace(t *testing.T) {
+	const numSenders = 30
+
+	n := NewGraph()
+
+	// Create senders
+	senders := make([]*singleShot, numSenders)
+	for i := range numSenders {
+		senders[i] = new(singleShot)
+		if err := n.Add(fmt.Sprintf("s%d", i), senders[i]); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Create a single receiver (echo reads until its input closes)
+	r := new(echo)
+	if err := n.Add("r", r); err != nil {
+		t.Fatal(err)
+	}
+
+	// Fan-in: connect all sender outputs to the same receiver input
+	for i := range numSenders {
+		if err := n.Connect(fmt.Sprintf("s%d", i), "Out", "r", "In"); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Map inports
+	for i := range numSenders {
+		n.MapInPort(fmt.Sprintf("In%d", i), fmt.Sprintf("s%d", i), "In")
+	}
+	n.MapOutPort("Out", "r", "Out")
+
+	// Set up external channels
+	inChans := make([]chan int, numSenders)
+	for i := range numSenders {
+		inChans[i] = make(chan int)
+		if err := n.SetInPort(fmt.Sprintf("In%d", i), inChans[i]); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	out := make(chan int, numSenders)
+	if err := n.SetOutPort("Out", out); err != nil {
+		t.Fatal(err)
+	}
+
+	wait := Run(n)
+
+	// Send one value to each sender and close each input
+	for i := range numSenders {
+		inChans[i] <- i
+		close(inChans[i])
+	}
+
+	// Read all results
+	count := 0
+	for range out {
+		count++
+	}
+
+	if count != numSenders {
+		t.Errorf("expected %d values, got %d", numSenders, count)
+	}
+
+	<-wait
+}
+
+// TestIIPAndCloseOutRace verifies that when an IIP sends on a channel that
+// is also an output port of another process, no double-close race occurs.
+// The IIP goroutine and closeProcOuts both target the same underlying channel.
+func TestIIPAndCloseOutRace(t *testing.T) {
+	n := NewGraph()
+
+	// A sender component
+	s := new(singleShot)
+	if err := n.Add("s", s); err != nil {
+		t.Fatal(err)
+	}
+
+	// Receiver
+	r := new(echo)
+	if err := n.Add("r", r); err != nil {
+		t.Fatal(err)
+	}
+
+	// Connect sender to receiver
+	if err := n.Connect("s", "Out", "r", "In"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Add IIP to the same receiver input port (same underlying channel)
+	if err := n.AddIIP("r", "In", 99); err != nil {
+		t.Fatal(err)
+	}
+
+	// Map ports
+	n.MapInPort("In", "s", "In")
+	n.MapOutPort("Out", "r", "Out")
+
+	in := make(chan int)
+	out := make(chan int, 2)
+
+	if err := n.SetInPort("In", in); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := n.SetOutPort("Out", out); err != nil {
+		t.Fatal(err)
+	}
+
+	wait := Run(n)
+
+	// Send to the sender
+	in <- 42
+	close(in)
+
+	count := 0
+	for range out {
+		count++
+	}
+
+	// Expect: 42 from sender + 99 from IIP
+	if count != 2 {
+		t.Errorf("expected 2 values, got %d", count)
+	}
+
+	<-wait
+}
+
 func RegisterTestGraph(f *Factory) error {
-	f.Register("doubleEcho", func() (interface{}, error) {
+	f.Register("doubleEcho", func() (any, error) {
 		return newDoubleEcho()
 	})
 

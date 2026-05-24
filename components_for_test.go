@@ -67,6 +67,17 @@ func (c *adder) Process() {
 	}
 }
 
+// singleShot reads one value from In, sends it to Out, then exits.
+// Used in tests where senders must terminate (triggering closeProcOuts).
+type singleShot struct {
+	In  <-chan int
+	Out chan<- int
+}
+
+func (c *singleShot) Process() {
+	c.Out <- <-c.In
+}
+
 // echo passes input to the output.
 type echo struct {
 	In  <-chan int

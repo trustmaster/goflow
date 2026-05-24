@@ -22,6 +22,7 @@ type Graph struct {
 	connections            []connection           // Network graph edges (inter-process connections)
 	chanListenersCount     map[uintptr]uint       // Tracks how many outports use the same channel
 	chanListenersCountLock sync.Locker            // Used to synchronize operations on the chanListenersCount map
+	closedChans            sync.Map               // Guards against double-close: stores closed channel pointers
 	iips                   []iip                  // Initial Information Packets to be sent to the network on start
 }
 
@@ -181,6 +182,17 @@ func (n *Graph) Process() {
 	n.waitGrp.Wait()
 }
 
+// closeChan closes a channel safely, ensuring it is only closed once.
+// The sync.Map guards against double-close when multiple goroutines
+// share the same underlying channel (e.g. fan-in, or IIP + process output).
+func (n *Graph) closeChan(c reflect.Value) {
+	ptr := c.Pointer()
+	_, loaded := n.closedChans.LoadOrStore(ptr, struct{}{})
+	if !loaded {
+		c.Close()
+	}
+}
+
 func (n *Graph) closeProcOuts(proc interface{}) {
 	val := reflect.ValueOf(proc).Elem()
 	for i := 0; i < val.NumField(); i++ {
@@ -193,7 +205,7 @@ func (n *Graph) closeProcOuts(proc interface{}) {
 		}
 
 		if !field.IsNil() && n.decChanListenersCount(field) {
-			field.Close()
+			n.closeChan(field)
 		}
 	}
 }

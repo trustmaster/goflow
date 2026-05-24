@@ -78,7 +78,7 @@ func (n *Graph) sendIIPs() error {
 			channel.Send(data)
 
 			if n.decChanListenersCount(channel) {
-				channel.Close()
+				n.closeChan(channel)
 			}
 		}(channel, reflect.ValueOf(ip.data))
 	}
