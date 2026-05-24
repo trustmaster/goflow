@@ -39,7 +39,7 @@ func TestFactoryRegistration(t *testing.T) {
 		return
 	}
 
-	err := f.Register("echo", func() (interface{}, error) {
+	err := f.Register("echo", func() (any, error) {
 		return new(echo), nil
 	})
 	if err == nil {

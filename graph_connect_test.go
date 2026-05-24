@@ -66,6 +66,7 @@ func TestConnectInvalidParams(t *testing.T) {
 		c := item
 		t.Run(c.scenario, func(t *testing.T) {
 			t.Parallel()
+
 			if c.err == nil {
 				t.Fail()
 			} else if c.msg != c.err.Error() {
@@ -99,6 +100,7 @@ func TestPortNameCapitalization(t *testing.T) {
 		c := item
 		t.Run(c.scenario, func(t *testing.T) {
 			t.Parallel()
+
 			if c.err != nil {
 				t.Error(c.err)
 			}
@@ -161,7 +163,7 @@ func TestSubgraphReceiver(t *testing.T) {
 func newFanOutFanIn() (*Graph, error) {
 	n := NewGraph()
 
-	components := map[string]interface{}{
+	components := map[string]any{
 		"e1": new(echo),
 		"d1": new(doubler),
 		"d2": new(doubler),
@@ -238,6 +240,7 @@ func TestFanOutFanIn(t *testing.T) {
 		if !found {
 			t.Errorf("%d not found in expected data", actual)
 		}
+
 		i++
 	}
 
@@ -251,7 +254,7 @@ func TestFanOutFanIn(t *testing.T) {
 func newMapPorts() (*Graph, error) {
 	n := NewGraph()
 
-	components := map[string]interface{}{
+	components := map[string]any{
 		"e1":  new(echo),
 		"e11": new(echo),
 		"e22": new(echo),
@@ -354,7 +357,7 @@ func TestMapPorts(t *testing.T) {
 func newArrayPorts() (*Graph, error) {
 	n := NewGraph()
 
-	components := map[string]interface{}{
+	components := map[string]any{
 		"e0":  new(echo),
 		"e00": new(echo),
 		"e11": new(echo),

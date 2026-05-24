@@ -67,6 +67,7 @@ func testGraphWithNumberSequence(n *Graph, t *testing.T) {
 		if actual != expected {
 			t.Errorf("%d != %d", actual, expected)
 		}
+
 		i++
 	}
 
@@ -138,6 +139,7 @@ func TestFanInCloseRace(t *testing.T) {
 	for i := range numSenders {
 		n.MapInPort(fmt.Sprintf("In%d", i), fmt.Sprintf("s%d", i), "In")
 	}
+
 	n.MapOutPort("Out", "r", "Out")
 
 	// Set up external channels

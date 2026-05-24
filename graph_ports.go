@@ -65,17 +65,17 @@ func (n *Graph) MapOutPort(name, procName, procPort string) {
 // }
 
 // SetInPort assigns a channel to a network's inport to talk to the outer world.
-func (n *Graph) SetInPort(name string, channel interface{}) error {
+func (n *Graph) SetInPort(name string, channel any) error {
 	return n.setGraphPort(name, channel, reflect.RecvDir)
 }
 
 // SetOutPort assigns a channel to a network's outport to talk to the outer world.
 // It returns true on success or false if the outport cannot be set.
-func (n *Graph) SetOutPort(name string, channel interface{}) error {
+func (n *Graph) SetOutPort(name string, channel any) error {
 	return n.setGraphPort(name, channel, reflect.SendDir)
 }
 
-func (n *Graph) setGraphPort(name string, channel interface{}, dir reflect.ChanDir) error {
+func (n *Graph) setGraphPort(name string, channel any, dir reflect.ChanDir) error {
 	var (
 		ports    map[string]port
 		dirDescr string

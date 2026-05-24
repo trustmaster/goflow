@@ -1,3 +1,3 @@
 module github.com/trustmaster/goflow
 
-go 1.22
+go 1.23

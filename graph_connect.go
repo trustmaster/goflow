@@ -108,7 +108,7 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 
 	// Check if process is settable
 	val := reflect.ValueOf(proc)
-	if val.Kind() == reflect.Ptr && val.IsValid() {
+	if val.Kind() == reflect.Pointer && val.IsValid() {
 		val = val.Elem()
 	}
 
@@ -306,6 +306,7 @@ func capitalizePortName(name string) string {
 		if len(runes) > 0 {
 			runes[0] = unicode.ToUpper(runes[0])
 		}
+
 		return string(runes)
 	}
 
