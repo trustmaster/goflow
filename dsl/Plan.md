@@ -99,13 +99,32 @@ The items below reflect the current state of the `parser` branch at the time thi
 - [ ] end-to-end `.fbp` integration tests
 - [ ] examples for loading/parsing/caching
 
-## 3.3 Important conclusion
+## 3.3 Phase progress snapshot
 
-The current branch contains a **working tokenizer experiment**, not a finished DSL parser.
+- [x] Phase 0 plan/inventory exists
+- [x] Phase 1 deterministic lexer implemented
+- [ ] Phase 2 statement segmentation
+- [ ] Phase 3 statement parsers
+- [ ] Phase 4 definition collection
+- [ ] Phase 5 graph builder
+- [ ] Phase 6 public APIs
+- [ ] Phase 7 integration tests
+- [ ] Phase 8 examples and caching
+
+## 3.4 Important conclusion
+
+The current branch contains both:
+
+- a **working tokenizer experiment**
+- a **new deterministic lexer graph**
+
+The tokenizer remains as legacy coverage/reference. The deterministic lexer is now the active Phase 1 path.
 
 ---
 
 # 4. Target v1 feature set
+
+
 
 Only the following syntax must be supported in the first complete version.
 
@@ -335,13 +354,13 @@ type BuildError struct {
 Implementation tracking:
 
 - [x] `File` exists today
-- [ ] `Span`
-- [ ] `Cursor`
-- [ ] new `Token` shape with span support
-- [ ] `LexError`
-- [ ] `ParseError`
-- [ ] `BuildError`
-- [ ] line/column diagnostics in tests
+- [x] `Span`
+- [x] `Cursor`
+- [x] new `Token` shape with span support
+- [x] `LexError`
+- [x] `ParseError`
+- [x] `BuildError`
+- [x] line/column diagnostics in tests
 
 ---
 
@@ -378,22 +397,22 @@ const (
 
 Implementation tracking:
 
-- [ ] `TokEOF`
-- [ ] `TokEOL`
-- [ ] `TokWhitespace`
-- [ ] `TokComment`
-- [ ] `TokIdent`
-- [ ] `TokInt`
-- [ ] `TokQuoted`
-- [ ] `TokEqual`
-- [ ] `TokDot`
-- [ ] `TokColon`
-- [ ] `TokLParen`
-- [ ] `TokRParen`
-- [ ] `TokLBracket`
-- [ ] `TokRBracket`
-- [ ] `TokArrow`
-- [ ] `TokSlash`
+- [x] `TokEOF`
+- [x] `TokEOL`
+- [x] `TokWhitespace`
+- [x] `TokComment`
+- [x] `TokIdent`
+- [x] `TokInt`
+- [x] `TokQuoted`
+- [x] `TokEqual`
+- [x] `TokDot`
+- [x] `TokColon`
+- [x] `TokLParen`
+- [x] `TokRParen`
+- [x] `TokLBracket`
+- [x] `TokRBracket`
+- [x] `TokArrow`
+- [x] `TokSlash`
 
 ## 9.3 Keyword handling rule
 
@@ -427,11 +446,11 @@ Protect useful behavior from the current branch before replacing internals.
 
 ## Actions
 
-- [ ] identify which current tests should be preserved or ported
-- [ ] preserve quoted string edge cases from current scanner tests
-- [ ] preserve comment behavior from current scanner tests
-- [ ] preserve tokenizer expectations that still apply to the new lexer
-- [ ] document which current files are experimental and slated for replacement
+- [x] identify which current tests should be preserved or ported
+- [x] preserve quoted string edge cases from current scanner tests
+- [x] preserve comment behavior from current scanner tests
+- [x] preserve tokenizer expectations that still apply to the new lexer
+- [x] document which current files are experimental and slated for replacement
 
 ## Files to inspect
 
@@ -442,12 +461,12 @@ Protect useful behavior from the current branch before replacing internals.
 
 ## Acceptance
 
-- [ ] there is a clear mapping from old coverage to new tests
-- [ ] no important lexer behavior is lost during rewrite
+- [x] there is a clear mapping from old coverage to new tests
+- [x] no important lexer behavior is lost during rewrite
 
 ## Validation
 
-- [ ] no code validation required if only documenting/mapping
+- [x] no code validation required if only documenting/mapping
 
 ---
 
@@ -459,18 +478,18 @@ Build a lexer graph that replaces the current speculative `Split -> scanners -> 
 
 ## New components/files
 
-- [ ] `types.go`
-- [ ] `errors.go`
-- [ ] `start_cursor.go`
-- [ ] `dispatch.go`
-- [ ] `scan_whitespace.go`
-- [ ] `scan_comment.go`
-- [ ] `scan_quoted.go`
-- [ ] `scan_ident.go`
-- [ ] `scan_number.go`
-- [ ] `scan_operator.go`
-- [ ] `advance.go`
-- [ ] `lexer.go`
+- [x] `types.go`
+- [x] `errors.go`
+- [x] `start_cursor.go`
+- [x] `dispatch.go`
+- [x] `scan_whitespace.go`
+- [x] `scan_comment.go`
+- [x] `scan_quoted.go`
+- [x] `scan_ident.go`
+- [x] `scan_number.go`
+- [x] `scan_operator.go`
+- [x] `advance.go`
+- [x] `lexer.go`
 
 ## Component responsibilities
 
@@ -510,23 +529,23 @@ Composite graph wiring the lexer stages.
 
 ## Required behavior
 
-- [ ] `->` is recognized as one token
-- [ ] `[` and `]` are supported
-- [ ] quoted strings support existing escape behavior
-- [ ] comments are supported
-- [ ] CRLF and LF are supported
-- [ ] EOF is emitted reliably
+- [x] `->` is recognized as one token
+- [x] `[` and `]` are supported
+- [x] quoted strings support existing escape behavior
+- [x] comments are supported
+- [x] CRLF and LF are supported
+- [x] EOF is emitted reliably
 
 ## Acceptance
 
-- [ ] lexer graph exists
-- [ ] speculative `Collect` design is not used in the active lexer path
-- [ ] lexer emits spans with line/column info
+- [x] lexer graph exists
+- [x] speculative `Collect` design is not used in the active lexer path
+- [x] lexer emits spans with line/column info
 
 ## Validation
 
-- [ ] add/update lexer unit tests
-- [ ] run `go test ./dsl/...` if package split supports it, otherwise `go test ./...`
+- [x] add/update lexer unit tests
+- [x] run `go test ./dsl/...` if package split supports it, otherwise `go test ./...`
 
 ---
 
@@ -999,7 +1018,7 @@ This section is the quickest place for an agent to check status.
 ## Overall phase status
 
 - [x] Phase 0 plan/inventory exists
-- [ ] Phase 1 deterministic lexer
+- [x] Phase 1 deterministic lexer
 - [ ] Phase 2 statement segmentation
 - [ ] Phase 3 statement parsers
 - [ ] Phase 4 definition collection
@@ -1010,18 +1029,15 @@ This section is the quickest place for an agent to check status.
 
 ## Current recommended next step
 
-**Next implementation step:** Phase 1 — introduce core types and deterministic lexer.
+**Next implementation step:** Phase 2 — strip trivia and segment statements.
 
 Specifically start with:
 
-1. `types.go`
-2. `errors.go`
-3. `start_cursor.go`
-4. `scan_quoted.go`
-5. `scan_operator.go`
-6. `dispatch.go`
-7. `lexer.go`
-8. focused lexer tests
+1. `strip_trivia.go`
+2. `segment_statements.go`
+3. `Statement` type
+4. focused statement-segmentation tests
+5. lexer-to-statement integration tests
 
 ---
 

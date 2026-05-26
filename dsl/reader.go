@@ -2,16 +2,9 @@ package dsl
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
-
-// File represents a source file.
-type File struct {
-	Name string
-	Data []byte
-}
 
 // FileError is an error while reading from a file.
 type FileError struct {
@@ -47,12 +40,7 @@ func (c *Reader) Process() {
 	}
 
 	for name := range c.Name {
-		r, err := os.Open(filepath.Clean(name))
-		if !check(err, name) {
-			continue
-		}
-
-		data, err := ioutil.ReadAll(r)
+		data, err := os.ReadFile(filepath.Clean(name))
 		if !check(err, name) {
 			continue
 		}
