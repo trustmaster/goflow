@@ -27,7 +27,6 @@ func (c *Collect) Process() {
 		matched := false
 
 		for i := 0; i < insCount; i++ {
-			i := i
 			ch := c.In[i]
 			t, ok := <-ch
 
@@ -50,6 +49,7 @@ func (c *Collect) Process() {
 
 		if matched {
 			c.Out <- res
+
 			t := res // makes a copy
 			t.Pos += len(t.Value)
 
@@ -57,6 +57,7 @@ func (c *Collect) Process() {
 				c.Next <- t
 			} else {
 				t.Type = tokEOF
+
 				t.Value = t.File.Name
 				c.Out <- t
 				// FIXME how to process multiple files in the same network and provide graceful shutdown?

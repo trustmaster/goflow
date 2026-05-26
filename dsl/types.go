@@ -127,6 +127,7 @@ func advanceCursor(cursor Cursor, end int) Cursor {
 	if end < cursor.Offset {
 		end = cursor.Offset
 	}
+
 	if end > len(cursor.File.Data) {
 		end = len(cursor.File.Data)
 	}
@@ -141,6 +142,7 @@ func advanceCursor(cursor Cursor, end int) Cursor {
 			if i+1 < end && data[i+1] == '\n' {
 				i++
 			}
+
 			line++
 			column = 1
 		case '\n':

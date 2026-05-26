@@ -14,6 +14,7 @@ func (s *ScanIdentToken) Process() {
 		}
 
 		data := cursor.File.Data
+
 		start := cursor.Offset
 		if !isIdentStart(data[start]) {
 			s.Out <- illegalToken(cursor, start+1, string(data[start:start+1]))

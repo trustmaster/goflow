@@ -14,6 +14,7 @@ func (s *ScanCommentToken) Process() {
 		}
 
 		data := cursor.File.Data
+
 		start := cursor.Offset
 		if data[start] != '#' {
 			s.Out <- illegalToken(cursor, start+1, string(data[start:start+1]))

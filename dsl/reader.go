@@ -44,6 +44,7 @@ func (c *Reader) Process() {
 		if !check(err, name) {
 			continue
 		}
+
 		c.File <- &File{
 			Name: name,
 			Data: data,

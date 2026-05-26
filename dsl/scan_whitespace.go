@@ -23,6 +23,7 @@ func (s *ScanWhitespaceToken) Process() {
 			if end < len(data) && data[end] == '\n' {
 				end++
 			}
+
 			s.Out <- newToken(TokEOL, cursor, end, string(data[start:end]))
 		case '\n':
 			s.Out <- newToken(TokEOL, cursor, start+1, string(data[start:start+1]))
@@ -31,6 +32,7 @@ func (s *ScanWhitespaceToken) Process() {
 			for end < len(data) && (data[end] == ' ' || data[end] == '\t') {
 				end++
 			}
+
 			s.Out <- newToken(TokWhitespace, cursor, end, string(data[start:end]))
 		}
 	}

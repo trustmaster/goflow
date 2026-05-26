@@ -57,6 +57,7 @@ func (s *Scanner) handleTokens(scan scanTok) {
 		if !match {
 			t.Type = tokIllegal
 		}
+
 		s.Out <- t
 	}
 }
@@ -83,10 +84,13 @@ func (s *ScanChars) Process() {
 			if r == rune(0) || !matcher(r) {
 				break
 			}
+
 			buf.WriteRune(r)
 		}
+
 		tok.Value = buf.String()
 		tok.Type = TokenType(tokenType)
+
 		return tok, buf.Len() > 0
 	})
 }
@@ -100,7 +104,6 @@ func (s *ScanChars) matcher(set string) func(r rune) bool {
 		)
 
 		reg, err = regexp.Compile(set)
-
 		if err != nil {
 			// TODO error handling
 			return func(r rune) bool {
@@ -109,7 +112,7 @@ func (s *ScanChars) matcher(set string) func(r rune) bool {
 		}
 
 		return func(r rune) bool {
-			return reg.Match([]byte{byte(r)})
+			return reg.MatchString(string(r))
 		}
 	}
 	// Replace special chars
@@ -153,6 +156,7 @@ func (s *ScanKeyword) Process() {
 			// Data is too short
 			return tok, false
 		}
+
 		tok.Value = string(tok.File.Data[tok.Pos : tok.Pos+wordLen])
 		if strings.ToUpper(tok.Value) == word {
 			// Potential match, should be followed by EOF or non-word character
@@ -166,6 +170,7 @@ func (s *ScanKeyword) Process() {
 			// Checks passed, it's a match
 			tok.Type = TokenType(tokenType)
 			tok.Value = word
+
 			return tok, true
 		}
 		// No match
@@ -189,6 +194,7 @@ func (s *ScanComment) Process() {
 		if tok.File.Data[tok.Pos] != prefix[0] {
 			return tok, false
 		}
+
 		buf := bytes.NewBufferString("")
 		dataLen := len(tok.File.Data)
 		// Read all characters till the end of the line
@@ -197,10 +203,13 @@ func (s *ScanComment) Process() {
 			if r == rune(0) || r == rune('\n') || r == rune('\r') {
 				break
 			}
+
 			buf.WriteRune(r)
 		}
+
 		tok.Value = buf.String()
 		tok.Type = TokenType(tokenType)
+
 		return tok, true
 	})
 }
@@ -220,32 +229,39 @@ func (s *ScanQuoted) Process() {
 	s.handleTokens(func(tok Token) (Token, bool) {
 		// Find the quote char
 		var q rune = 0
+
 		for _, b := range quotes {
 			if rune(tok.File.Data[tok.Pos]) == b {
 				q = b
 				break
 			}
 		}
+
 		if q == 0 {
 			return tok, false
 		}
 
-		var e rune = '\\'
+		e := '\\'
 		escaped := false
 		buf := bytes.NewBufferString(string(q))
+
 		dataLen := len(tok.File.Data)
 		for i := tok.Pos + 1; i < dataLen; i++ {
 			r := rune(tok.File.Data[i])
 			if r == e {
 				if escaped {
 					buf.Truncate(buf.Len() - 1)
+
 					escaped = false
 				} else {
 					buf.WriteRune(r)
+
 					escaped = true
+
 					continue
 				}
 			}
+
 			if r == q {
 				if escaped {
 					buf.Truncate(buf.Len() - 1)
@@ -254,11 +270,15 @@ func (s *ScanQuoted) Process() {
 					break
 				}
 			}
+
 			buf.WriteRune(r)
+
 			escaped = false
 		}
+
 		tok.Value = buf.String()
 		tok.Type = TokenType(tokenType)
+
 		return tok, true
 	})
 }

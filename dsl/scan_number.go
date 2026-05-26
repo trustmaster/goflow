@@ -14,6 +14,7 @@ func (s *ScanNumberToken) Process() {
 		}
 
 		data := cursor.File.Data
+
 		start := cursor.Offset
 		if !isDigit(data[start]) {
 			s.Out <- illegalToken(cursor, start+1, string(data[start:start+1]))
