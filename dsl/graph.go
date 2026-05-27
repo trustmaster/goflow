@@ -42,6 +42,9 @@ func RegisterComponents(f *goflow.Factory) error {
 		{"dsl/Reader", func() (interface{}, error) {
 			return new(Reader), nil
 		}},
+		{"dsl/SegmentStatements", func() (interface{}, error) {
+			return new(SegmentStatements), nil
+		}},
 		{"dsl/ScanChars", func() (interface{}, error) {
 			return new(ScanChars), nil
 		}},
@@ -74,6 +77,9 @@ func RegisterComponents(f *goflow.Factory) error {
 		}},
 		{"dsl/Split", func() (interface{}, error) {
 			return new(Split), nil
+		}},
+		{"dsl/StripTrivia", func() (interface{}, error) {
+			return new(StripTrivia), nil
 		}},
 		{"dsl/StartCursor", func() (interface{}, error) {
 			return new(StartCursor), nil
