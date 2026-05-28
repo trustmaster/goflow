@@ -1019,9 +1019,9 @@ This section is the quickest place for an agent to check status.
 
 - [x] Phase 0 plan/inventory exists
 - [x] Phase 1 deterministic lexer
-- [ ] Phase 2 statement segmentation
-- [ ] Phase 3 statement parsers
-- [ ] Phase 4 definition collection
+- [x] Phase 2 statement segmentation
+- [x] Phase 3 statement parsers
+- [x] Phase 4 definition collection
 - [ ] Phase 5 graph builder
 - [ ] Phase 6 public APIs
 - [ ] Phase 7 integration tests
@@ -1029,15 +1029,12 @@ This section is the quickest place for an agent to check status.
 
 ## Current recommended next step
 
-**Next implementation step:** Phase 2 — strip trivia and segment statements.
+**Next implementation step:** Phase 5 — Build GoFlow graph from `Definition`.
 
 Specifically start with:
 
-1. `strip_trivia.go`
-2. `segment_statements.go`
-3. `Statement` type
-4. focused statement-segmentation tests
-5. lexer-to-statement integration tests
+1. `build.go` — `Build(def Definition, f *goflow.Factory) (*goflow.Graph, error)`
+2. `build_test.go`
 
 ---
 
