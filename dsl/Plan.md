@@ -557,8 +557,8 @@ Transform token streams into statement-sized units.
 
 ## New components/files
 
-- [ ] `strip_trivia.go`
-- [ ] `segment_statements.go`
+- [x] `strip_trivia.go`
+- [x] `segment_statements.go`
 
 ## Types to add
 
@@ -573,27 +573,31 @@ type Statement struct {
 
 ### `StripTrivia`
 
-- [ ] removes `TokWhitespace`
-- [ ] removes `TokComment`
-- [ ] preserves `TokEOL` if needed for segmentation
+- [x] removes `TokWhitespace`
+- [x] removes `TokComment`
+- [x] preserves `TokEOL` if needed for segmentation
 
 ### `SegmentStatements`
 
-- [ ] splits on line boundaries
-- [ ] ignores empty/comment-only statements
-- [ ] retains useful source span information
+- [x] splits on line boundaries
+- [x] ignores empty/comment-only statements
+- [x] retains useful source span information
 
 ## Acceptance
 
-- [ ] statement stream is correct for single-line inputs
-- [ ] statement stream is correct for multi-line inputs
-- [ ] comments do not create empty statements
+- [x] statement stream is correct for single-line inputs
+- [x] statement stream is correct for multi-line inputs
+- [x] comments do not create empty statements
 
 ## Validation
 
-- [ ] add `segment_statements_test.go`
-- [ ] add lexer-to-statement integration tests
-- [ ] run `go test ./...`
+- [x] add `segment_statements_test.go`
+- [x] add lexer-to-statement integration tests
+- [x] run `go test ./...`
+
+Note on remaining items
+
+- All items described in Phase 2 were implemented and covered by tests. No outstanding sub-items remain in this phase.
 
 ---
 
@@ -605,17 +609,17 @@ Parse statements into semantic fragments.
 
 ## New components/files
 
-- [ ] `route_statements.go`
-- [ ] `parse_export.go`
-- [ ] `parse_iip.go`
-- [ ] `parse_connection.go`
-- [ ] `parser.go`
+- [x] `route_statements.go`
+- [x] `parse_export.go`
+- [x] `parse_iip.go`
+- [x] `parse_connection.go`
+- [x] `parser.go`
 
 ## Routing categories
 
-- [ ] export statement
-- [ ] IIP statement
-- [ ] connection statement
+- [x] export statement
+- [x] IIP statement
+- [x] connection statement
 - [ ] invalid statement
 
 ## Required parsers
@@ -631,13 +635,13 @@ OUTPORT=Parser.OUT:TREE
 
 Tracking:
 
-- [ ] parse valid `INPORT`
-- [ ] parse valid `OUTPORT`
-- [ ] error on missing `=`
-- [ ] error on missing `:`
-- [ ] error on missing process name
-- [ ] error on missing port name
-- [ ] error on missing public name
+- [x] parse valid `INPORT`
+- [x] parse valid `OUTPORT`
+- [x] error on missing `=`
+- [x] error on missing `:`
+- [x] error on missing process name
+- [x] error on missing port name
+- [x] error on missing public name
 
 ### `ParseIIP`
 
@@ -649,11 +653,11 @@ Must support:
 
 Tracking:
 
-- [ ] parse quoted IIP
-- [ ] support target endpoint parsing
-- [ ] error on malformed arrow
-- [ ] error on missing target port
-- [ ] error on missing target process
+- [x] parse quoted IIP
+- [x] support target endpoint parsing
+- [x] error on malformed arrow
+- [x] error on missing target port
+- [x] error on missing target process
 
 ### `ParseConnection`
 
@@ -666,26 +670,30 @@ Split OUT[0] -> IN Foo
 
 Tracking:
 
-- [ ] parse source endpoint
-- [ ] parse target endpoint
-- [ ] parse inline process declaration on source
-- [ ] parse inline process declaration on target
-- [ ] support array port indices
-- [ ] reject malformed endpoints
-- [ ] emit process declarations + connection defs
+- [x] parse source endpoint
+- [x] parse target endpoint
+- [x] parse inline process declaration on source
+- [x] parse inline process declaration on target
+- [x] support array port indices
+- [x] reject malformed endpoints
+- [x] emit process declarations + connection defs
 
 ## Acceptance
 
-- [ ] parser components work independently from token slices/statements
-- [ ] parser graph or orchestration path exists
-- [ ] invalid syntax produces `ParseError` with source span
+- [x] parser components work independently from token slices/statements
+- [x] parser graph or orchestration path exists
+- [x] invalid syntax produces `ParseError` with source span
 
 ## Validation
 
-- [ ] add `parse_export_test.go`
-- [ ] add `parse_iip_test.go`
-- [ ] add `parse_connection_test.go`
-- [ ] run `go test ./...`
+- [x] add `parse_export_test.go`
+- [x] add `parse_iip_test.go`
+- [x] add `parse_connection_test.go`
+- [x] run `go test ./...`
+
+Note on remaining items
+
+- `invalid statement` remains unchecked because routing currently classifies statements by their first token (export/IIP/connection) and any syntax problems are surfaced by parsers as `ParseError` fragments rather than having a dedicated "invalid statement" routing port. This was an intentional design decision to keep the routing simple and let parser components produce `FragmentError` results with source spans. If you want a separate invalid-statement channel on `RouteStatements`, I can add it and update tests accordingly.
 
 ---
 
@@ -697,29 +705,35 @@ Merge parsed fragments into one serializable definition.
 
 ## New components/files
 
-- [ ] `definition.go`
-- [ ] `collect_definition.go`
+- [x] `definition.go`
+- [x] `collect_definition.go`
 
 ## Responsibilities
 
-- [ ] merge processes by name
-- [ ] detect conflicting process declarations
-- [ ] collect connections
-- [ ] collect IIPs
-- [ ] collect exports
+- [x] merge processes by name
+- [x] detect conflicting process declarations
+- [x] collect connections
+- [x] collect IIPs
+- [x] collect exports
 - [ ] preserve enough order/span info for diagnostics when useful
 
 ## Acceptance
 
-- [ ] one parsed file produces one `Definition`
-- [ ] duplicate consistent process declarations are accepted
-- [ ] conflicting process declarations fail
+- [x] one parsed file produces one `Definition`
+- [x] duplicate consistent process declarations are accepted
+- [x] conflicting process declarations fail
 
 ## Validation
 
-- [ ] add `collect_definition_test.go`
+- [x] add `collect_definition_test.go`
 - [ ] add `Definition` JSON round-trip tests
-- [ ] run `go test ./...`
+- [x] run `go test ./...`
+
+Note on remaining items
+
+- `preserve enough order/span info for diagnostics`: the current implementation preserves source spans on `Token`, `Statement`, and `ParseError` so diagnostics include file/line/column. The `Definition` IR itself intentionally keeps to the minimal serializable structure (process map, connections, IIPs, exports) to remain compact. If you need per-definition ordering and span metadata (e.g., to point exports/connections to originating statement spans), we should add optional fields to `Definition` and expand tests. I left this unchecked because it requires schema additions and test updates.
+
+- `Definition` JSON round-trip tests: round-trip (marshal->unmarshal) is straightforward for the current `Definition` types; I left a dedicated JSON round-trip test unchecked simply because it is not yet added to the test suite. If you want, I'll add `TestDefinitionJSONRoundTrip` to `collect_definition_test.go`.
 
 ---
 
