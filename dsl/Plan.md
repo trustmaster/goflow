@@ -745,32 +745,32 @@ Turn parsed DSL into a runnable `*goflow.Graph`.
 
 ## New files
 
-- [ ] `build.go`
+- [x] `build.go`
 
 ## Required behavior
 
-- [ ] create a new graph
-- [ ] add all processes via `AddNew`
-- [ ] connect all edges via `Connect`
-- [ ] add all IIPs via `AddIIP`
-- [ ] map exported ports via `MapInPort` / `MapOutPort`
+- [x] create a new graph
+- [x] add all processes via `AddNew`
+- [x] connect all edges via `Connect`
+- [x] add all IIPs via `AddIIP`
+- [x] map exported ports via `MapInPort` / `MapOutPort`
 
 ## Required validation behavior
 
-- [ ] error on unknown component name
-- [ ] error on undeclared process reference
-- [ ] error on invalid ports
-- [ ] error on invalid export targets
+- [x] error on unknown component name
+- [x] error on undeclared process reference
+- [x] error on invalid ports
+- [x] error on invalid export targets
 
 ## Acceptance
 
-- [ ] `Build(def, factory)` returns runnable graph for valid definitions
-- [ ] errors are wrapped as `BuildError` or clear equivalent errors
+- [x] `Build(def, factory)` returns runnable graph for valid definitions
+- [x] errors are wrapped as `BuildError` or clear equivalent errors
 
 ## Validation
 
-- [ ] add `build_test.go`
-- [ ] run `go test ./...`
+- [x] add `build_test.go`
+- [x] run `go test ./...`
 
 ---
 
@@ -1036,19 +1036,19 @@ This section is the quickest place for an agent to check status.
 - [x] Phase 2 statement segmentation
 - [x] Phase 3 statement parsers
 - [x] Phase 4 definition collection
-- [ ] Phase 5 graph builder
+- [x] Phase 5 graph builder
 - [ ] Phase 6 public APIs
 - [ ] Phase 7 integration tests
 - [ ] Phase 8 examples and caching
 
 ## Current recommended next step
 
-**Next implementation step:** Phase 5 — Build GoFlow graph from `Definition`.
+**Next implementation step:** Phase 6 — Add top-level public APIs.
 
 Specifically start with:
 
-1. `build.go` — `Build(def Definition, f *goflow.Factory) (*goflow.Graph, error)`
-2. `build_test.go`
+1. `api.go` — `Parse(src []byte) (*Definition, error)`, `ParseFile(path string) (*Definition, error)`, `BuildFile(path string, f *goflow.Factory) (*goflow.Graph, error)`
+2. `api_test.go`
 
 ---
 
