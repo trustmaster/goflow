@@ -16,15 +16,18 @@ func (s *SegmentStatements) Process() {
 		}
 
 		s.Out <- newStatement(tokens)
+
 		tokens = nil
 	}
 
 	for tok := range s.In {
+		//nolint:exhaustive // default handles all non-delimiter tokens
 		switch tok.Type {
 		case TokEOL, TokNewFile:
 			flush()
 		case TokEOF:
 			flush()
+
 			return
 		default:
 			tokens = append(tokens, tok)

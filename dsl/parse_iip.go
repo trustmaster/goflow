@@ -23,6 +23,35 @@ func (p *ParseIIP) Process() {
 	}
 }
 
+// parseIIPData extracts the data value from an IIP data token.
+func parseIIPData(dataTok *Token) (any, *ParseError) {
+	//nolint:exhaustive // default handles unexpected token types
+	switch dataTok.Type {
+	case TokQuoted:
+		v := dataTok.Value
+		if len(v) >= 2 {
+			v = v[1 : len(v)-1]
+		}
+
+		return v, nil
+	case TokInt:
+		n := 0
+
+		for _, ch := range dataTok.Value {
+			if ch >= '0' && ch <= '9' {
+				n = n*10 + int(ch-'0')
+			}
+		}
+
+		return n, nil
+	default:
+		return nil, &ParseError{
+			Span: dataTok.Span,
+			Err:  fmt.Errorf("expected quoted string or integer for IIP data, got %s %q", dataTok.Type, dataTok.Value),
+		}
+	}
+}
+
 // parseIIPStatement parses a single IIP statement.
 //
 // Expected token sequence:
@@ -37,30 +66,9 @@ func parseIIPStatement(stmt Statement) ([]Fragment, *ParseError) {
 
 	dataTok := cur.consume()
 
-	var data any
-
-	switch dataTok.Type {
-	case TokQuoted:
-		v := dataTok.Value
-		if len(v) >= 2 {
-			v = v[1 : len(v)-1] // strip surrounding quote characters
-		}
-
-		data = v
-	case TokInt:
-		n := 0
-		for _, ch := range dataTok.Value {
-			if ch >= '0' && ch <= '9' {
-				n = n*10 + int(ch-'0')
-			}
-		}
-
-		data = n
-	default:
-		return nil, &ParseError{
-			Span: dataTok.Span,
-			Err:  fmt.Errorf("expected quoted string or integer for IIP data, got %s %q", dataTok.Type, dataTok.Value),
-		}
+	data, err := parseIIPData(&dataTok)
+	if err != nil {
+		return nil, err
 	}
 
 	if _, err := cur.expect(TokArrow); err != nil {

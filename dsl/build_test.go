@@ -86,8 +86,7 @@ func TestBuild_EmptyDefinition(t *testing.T) {
 	_ = registerTestComponents(f)
 
 	def := Definition{Processes: make(map[string]ProcessDef)}
-	g, err := Build(def, f)
-
+	g, err := Build(&def, f)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -107,8 +106,7 @@ func TestBuild_SingleProcess(t *testing.T) {
 		},
 	}
 
-	g, err := Build(def, f)
-
+	g, err := Build(&def, f)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -138,8 +136,7 @@ func TestBuild_Connection(t *testing.T) {
 		},
 	}
 
-	g, err := Build(def, f)
-
+	g, err := Build(&def, f)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -183,8 +180,7 @@ func TestBuild_IIP(t *testing.T) {
 		},
 	}
 
-	g, err := Build(def, f)
-
+	g, err := Build(&def, f)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -230,8 +226,7 @@ func TestBuild_ArrayPort(t *testing.T) {
 		},
 	}
 
-	g, err := Build(def, f)
-
+	g, err := Build(&def, f)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -269,8 +264,7 @@ func TestBuild_InPortExport(t *testing.T) {
 		},
 	}
 
-	g, err := Build(def, f)
-
+	g, err := Build(&def, f)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -312,7 +306,7 @@ func TestBuild_ErrorUnknownComponent(t *testing.T) {
 		},
 	}
 
-	_, err := Build(def, f)
+	_, err := Build(&def, f)
 
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -339,7 +333,7 @@ func TestBuild_ErrorUndeclaredProcessInConnection(t *testing.T) {
 		},
 	}
 
-	_, err := Build(def, f)
+	_, err := Build(&def, f)
 
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -361,7 +355,7 @@ func TestBuild_ErrorUndeclaredProcessInIIP(t *testing.T) {
 		},
 	}
 
-	_, err := Build(def, f)
+	_, err := Build(&def, f)
 
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -385,7 +379,7 @@ func TestBuild_ErrorUnknownExportKind(t *testing.T) {
 		},
 	}
 
-	_, err := Build(def, f)
+	_, err := Build(&def, f)
 
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -407,7 +401,7 @@ func TestBuild_ErrorExportUnknownProcess(t *testing.T) {
 		},
 	}
 
-	_, err := Build(def, f)
+	_, err := Build(&def, f)
 
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -438,8 +432,7 @@ func TestBuild_MultipleProcessesAndConnections(t *testing.T) {
 		},
 	}
 
-	g, err := Build(def, f)
-
+	g, err := Build(&def, f)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

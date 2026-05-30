@@ -10,15 +10,28 @@ import "github.com/trustmaster/goflow"
 func NewParser(f *goflow.Factory) (*goflow.Graph, error) {
 	n := goflow.NewGraph()
 
+	const (
+		procRoute       = "RouteStatements"
+		procParseExport = "ParseExport"
+		procParseIIP    = "ParseIIP"
+		procParseConn   = "ParseConnection"
+		procCollectDef  = "CollectDefinition"
+		compRoute       = "dsl/RouteStatements"
+		compParseExport = "dsl/ParseExport"
+		compParseIIP    = "dsl/ParseIIP"
+		compParseConn   = "dsl/ParseConnection"
+		compCollectDef  = "dsl/CollectDefinition"
+	)
+
 	procs := []struct {
 		name      string
 		component string
 	}{
-		{"RouteStatements", "dsl/RouteStatements"},
-		{"ParseExport", "dsl/ParseExport"},
-		{"ParseIIP", "dsl/ParseIIP"},
-		{"ParseConnection", "dsl/ParseConnection"},
-		{"CollectDefinition", "dsl/CollectDefinition"},
+		{procRoute, compRoute},
+		{procParseExport, compParseExport},
+		{procParseIIP, compParseIIP},
+		{procParseConn, compParseConn},
+		{procCollectDef, compCollectDef},
 	}
 
 	for i := range procs {
@@ -27,25 +40,27 @@ func NewParser(f *goflow.Factory) (*goflow.Graph, error) {
 		}
 	}
 
+	//nolint:goconst // "Out" and "In" are common port names, not configurable constants
 	conns := []struct{ src, srcPort, tgt, tgtPort string }{
-		{"RouteStatements", "Export", "ParseExport", "In"},
-		{"RouteStatements", "IIP", "ParseIIP", "In"},
-		{"RouteStatements", "Connection", "ParseConnection", "In"},
+		{procRoute, "Export", procParseExport, "In"},
+		{procRoute, "IIP", procParseIIP, "In"},
+		{procRoute, "Connection", procParseConn, "In"},
 		// Fan-in: all three parsers send fragments to CollectDefinition
-		{"ParseExport", "Out", "CollectDefinition", "In"},
-		{"ParseIIP", "Out", "CollectDefinition", "In"},
-		{"ParseConnection", "Out", "CollectDefinition", "In"},
+		{procParseExport, "Out", procCollectDef, "In"},
+		{procParseIIP, "Out", procCollectDef, "In"},
+		{procParseConn, "Out", procCollectDef, "In"},
 	}
 
 	for i := range conns {
 		c := conns[i]
+
 		if err := n.Connect(c.src, c.srcPort, c.tgt, c.tgtPort); err != nil {
 			return n, err
 		}
 	}
 
-	n.MapInPort("In", "RouteStatements", "In")
-	n.MapOutPort("Out", "CollectDefinition", "Out")
+	n.MapInPort("In", procRoute, "In")
+	n.MapOutPort("Out", procCollectDef, "Out")
 
 	return n, nil
 }

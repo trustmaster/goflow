@@ -46,6 +46,7 @@ func assertFragments(t *testing.T, got, want []Fragment) {
 			continue
 		}
 
+		//nolint:exhaustive // only Process and Connection are relevant for connection tests
 		switch want[i].Kind {
 		case FragmentProcess:
 			if got[i].Process == nil {
@@ -65,6 +66,9 @@ func assertFragments(t *testing.T, got, want []Fragment) {
 
 			assertEndpoint(t, fmt.Sprintf("fragment[%d].Src", i), got[i].Connection.Src, want[i].Connection.Src)
 			assertEndpoint(t, fmt.Sprintf("fragment[%d].Tgt", i), got[i].Connection.Tgt, want[i].Connection.Tgt)
+
+		default:
+			t.Errorf("fragment[%d] unexpected kind %q", i, want[i].Kind)
 		}
 	}
 }

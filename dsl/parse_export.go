@@ -36,10 +36,11 @@ func parseExportStatement(stmt Statement) (ExportDef, *ParseError) {
 	}
 
 	var kind ExportKind
+
 	switch keyword.Value {
-	case "INPORT":
+	case keywordINPORT:
 		kind = ExportInPort
-	case "OUTPORT":
+	case keywordOUTPORT:
 		kind = ExportOutPort
 	default:
 		return ExportDef{}, &ParseError{Span: keyword.Span, Err: fmt.Errorf("expected INPORT or OUTPORT, got %q", keyword.Value)}

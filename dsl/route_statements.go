@@ -21,7 +21,7 @@ func (r *RouteStatements) Process() {
 		first := stmt.Tokens[0]
 
 		switch {
-		case first.Type == TokIdent && (first.Value == "INPORT" || first.Value == "OUTPORT"):
+		case first.Type == TokIdent && (first.Value == keywordINPORT || first.Value == keywordOUTPORT):
 			r.Export <- stmt
 		case first.Type == TokQuoted || first.Type == TokInt:
 			r.IIP <- stmt

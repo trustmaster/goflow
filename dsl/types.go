@@ -57,6 +57,11 @@ const (
 )
 
 const (
+	keywordINPORT  = "INPORT"
+	keywordOUTPORT = "OUTPORT"
+)
+
+const (
 	// Legacy aliases used by the experimental tokenizer implementation/tests.
 	tokIllegal    = TokIllegal
 	tokNewFile    = TokNewFile

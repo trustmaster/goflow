@@ -21,34 +21,88 @@ func (p *ParseConnection) Process() {
 	}
 }
 
+// tokenCursorWithError wraps a tokenCursor and tracks parse errors.
+type parseEndpointResult struct {
+	procName  string
+	portName  string
+	component string
+	index     *int
+}
+
+// parseSourceEndpoint parses the source side of a connection: ProcName [(Component)] PortName [[Index]].
+func parseSourceEndpoint(cur *tokenCursor) (parseEndpointResult, *ParseError) {
+	var res parseEndpointResult
+
+	procTok, err := cur.expectIdent()
+	if err != nil {
+		return res, err
+	}
+
+	res.procName = procTok.Value
+
+	res.component, err = parseComponent(cur)
+	if err != nil {
+		return res, err
+	}
+
+	portTok, err := cur.expectIdent()
+	if err != nil {
+		return res, err
+	}
+
+	res.portName = portTok.Value
+
+	res.index, err = parseArrayIndex(cur)
+	if err != nil {
+		return res, err
+	}
+
+	return res, nil
+}
+
+// parseTargetEndpoint parses the target side of a connection: PortName [[Index]] ProcName [(Component)].
+func parseTargetEndpoint(cur *tokenCursor) (parseEndpointResult, *ParseError) {
+	var res parseEndpointResult
+
+	portTok, err := cur.expectIdent()
+	if err != nil {
+		return res, err
+	}
+
+	res.portName = portTok.Value
+
+	res.index, err = parseArrayIndex(cur)
+	if err != nil {
+		return res, err
+	}
+
+	procTok, err := cur.expectIdent()
+	if err != nil {
+		return res, err
+	}
+
+	res.procName = procTok.Value
+
+	res.component, err = parseComponent(cur)
+	if err != nil {
+		return res, err
+	}
+
+	return res, nil
+}
+
 // parseConnectionStatement parses a single connection statement.
 //
 // Expected token sequence:
 //
-//	SrcProc [( SrcComp )] SrcPort [[SrcIdx]] -> TgtPort [[TgtIdx]] TgtProc [( TgtComp )]
+//	SrcProc [(SrcComp)] SrcPort [[SrcIdx]] -> TgtPort [[TgtIdx]] TgtProc [(TgtComp)]
 //
 // Process declaration fragments are emitted only when an inline component is present.
 // A ConnectionDef fragment is always emitted.
 func parseConnectionStatement(stmt Statement) ([]Fragment, *ParseError) {
 	cur := newTokenCursor(stmt.Tokens)
 
-	// Source endpoint: ProcName [(Component)] PortName [[Index]]
-	srcProcTok, err := cur.expectIdent()
-	if err != nil {
-		return nil, err
-	}
-
-	srcComp, err := parseComponent(cur)
-	if err != nil {
-		return nil, err
-	}
-
-	srcPortTok, err := cur.expectIdent()
-	if err != nil {
-		return nil, err
-	}
-
-	srcIndex, err := parseArrayIndex(cur)
+	src, err := parseSourceEndpoint(cur)
 	if err != nil {
 		return nil, err
 	}
@@ -58,48 +112,32 @@ func parseConnectionStatement(stmt Statement) ([]Fragment, *ParseError) {
 		return nil, err
 	}
 
-	// Target endpoint: PortName [[Index]] ProcName [(Component)]
-	tgtPortTok, err := cur.expectIdent()
-	if err != nil {
-		return nil, err
-	}
-
-	tgtIndex, err := parseArrayIndex(cur)
-	if err != nil {
-		return nil, err
-	}
-
-	tgtProcTok, err := cur.expectIdent()
-	if err != nil {
-		return nil, err
-	}
-
-	tgtComp, err := parseComponent(cur)
+	tgt, err := parseTargetEndpoint(cur)
 	if err != nil {
 		return nil, err
 	}
 
 	var frags []Fragment
 
-	if srcComp != "" {
+	if src.component != "" {
 		frags = append(frags, Fragment{
 			Kind:    FragmentProcess,
-			Process: &ProcessDef{Name: srcProcTok.Value, Component: srcComp},
+			Process: &ProcessDef{Name: src.procName, Component: src.component},
 		})
 	}
 
-	if tgtComp != "" {
+	if tgt.component != "" {
 		frags = append(frags, Fragment{
 			Kind:    FragmentProcess,
-			Process: &ProcessDef{Name: tgtProcTok.Value, Component: tgtComp},
+			Process: &ProcessDef{Name: tgt.procName, Component: tgt.component},
 		})
 	}
 
 	frags = append(frags, Fragment{
 		Kind: FragmentConnection,
 		Connection: &ConnectionDef{
-			Src: Endpoint{Process: srcProcTok.Value, Port: srcPortTok.Value, Index: srcIndex},
-			Tgt: Endpoint{Process: tgtProcTok.Value, Port: tgtPortTok.Value, Index: tgtIndex},
+			Src: Endpoint{Process: src.procName, Port: src.portName, Index: src.index},
+			Tgt: Endpoint{Process: tgt.procName, Port: tgt.portName, Index: tgt.index},
 		},
 	})
 
