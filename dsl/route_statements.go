@@ -7,7 +7,7 @@ package dsl
 type RouteStatements struct {
 	In         <-chan Statement
 	Export     chan<- Statement
-	IIP        chan<- Statement
+	Iip        chan<- Statement
 	Connection chan<- Statement
 }
 
@@ -24,7 +24,7 @@ func (r *RouteStatements) Process() {
 		case first.Type == TokIdent && (first.Value == keywordINPORT || first.Value == keywordOUTPORT):
 			r.Export <- stmt
 		case first.Type == TokQuoted || first.Type == TokInt:
-			r.IIP <- stmt
+			r.Iip <- stmt
 		default:
 			r.Connection <- stmt
 		}

@@ -103,11 +103,11 @@ The items below reflect the current state of the `parser` branch at the time thi
 
 - [x] Phase 0 plan/inventory exists
 - [x] Phase 1 deterministic lexer implemented
-- [ ] Phase 2 statement segmentation
-- [ ] Phase 3 statement parsers
-- [ ] Phase 4 definition collection
-- [ ] Phase 5 graph builder
-- [ ] Phase 6 public APIs
+- [x] Phase 2 statement segmentation
+- [x] Phase 3 statement parsers
+- [x] Phase 4 definition collection
+- [x] Phase 5 graph builder
+- [x] Phase 6 public APIs
 - [ ] Phase 7 integration tests
 - [ ] Phase 8 examples and caching
 
@@ -130,12 +130,12 @@ Only the following syntax must be supported in the first complete version.
 
 ## 4.1 Required statement types
 
-- [ ] inline process declarations
-- [ ] connections
-- [ ] IIPs
-- [ ] port exports
-- [ ] comments
-- [ ] addressable array ports
+- [x] inline process declarations
+- [x] connections
+- [x] IIPs
+- [x] port exports
+- [x] comments
+- [x] addressable array ports
 
 ### Examples
 
@@ -726,7 +726,7 @@ Merge parsed fragments into one serializable definition.
 ## Validation
 
 - [x] add `collect_definition_test.go`
-- [ ] add `Definition` JSON round-trip tests
+- [x] add `Definition` JSON round-trip tests
 - [x] run `go test ./...`
 
 Note on remaining items
@@ -782,27 +782,27 @@ Expose ergonomic parse/load/build entry points.
 
 ## New files
 
-- [ ] `api.go`
+- [x] `api.go`
 
 ## Functions to implement
 
-- [ ] `ParseDefinition`
-- [ ] `LoadDefinitionFile`
-- [ ] `Parse`
-- [ ] `LoadFile`
-- [ ] `UnmarshalDefinition`
+- [x] `ParseDefinition`
+- [x] `LoadDefinitionFile`
+- [x] `Parse`
+- [x] `LoadFile`
+- [x] `UnmarshalDefinition`
 
 ## Acceptance
 
-- [ ] `.fbp` source bytes can be parsed directly
-- [ ] `.fbp` files can be loaded from disk
-- [ ] direct parse-to-graph path works
-- [ ] parse-to-definition path works
+- [x] `.fbp` source bytes can be parsed directly
+- [x] `.fbp` files can be loaded from disk
+- [x] direct parse-to-graph path works
+- [x] parse-to-definition path works
 
 ## Validation
 
-- [ ] add API-level tests
-- [ ] run `go test ./...`
+- [x] add API-level tests
+- [x] run `go test ./...`
 
 ---
 
