@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/trustmaster/goflow"
 )
@@ -18,7 +19,7 @@ func ParseDefinition(src []byte) (*Definition, error) {
 
 // LoadDefinitionFile reads an FBP file from disk and parses it into a Definition.
 func LoadDefinitionFile(path string) (*Definition, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(filepath.Clean(path)) // #nosec G304
 	if err != nil {
 		return nil, fmt.Errorf("load definition file: %w", err)
 	}
@@ -60,22 +61,29 @@ func UnmarshalDefinition(data []byte) (*Definition, error) {
 	return &def, nil
 }
 
-// parseFile runs the lexer -> strip trivia -> segment statements -> parser
-// pipeline and returns the collected Definition.
-func parseFile(file *File) (*Definition, error) {
+func createLexerParser() (*goflow.Graph, *goflow.Graph, error) {
 	f := goflow.NewFactory()
 	if err := RegisterComponents(f); err != nil {
-		return nil, fmt.Errorf("register components: %w", err)
+		return nil, nil, fmt.Errorf("register components: %w", err)
 	}
 
 	lexer, err := NewLexer(f)
 	if err != nil {
-		return nil, fmt.Errorf("create lexer: %w", err)
+		return nil, nil, fmt.Errorf("create lexer: %w", err)
 	}
 
 	parser, err := NewParser(f)
 	if err != nil {
-		return nil, fmt.Errorf("create parser: %w", err)
+		return nil, nil, fmt.Errorf("create parser: %w", err)
+	}
+
+	return lexer, parser, nil
+}
+
+func runPipeline(file *File) (DefinitionResult, error) {
+	lexer, parser, err := createLexerParser()
+	if err != nil {
+		return DefinitionResult{}, err
 	}
 
 	fileCh := make(chan *File, 1)
@@ -85,21 +93,24 @@ func parseFile(file *File) (*Definition, error) {
 	resultCh := make(chan DefinitionResult)
 
 	if err := lexer.SetInPort("In", fileCh); err != nil {
-		return nil, fmt.Errorf("set lexer in port: %w", err)
+		return DefinitionResult{}, fmt.Errorf("set lexer in port: %w", err)
 	}
+
 	if err := lexer.SetOutPort("Out", tokenCh); err != nil {
-		return nil, fmt.Errorf("set lexer out port: %w", err)
+		return DefinitionResult{}, fmt.Errorf("set lexer out port: %w", err)
 	}
 
 	if err := parser.SetInPort("In", stmtCh); err != nil {
-		return nil, fmt.Errorf("set parser in port: %w", err)
+		return DefinitionResult{}, fmt.Errorf("set parser in port: %w", err)
 	}
+
 	if err := parser.SetOutPort("Out", resultCh); err != nil {
-		return nil, fmt.Errorf("set parser out port: %w", err)
+		return DefinitionResult{}, fmt.Errorf("set parser out port: %w", err)
 	}
 
 	go func() {
 		fileCh <- file
+
 		close(fileCh)
 	}()
 
@@ -127,6 +138,17 @@ func parseFile(file *File) (*Definition, error) {
 
 	<-lexerWait
 	<-parserWait
+
+	return result, nil
+}
+
+// parseFile runs the lexer -> strip trivia -> segment statements -> parser
+// pipeline and returns the collected Definition.
+func parseFile(file *File) (*Definition, error) {
+	result, err := runPipeline(file)
+	if err != nil {
+		return nil, err
+	}
 
 	if len(result.Errors) > 0 {
 		return nil, errors.Join(result.Errors...)
