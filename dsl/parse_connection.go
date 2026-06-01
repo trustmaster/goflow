@@ -7,8 +7,14 @@ type ParseConnection struct {
 }
 
 // Process parses each incoming Statement as a connection declaration.
+// Standalone process declarations (e.g. "Foo(comp/path)") are also accepted.
 func (p *ParseConnection) Process() {
 	for stmt := range p.In {
+		if proc := tryParseStandaloneProcess(stmt); proc != nil {
+			p.Out <- Fragment{Kind: FragmentProcess, Process: proc}
+			continue
+		}
+
 		frags, err := parseConnectionStatement(stmt)
 		if err != nil {
 			p.Out <- Fragment{Kind: FragmentError, Err: err}
@@ -27,6 +33,45 @@ type parseEndpointResult struct {
 	portName  string
 	component string
 	index     *int
+}
+
+// tryParseStandaloneProcess attempts to parse a statement that consists solely of
+// an inline process declaration: ProcName '(' ComponentPath ')'.
+// It returns nil if the statement does not match this pattern.
+func tryParseStandaloneProcess(stmt Statement) *ProcessDef {
+	// Reject statements that contain operators used by connections, IIPs, or exports.
+	for _, t := range stmt.Tokens {
+		switch t.Type {
+		case TokArrow, TokEqual, TokDot, TokColon:
+			return nil
+		}
+	}
+
+	if len(stmt.Tokens) < 4 {
+		return nil
+	}
+
+	if stmt.Tokens[0].Type != TokIdent || stmt.Tokens[1].Type != TokLParen {
+		return nil
+	}
+
+	cur := newTokenCursor(stmt.Tokens)
+
+	procTok, err := cur.expectIdent()
+	if err != nil {
+		return nil
+	}
+
+	comp, err := parseComponent(cur)
+	if err != nil || comp == "" {
+		return nil
+	}
+
+	if !cur.done() {
+		return nil
+	}
+
+	return &ProcessDef{Name: procTok.Value, Component: comp}
 }
 
 // parseSourceEndpoint parses the source side of a connection: ProcName [(Component)] PortName [[Index]].

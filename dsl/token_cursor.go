@@ -15,6 +15,32 @@ func newTokenCursor(tokens []Token) *tokenCursor {
 // peek returns the current token without advancing.
 func (c *tokenCursor) peek() Token {
 	if c.pos >= len(c.tokens) {
+		if len(c.tokens) > 0 {
+			last := c.tokens[len(c.tokens)-1]
+			line := last.Span.Line
+			col := last.Span.Column
+
+			for _, r := range last.Value {
+				if r == '\n' {
+					line++
+					col = 1
+				} else {
+					col++
+				}
+			}
+
+			return Token{
+				Type: TokEOF,
+				Span: Span{
+					File:   last.Span.File,
+					Offset: last.Span.End,
+					Line:   line,
+					Column: col,
+					End:    last.Span.End,
+				},
+			}
+		}
+
 		return Token{Type: TokEOF}
 	}
 

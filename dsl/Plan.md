@@ -108,7 +108,7 @@ The items below reflect the current state of the `parser` branch at the time thi
 - [x] Phase 4 definition collection
 - [x] Phase 5 graph builder
 - [x] Phase 6 public APIs
-- [ ] Phase 7 integration tests
+- [x] Phase 7 integration tests
 - [ ] Phase 8 examples and caching
 
 ## 3.4 Important conclusion
@@ -814,8 +814,8 @@ Prove the package works with actual GoFlow components.
 
 ## New files
 
-- [ ] `integration_test.go`
-- [ ] `testdata/*.fbp`
+- [x] `integration_test.go`
+- [x] `testdata/*.fbp`
 - [ ] optionally `testdata/*.json`
 
 ## Test scenarios
@@ -823,36 +823,35 @@ Prove the package works with actual GoFlow components.
 ### Minimal connection graph
 
 ```fbp
-Echo(echo) OUT -> IN Doubler(doubler)
-INPORT=Echo.IN:IN
-OUTPORT=Doubler.OUT:OUT
+Sender(test/sender) OUT -> IN Receiver(test/receiver)
+OUTPORT=Receiver.OUT:OUT
 ```
 
 Tracking:
 
-- [ ] parse valid graph
-- [ ] build graph successfully
-- [ ] run graph successfully
-- [ ] verify transformed output
+- [x] parse valid graph
+- [x] build graph successfully
+- [x] run graph successfully
+- [x] verify transformed output
 
 ### IIP-driven graph
 
-- [ ] add a scenario proving IIPs are attached correctly
+- [x] add a scenario proving IIPs are attached correctly
 
 ### Array port routing
 
-- [ ] add targeted array-port scenario once builder support is complete
+- [x] add targeted array-port scenario once builder support is complete
 
 ### Error scenarios
 
-- [ ] unknown component
-- [ ] syntax error with line/column
-- [ ] conflicting process declaration
-- [ ] invalid export target
+- [x] unknown component
+- [x] syntax error with line/column
+- [x] conflicting process declaration
+- [x] invalid export target
 
 ## Validation
 
-- [ ] run `go test ./...`
+- [x] run `go test ./...`
 
 ---
 
@@ -1037,13 +1036,13 @@ This section is the quickest place for an agent to check status.
 - [x] Phase 3 statement parsers
 - [x] Phase 4 definition collection
 - [x] Phase 5 graph builder
-- [ ] Phase 6 public APIs
-- [ ] Phase 7 integration tests
+- [x] Phase 6 public APIs
+- [x] Phase 7 integration tests
 - [ ] Phase 8 examples and caching
 
 ## Current recommended next step
 
-**Next implementation step:** Phase 6 — Add top-level public APIs.
+**Next implementation step:** Phase 8 — Examples and caching story.
 
 Specifically start with:
 
