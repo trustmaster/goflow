@@ -40,8 +40,9 @@ type parseEndpointResult struct {
 // It returns nil if the statement does not match this pattern.
 func tryParseStandaloneProcess(stmt Statement) *ProcessDef {
 	// Reject statements that contain operators used by connections, IIPs, or exports.
-	for _, t := range stmt.Tokens {
-		switch t.Type {
+	for i := range stmt.Tokens {
+		//nolint:exhaustive // only operator tokens are relevant here
+		switch stmt.Tokens[i].Type {
 		case TokArrow, TokEqual, TokDot, TokColon:
 			return nil
 		}
