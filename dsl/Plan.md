@@ -92,12 +92,12 @@ The items below reflect the current state of the `parser` branch at the time thi
 
 ## 3.2 Missing in the repository
 
-- [ ] real parser producing a syntax/semantic model
-- [ ] serializable `Definition` intermediate representation
-- [ ] graph builder from `Definition` to `*goflow.Graph`
-- [ ] public parse/load APIs in `goflow/dsl`
-- [ ] end-to-end `.fbp` integration tests
-- [ ] examples for loading/parsing/caching
+- [x] real parser producing a syntax/semantic model
+- [x] serializable `Definition` intermediate representation
+- [x] graph builder from `Definition` to `*goflow.Graph`
+- [x] public parse/load APIs in `goflow/dsl`
+- [x] end-to-end `.fbp` integration tests
+- [x] examples for loading/parsing/caching
 
 ## 3.3 Phase progress snapshot
 
@@ -109,7 +109,7 @@ The items below reflect the current state of the `parser` branch at the time thi
 - [x] Phase 5 graph builder
 - [x] Phase 6 public APIs
 - [x] Phase 7 integration tests
-- [ ] Phase 8 examples and caching
+- [x] Phase 8 examples and caching
 
 ## 3.4 Important conclusion
 
@@ -190,12 +190,12 @@ func UnmarshalDefinition(data []byte) (*Definition, error)
 
 Completion tracking:
 
-- [ ] `ParseDefinition`
-- [ ] `LoadDefinitionFile`
-- [ ] `Build`
-- [ ] `Parse`
-- [ ] `LoadFile`
-- [ ] `UnmarshalDefinition`
+- [x] `ParseDefinition`
+- [x] `LoadDefinitionFile`
+- [x] `Build`
+- [x] `Parse`
+- [x] `LoadFile`
+- [x] `UnmarshalDefinition`
 
 ---
 
@@ -279,14 +279,14 @@ type ExportDef struct {
 
 Implementation tracking:
 
-- [ ] `Definition`
-- [ ] `ProcessDef`
-- [ ] `Endpoint`
-- [ ] `ConnectionDef`
-- [ ] `IIPDef`
-- [ ] `ExportKind`
-- [ ] `ExportDef`
-- [ ] JSON round-trip test for `Definition`
+- [x] `Definition`
+- [x] `ProcessDef`
+- [x] `Endpoint`
+- [x] `ConnectionDef`
+- [x] `IIPDef`
+- [x] `ExportKind`
+- [x] `ExportDef`
+- [x] JSON round-trip test for `Definition`
 
 ## Semantic rule
 
@@ -620,7 +620,7 @@ Parse statements into semantic fragments.
 - [x] export statement
 - [x] IIP statement
 - [x] connection statement
-- [ ] invalid statement
+- [ ] invalid statement — deferred; routing classifies by first token and parsers produce `ParseError` fragments instead of a dedicated invalid-statement channel
 
 ## Required parsers
 
@@ -715,7 +715,7 @@ Merge parsed fragments into one serializable definition.
 - [x] collect connections
 - [x] collect IIPs
 - [x] collect exports
-- [ ] preserve enough order/span info for diagnostics when useful
+- [ ] preserve enough order/span info for diagnostics when useful — deferred; `Token`, `Statement`, and `ParseError` retain spans; the `Definition` IR stays minimal
 
 ## Acceptance
 
@@ -863,34 +863,34 @@ Make the package easy to understand and present as a showcase.
 
 ## New files
 
-- [ ] `example_test.go` and/or `examples/...`
-- [ ] `testdata/hello.fbp`
+- [x] `example_test.go` and/or `examples/...`
+- [x] `testdata/hello.fbp`
 
 ## Examples to add
 
 ### Example 1 — load and run `.fbp`
 
-- [ ] register components in `Factory`
-- [ ] call `dsl.LoadFile`
-- [ ] set ports and run graph
+- [x] register components in `Factory`
+- [x] call `dsl.LoadFile`
+- [x] set ports and run graph
 
 ### Example 2 — parse to `Definition`
 
-- [ ] call `dsl.ParseDefinition`
-- [ ] inspect resulting structure
-- [ ] show JSON marshaling
+- [x] call `dsl.ParseDefinition`
+- [x] inspect resulting structure
+- [x] show JSON marshaling
 
 ### Example 3 — cached definition
 
-- [ ] parse `.fbp`
-- [ ] marshal definition to JSON
-- [ ] unmarshal definition later
-- [ ] call `dsl.Build`
+- [x] parse `.fbp`
+- [x] marshal definition to JSON
+- [x] unmarshal definition later
+- [x] call `dsl.Build`
 
 ## Validation
 
-- [ ] example tests run successfully
-- [ ] `go test ./...`
+- [x] example tests run successfully
+- [x] `go test ./...`
 
 ---
 
@@ -901,70 +901,71 @@ This is the recommended end-state layout for `goflow/dsl`.
 ## Keep and adapt
 
 - [x] `reader.go`
-- [ ] port useful logic from old scanner/tokenizer tests
-- [ ] keep `dsl.fbp` only if still useful as a fixture/reference
+- [x] port useful logic from old scanner/tokenizer tests — legacy files removed; active lexer and parser tests provide equivalent coverage
+- [x] keep `dsl.fbp` as a fixture/reference
 
 ## Replace or retire after new coverage exists
 
-- [ ] `collect.go`
-- [ ] `merge.go`
-- [ ] `split.go`
-- [ ] `start_token.go`
-- [ ] `tokenizer.go`
-- [ ] `tokenizer.fbp`
-- [ ] old scanner implementations built around speculative matching
+- [x] `collect.go`
+- [x] `merge.go`
+- [x] `split.go`
+- [x] `start_token.go`
+- [x] `tokenizer.go`
+- [x] `tokenizer.fbp`
+- [x] old scanner implementations built around speculative matching
 
 ## Target files
 
 ### Core
 
-- [ ] `types.go`
-- [ ] `definition.go`
-- [ ] `errors.go`
+- [x] `types.go`
+- [x] `definition.go`
+- [x] `errors.go`
 
 ### Lexer
 
-- [ ] `reader.go`
-- [ ] `start_cursor.go`
-- [ ] `dispatch.go`
-- [ ] `scan_whitespace.go`
-- [ ] `scan_comment.go`
-- [ ] `scan_quoted.go`
-- [ ] `scan_ident.go`
-- [ ] `scan_number.go`
-- [ ] `scan_operator.go`
-- [ ] `advance.go`
-- [ ] `lexer.go`
+- [x] `reader.go`
+- [x] `start_cursor.go`
+- [x] `dispatch.go`
+- [x] `scan_whitespace.go`
+- [x] `scan_comment.go`
+- [x] `scan_quoted.go`
+- [x] `scan_ident.go`
+- [x] `scan_number.go`
+- [x] `scan_operator.go`
+- [x] `advance.go`
+- [x] `lexer.go`
 
 ### Parser
 
-- [ ] `strip_trivia.go`
-- [ ] `segment_statements.go`
-- [ ] `route_statements.go`
-- [ ] `parse_export.go`
-- [ ] `parse_iip.go`
-- [ ] `parse_connection.go`
-- [ ] `collect_definition.go`
-- [ ] `parser.go`
+- [x] `strip_trivia.go`
+- [x] `segment_statements.go`
+- [x] `route_statements.go`
+- [x] `parse_export.go`
+- [x] `parse_iip.go`
+- [x] `parse_connection.go`
+- [x] `collect_definition.go`
+- [x] `parser.go`
 
 ### Build/API
 
-- [ ] `build.go`
-- [ ] `api.go`
+- [x] `build.go`
+- [x] `api.go`
 
 ### Tests
 
-- [ ] `reader_test.go`
-- [ ] `lexer_test.go`
-- [ ] `scan_quoted_test.go`
-- [ ] `scan_operator_test.go`
-- [ ] `segment_statements_test.go`
-- [ ] `parse_export_test.go`
-- [ ] `parse_iip_test.go`
-- [ ] `parse_connection_test.go`
-- [ ] `collect_definition_test.go`
-- [ ] `build_test.go`
-- [ ] `integration_test.go`
+- [x] `reader_test.go`
+- [x] `lexer_test.go`
+- [x] `segment_statements_test.go`
+- [x] `parse_export_test.go`
+- [x] `parse_iip_test.go`
+- [x] `parse_connection_test.go`
+- [x] `collect_definition_test.go`
+- [x] `build_test.go`
+- [x] `integration_test.go`
+- [x] `example_test.go`
+
+*Note:* `scan_quoted_test.go` and `scan_operator_test.go` do not exist as standalone files; quoted-string and operator coverage is provided by `lexer_test.go`.
 
 ---
 
@@ -974,24 +975,24 @@ Follow this workflow while implementing.
 
 ## Before making changes
 
-- [ ] read this plan fully
-- [ ] inspect existing `goflow/dsl` files before deleting or rewriting them
-- [ ] inspect existing tests and preserve useful behavior
-- [ ] confirm dependency direction remains `dsl -> goflow` only
+- [x] read this plan fully
+- [x] inspect existing `goflow/dsl` files before deleting or rewriting them
+- [x] inspect existing tests and preserve useful behavior
+- [x] confirm dependency direction remains `dsl -> goflow` only
 
 ## During each phase
 
-- [ ] make focused, phase-local changes
-- [ ] prefer incremental commits/patches conceptually, even if not committing in git
-- [ ] add tests in the same phase as the implementation
-- [ ] do not remove old tests until replacement coverage exists
-- [ ] keep changes surgical and avoid unrelated cleanup
+- [x] make focused, phase-local changes
+- [x] prefer incremental commits/patches conceptually, even if not committing in git
+- [x] add tests in the same phase as the implementation
+- [x] do not remove old tests until replacement coverage exists
+- [x] keep changes surgical and avoid unrelated cleanup
 
 ## After each phase
 
-- [ ] run relevant tests
-- [ ] update checkbox status in this file if the phase is materially complete
-- [ ] record any deferred gaps directly in this plan
+- [x] run relevant tests
+- [x] update checkbox status in this file if the phase is materially complete
+- [x] record any deferred gaps directly in this plan
 
 ## If blocked
 
@@ -1007,12 +1008,12 @@ Do not claim completion unless validation has actually been run.
 
 After significant code changes:
 
-- [ ] `go test ./...`
+- [x] `go test ./...`
 
 When changing only one area, start narrower if helpful, then broaden:
 
-- [ ] package-level tests first if available
-- [ ] then full repository tests
+- [x] package-level tests first if available
+- [x] then full repository tests
 
 ## Diagnostics expectations
 
@@ -1038,16 +1039,11 @@ This section is the quickest place for an agent to check status.
 - [x] Phase 5 graph builder
 - [x] Phase 6 public APIs
 - [x] Phase 7 integration tests
-- [ ] Phase 8 examples and caching
+- [x] Phase 8 examples and caching
 
 ## Current recommended next step
 
-**Next implementation step:** Phase 8 — Examples and caching story.
-
-Specifically start with:
-
-1. `api.go` — `Parse(src []byte) (*Definition, error)`, `ParseFile(path string) (*Definition, error)`, `BuildFile(path string, f *goflow.Factory) (*goflow.Graph, error)`
-2. `api_test.go`
+All planned phases are complete.
 
 ---
 
@@ -1055,13 +1051,13 @@ Specifically start with:
 
 The implementation is successful when all of the following are true.
 
-- [ ] `dsl.LoadFile(path, factory)` builds a runnable `*goflow.Graph`
-- [ ] parser internals are still meaningfully implemented as GoFlow graphs/components
-- [ ] active parser architecture no longer depends on speculative scanner fan-out/fan-in
-- [ ] syntax errors report accurate line/column information
-- [ ] parsed definitions can be serialized to and from JSON
-- [ ] unit, integration, and example tests exist and pass
-- [ ] examples demonstrate both direct loading and cached-definition workflows
+- [x] `dsl.LoadFile(path, factory)` builds a runnable `*goflow.Graph`
+- [x] parser internals are still meaningfully implemented as GoFlow graphs/components
+- [x] active parser architecture no longer depends on speculative scanner fan-out/fan-in
+- [x] syntax errors report accurate line/column information
+- [x] parsed definitions can be serialized to and from JSON
+- [x] unit, integration, and example tests exist and pass
+- [x] examples demonstrate both direct loading and cached-definition workflows
 
 ---
 

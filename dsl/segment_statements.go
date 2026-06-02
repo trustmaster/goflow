@@ -23,7 +23,7 @@ func (s *SegmentStatements) Process() {
 	for tok := range s.In {
 		//nolint:exhaustive // default handles all non-delimiter tokens
 		switch tok.Type {
-		case TokEOL, TokNewFile:
+		case TokEOL:
 			flush()
 		case TokEOF:
 			flush()

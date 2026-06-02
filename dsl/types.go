@@ -29,7 +29,6 @@ type TokenType string
 const (
 	// Generic token types.
 	TokIllegal    = TokenType("illegal")
-	TokNewFile    = TokenType("newFile") // legacy tokenizer support
 	TokEOF        = TokenType("eof")
 	TokWhitespace = TokenType("whitespace")
 	TokEOL        = TokenType("eol")
@@ -50,37 +49,11 @@ const (
 	TokRBracket = TokenType("rbracket")
 	TokArrow    = TokenType("arrow")
 	TokSlash    = TokenType("slash")
-
-	// Keywords retained for legacy tokenizer/scanner coverage.
-	TokInport  = TokenType("inport")
-	TokOutport = TokenType("outport")
 )
 
 const (
 	keywordINPORT  = "INPORT"
 	keywordOUTPORT = "OUTPORT"
-)
-
-const (
-	// Legacy aliases used by the experimental tokenizer implementation/tests.
-	tokIllegal    = TokIllegal
-	tokNewFile    = TokNewFile
-	tokEOF        = TokEOF
-	tokWhitespace = TokWhitespace
-	tokEOL        = TokEOL
-	tokComment    = TokComment
-	tokIdent      = TokIdent
-	tokInt        = TokInt
-	tokQuotedStr  = TokQuoted
-	tokEqual      = TokEqual
-	tokDot        = TokDot
-	tokColon      = TokColon
-	tokLparen     = TokLParen
-	tokRparen     = TokRParen
-	tokArrow      = TokArrow
-	tokSlash      = TokSlash
-	tokInport     = TokInport
-	tokOutport    = TokOutport
 )
 
 // Token represents a single lexeme in a File.

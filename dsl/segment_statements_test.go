@@ -48,22 +48,6 @@ func TestSegmentStatements(t *testing.T) {
 			},
 		},
 		{
-			name: "ignores legacy new-file tokens",
-			input: []Token{
-				{Type: TokNewFile, File: file, Pos: 0, Value: file.Name},
-				testToken(file, TokIdent, 0, 1, 1, 1, "A"),
-				testToken(file, TokEOF, 1, 1, 2, 1, file.Name),
-			},
-			want: []Statement{
-				{
-					Tokens: []Token{
-						testToken(file, TokIdent, 0, 1, 1, 1, "A"),
-					},
-					Span: Span{File: file.Name, Offset: 0, Line: 1, Column: 1, End: 1},
-				},
-			},
-		},
-		{
 			name: "flushes trailing tokens when input closes without eof",
 			input: []Token{
 				testToken(file, TokIdent, 0, 1, 1, 1, "A"),
