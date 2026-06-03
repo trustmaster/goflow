@@ -1,5 +1,10 @@
 package dsl
 
+import (
+	"unicode"
+	"unicode/utf8"
+)
+
 // File represents a source file.
 type File struct {
 	Name string
@@ -59,8 +64,8 @@ const (
 // Token represents a single lexeme in a File.
 type Token struct {
 	Type  TokenType
-	File  *File
-	Pos   int
+	File  *File  // reference to the source file (same as Span.File for convenience)
+	Pos   int    // byte offset in file (same as Span.Offset)
 	Span  Span
 	Value string
 }
@@ -114,21 +119,24 @@ func advanceCursor(cursor Cursor, end int) Cursor {
 	column := cursor.Column
 	data := cursor.File.Data
 
-	for i := cursor.Offset; i < end; i++ {
-		switch data[i] {
-		case '\r':
-			if i+1 < end && data[i+1] == '\n' {
-				i++
+	for offset := cursor.Offset; offset < end; {
+		r, size := utf8.DecodeRune(data[offset:])
+		if r == '\n' {
+			line++
+			column = 1
+		} else if r == '\r' {
+			if offset+size < end {
+				nextR, _ := utf8.DecodeRune(data[offset+size:])
+				if nextR == '\n' {
+					offset += size
+				}
 			}
-
 			line++
 			column = 1
-		case '\n':
-			line++
-			column = 1
-		default:
+		} else {
 			column++
 		}
+		offset += size
 	}
 
 	return Cursor{
@@ -139,14 +147,14 @@ func advanceCursor(cursor Cursor, end int) Cursor {
 	}
 }
 
-func isIdentStart(ch byte) bool {
-	return ch == '_' || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+func isIdentStart(r rune) bool {
+	return r == '_' || unicode.IsLetter(r)
 }
 
-func isIdentPart(ch byte) bool {
-	return isIdentStart(ch) || isDigit(ch)
+func isIdentPart(r rune) bool {
+	return isIdentStart(r) || unicode.IsDigit(r)
 }
 
-func isDigit(ch byte) bool {
-	return ch >= '0' && ch <= '9'
+func isDigit(r rune) bool {
+	return r >= '0' && r <= '9'
 }

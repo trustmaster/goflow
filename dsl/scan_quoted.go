@@ -1,6 +1,9 @@
 package dsl
 
-import "bytes"
+import (
+	"bytes"
+	"unicode/utf8"
+)
 
 // ScanQuotedToken scans a single- or double-quoted string token.
 type ScanQuotedToken struct {
@@ -23,31 +26,28 @@ func scanQuotedToken(cursor Cursor) Token {
 	data := cursor.File.Data
 	start := cursor.Offset
 
-	quote := rune(data[start])
+	quote, size := utf8.DecodeRune(data[start:])
 	if quote != '\'' && quote != '"' {
-		return illegalToken(cursor, start+1, string(data[start:start+1]))
+		return illegalToken(cursor, start+size, string(data[start:start+size]))
 	}
 
 	escape := rune('\\')
 	escaped := false
 	buf := bytes.NewBufferString(string(quote))
-	end := len(data)
+	end := start + size
 	closed := false
 
-	for i := start + 1; i < len(data); i++ {
-		r := rune(data[i])
-		end = i + 1
+	for end < len(data) {
+		r, rSize := utf8.DecodeRune(data[end:])
+		end += rSize
 
 		if r == escape {
 			if escaped {
 				buf.Truncate(buf.Len() - 1)
-
 				escaped = false
 			} else {
 				buf.WriteRune(r)
-
 				escaped = true
-
 				continue
 			}
 		}
@@ -57,15 +57,12 @@ func scanQuotedToken(cursor Cursor) Token {
 				buf.Truncate(buf.Len() - 1)
 			} else {
 				buf.WriteRune(r)
-
 				closed = true
-
 				break
 			}
 		}
 
 		buf.WriteRune(r)
-
 		escaped = false
 	}
 

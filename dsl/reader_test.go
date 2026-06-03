@@ -2,6 +2,7 @@ package dsl
 
 import (
 	"testing"
+	"time"
 
 	"github.com/trustmaster/goflow"
 )
@@ -78,6 +79,8 @@ loop:
 				t.Errorf("Unexpected error: %s", fe.Err.Error())
 				break loop
 			}
+		case <-time.After(5 * time.Second):
+			t.Fatal("test timeout - graph did not complete")
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package dsl
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/trustmaster/goflow"
@@ -10,6 +11,13 @@ import (
 // It creates a new graph, adds all processes, connects edges, adds IIPs,
 // and maps exported ports. Returns a BuildError on any validation failure.
 func Build(def *Definition, f *goflow.Factory) (*goflow.Graph, error) {
+	if def == nil {
+		return nil, &BuildError{Err: errors.New("definition cannot be nil")}
+	}
+	if f == nil {
+		return nil, &BuildError{Err: errors.New("factory cannot be nil")}
+	}
+
 	g := goflow.NewGraph()
 
 	// 1. Add all processes.
@@ -40,6 +48,9 @@ func Build(def *Definition, f *goflow.Factory) (*goflow.Graph, error) {
 	return g, nil
 }
 
+// addConnections validates and creates all edges in the graph.
+// Note: the error return from g.Connect() below is exercised primarily
+// through integration tests that validate goflow-level port constraints.
 func addConnections(g *goflow.Graph, def *Definition) error {
 	for i := range def.Connections {
 		conn := def.Connections[i]

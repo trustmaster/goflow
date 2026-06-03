@@ -1,5 +1,7 @@
 package dsl
 
+import "unicode/utf8"
+
 // ScanIdentToken scans an identifier token.
 type ScanIdentToken struct {
 	In  <-chan Cursor
@@ -14,16 +16,21 @@ func (s *ScanIdentToken) Process() {
 		}
 
 		data := cursor.File.Data
-
 		start := cursor.Offset
-		if !isIdentStart(data[start]) {
-			s.Out <- illegalToken(cursor, start+1, string(data[start:start+1]))
+
+		r, size := utf8.DecodeRune(data[start:])
+		if !isIdentStart(r) {
+			s.Out <- illegalToken(cursor, start+size, string(data[start:start+size]))
 			continue
 		}
 
-		end := start + 1
-		for end < len(data) && isIdentPart(data[end]) {
-			end++
+		end := start + size
+		for end < len(data) {
+			r, size := utf8.DecodeRune(data[end:])
+			if !isIdentPart(r) {
+				break
+			}
+			end += size
 		}
 
 		s.Out <- newToken(TokIdent, cursor, end, string(data[start:end]))

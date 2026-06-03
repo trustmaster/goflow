@@ -1,5 +1,7 @@
 package dsl
 
+import "unicode/utf8"
+
 // Dispatch routes a cursor to the correct lexer scanner based on the current byte.
 type Dispatch struct {
 	In         <-chan Cursor
@@ -24,7 +26,9 @@ func (d *Dispatch) Process() {
 			continue
 		}
 
-		switch ch := cursor.File.Data[cursor.Offset]; {
+		ch, _ := utf8.DecodeRune(cursor.File.Data[cursor.Offset:])
+
+		switch {
 		case ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n':
 			d.Whitespace <- cursor
 		case ch == '#':

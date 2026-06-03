@@ -412,6 +412,35 @@ func TestBuild_ErrorExportUnknownProcess(t *testing.T) {
 	}
 }
 
+func TestBuild_ErrorInvalidConnection(t *testing.T) {
+	f := goflow.NewFactory()
+	_ = registerTestComponents(f)
+
+	// Try to connect to a port that does not exist on the component.
+	def := Definition{
+		Processes: map[string]ProcessDef{
+			"S": {Name: "S", Component: "test/sender"},
+			"R": {Name: "R", Component: "test/receiver"},
+		},
+		Connections: []ConnectionDef{
+			{
+				Src: Endpoint{Process: "S", Port: "Out"},
+				Tgt: Endpoint{Process: "R", Port: "NonExistent"},
+			},
+		},
+	}
+
+	_, err := Build(&def, f)
+
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	if _, ok := err.(*BuildError); !ok {
+		t.Fatalf("expected *BuildError, got %T: %v", err, err)
+	}
+}
+
 func TestBuild_MultipleProcessesAndConnections(t *testing.T) {
 	f := goflow.NewFactory()
 	_ = registerTestComponents(f)

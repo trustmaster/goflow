@@ -57,7 +57,7 @@ type DefinitionResult struct {
 	Errors     []error
 }
 
-// FragmentKind identifies the type of a parsed fragment.
+// FragmentKind identifies the type of graph element represented by a Fragment.
 type FragmentKind string
 
 const (
@@ -73,7 +73,9 @@ const (
 	FragmentError FragmentKind = "error"
 )
 
-// Fragment is a single parsed element emitted by a statement parser.
+// Fragment represents a single parsed element that will be collected
+// into the final Definition. This allows parsers to emit multiple
+// fragments per statement (e.g., inline component + connection).
 type Fragment struct {
 	Kind       FragmentKind
 	Process    *ProcessDef

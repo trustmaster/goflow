@@ -1,5 +1,10 @@
 package dsl
 
+import (
+	"fmt"
+	"strconv"
+)
+
 // ParseConnection is a FBP component that parses connection statements.
 type ParseConnection struct {
 	In  <-chan Statement
@@ -239,11 +244,11 @@ func parseArrayIndex(cur *tokenCursor) (*int, *ParseError) {
 		return nil, err
 	}
 
-	n := 0
-
-	for _, ch := range tok.Value {
-		if ch >= '0' && ch <= '9' {
-			n = n*10 + int(ch-'0')
+	n, convErr := strconv.Atoi(tok.Value)
+	if convErr != nil {
+		return nil, &ParseError{
+			Span: tok.Span,
+			Err:  fmt.Errorf("invalid integer %q: %w", tok.Value, convErr),
 		}
 	}
 

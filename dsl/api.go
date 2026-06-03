@@ -12,6 +12,15 @@ import (
 
 // ParseDefinition parses FBP source bytes into a Definition.
 func ParseDefinition(src []byte) (*Definition, error) {
+	if len(src) == 0 {
+		return &Definition{
+			Processes:   make(map[string]ProcessDef),
+			Connections: []ConnectionDef{},
+			IIPs:        []IIPDef{},
+			Exports:     []ExportDef{},
+		}, nil
+	}
+
 	file := &File{Name: "<input>", Data: src}
 
 	return parseFile(file)
@@ -81,6 +90,10 @@ func createLexerParser() (*goflow.Graph, *goflow.Graph, error) {
 }
 
 func runPipeline(file *File) (DefinitionResult, error) {
+	if file == nil {
+		return DefinitionResult{}, errors.New("file cannot be nil")
+	}
+
 	lexer, parser, err := createLexerParser()
 	if err != nil {
 		return DefinitionResult{}, err

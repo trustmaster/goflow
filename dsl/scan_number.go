@@ -1,5 +1,7 @@
 package dsl
 
+import "unicode/utf8"
+
 // ScanNumberToken scans an integer token.
 type ScanNumberToken struct {
 	In  <-chan Cursor
@@ -16,14 +18,19 @@ func (s *ScanNumberToken) Process() {
 		data := cursor.File.Data
 
 		start := cursor.Offset
-		if !isDigit(data[start]) {
-			s.Out <- illegalToken(cursor, start+1, string(data[start:start+1]))
+		r, size := utf8.DecodeRune(data[start:])
+		if !isDigit(r) {
+			s.Out <- illegalToken(cursor, start+size, string(data[start:start+size]))
 			continue
 		}
 
-		end := start + 1
-		for end < len(data) && isDigit(data[end]) {
-			end++
+		end := start + size
+		for end < len(data) {
+			r, size := utf8.DecodeRune(data[end:])
+			if !isDigit(r) {
+				break
+			}
+			end += size
 		}
 
 		s.Out <- newToken(TokInt, cursor, end, string(data[start:end]))

@@ -1,6 +1,9 @@
 package dsl
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // ParseIIP is a FBP component that parses IIP (initial information packet) statements.
 type ParseIIP struct {
@@ -35,11 +38,11 @@ func parseIIPData(dataTok *Token) (any, *ParseError) {
 
 		return v, nil
 	case TokInt:
-		n := 0
-
-		for _, ch := range dataTok.Value {
-			if ch >= '0' && ch <= '9' {
-				n = n*10 + int(ch-'0')
+		n, err := strconv.Atoi(dataTok.Value)
+		if err != nil {
+			return nil, &ParseError{
+				Span: dataTok.Span,
+				Err:  fmt.Errorf("invalid integer %q: %w", dataTok.Value, err),
 			}
 		}
 

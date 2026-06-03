@@ -17,6 +17,8 @@ func (c *tokenCursor) peek() Token {
 	if c.pos >= len(c.tokens) {
 		if len(c.tokens) > 0 {
 			last := c.tokens[len(c.tokens)-1]
+			// Calculate EOF position after the last token,
+			// accounting for newlines in the final token value.
 			line := last.Span.Line
 			col := last.Span.Column
 
