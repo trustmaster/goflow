@@ -1,10 +1,7 @@
-INPORT=Reader.FILE:FILE
-OUTPORT=Parser.OUT:TREE
-OUTPORT=Error.ERROR:ERROR
+# Top-level DSL pipeline: File -> Lexer -> StripTrivia -> SegmentStatements -> Parser -> DefinitionResult
+INPORT=Lexer.In:In
+OUTPORT=Parser.Out:Out
 
-Read(dsl/Reader) READER -> DATA Lexer(dsl/Lexer) TOKENS -> TOKENS Parser(dsl/Parser)
-
-# Error handling
-Reader ERR -> IN Error(dsl/Error)
-Lexer ERR -> IN Error
-Parser ERR -> IN Error
+Lexer(dsl/Lexer) Out -> In StripTrivia(dsl/StripTrivia)
+StripTrivia Out -> In SegmentStatements(dsl/SegmentStatements)
+SegmentStatements Out -> In Parser(dsl/Parser)

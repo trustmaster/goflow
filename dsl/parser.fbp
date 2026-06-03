@@ -1,0 +1,11 @@
+# Parser subgraph: Statement -> RouteStatements -> parsers -> CollectDefinition -> DefinitionResult
+INPORT=RouteStatements.In:In
+OUTPORT=CollectDefinition.Out:Out
+
+RouteStatements(dsl/RouteStatements) Export -> In ParseExport(dsl/ParseExport)
+RouteStatements Iip -> In ParseIIP(dsl/ParseIIP)
+RouteStatements Connection -> In ParseConnection(dsl/ParseConnection)
+
+ParseExport Out -> In CollectDefinition(dsl/CollectDefinition)
+ParseIIP Out -> In CollectDefinition
+ParseConnection Out -> In CollectDefinition
