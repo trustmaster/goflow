@@ -1,0 +1,3 @@
+OUTPORT=Receiver.OUT:OUT
+Receiver(test/receiver)
+99 -> IN Receiver

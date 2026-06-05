@@ -87,7 +87,7 @@ func newRepeatGraph2Ins() (*Graph, error) {
 	return n, nil
 }
 
-func TestGraphInportIIP(t *testing.T) { //nolint:funlen // long setup
+func TestGraphInportIIP(t *testing.T) {
 	n, err := newRepeatGraph2Ins()
 	if err != nil {
 		t.Error(err)

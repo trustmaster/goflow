@@ -1,0 +1,7 @@
+# Top-level DSL pipeline: File -> Lexer -> StripTrivia -> SegmentStatements -> Parser -> DefinitionResult
+INPORT=Lexer.In:In
+OUTPORT=Parser.Out:Out
+
+Lexer(dsl/Lexer) Out -> In StripTrivia(dsl/StripTrivia)
+StripTrivia Out -> In SegmentStatements(dsl/SegmentStatements)
+SegmentStatements Out -> In Parser(dsl/Parser)

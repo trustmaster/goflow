@@ -1,0 +1,9 @@
+# Three-stage pipeline with exported input and output ports.
+INPORT=Stage1.IN:INPUT
+OUTPORT=Stage3.OUT:OUTPUT
+
+Stage1(test/receiver)
+Stage2(test/receiver)
+Stage3(test/receiver)
+Stage1 OUT -> IN Stage2
+Stage2 OUT -> IN Stage3

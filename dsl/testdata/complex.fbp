@@ -1,0 +1,7 @@
+# Complex graph demonstrating all supported constructs.
+INPORT=Relay.IN:INPUT
+OUTPORT=Collector.OUT:OUTPUT
+Source1(test/sender) OUT -> IN Relay(test/receiver)
+Source2(test/sender) OUT -> IN[1] Collector(test/arrayReceiver)
+Relay OUT -> IN[0] Collector
+'hello' -> IN Logger(test/receiver)

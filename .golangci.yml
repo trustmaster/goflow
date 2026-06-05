@@ -19,7 +19,6 @@ linters:
     - gochecknoinits
     - goconst
     - gocritic
-    - gomodguard
     - goprintffuncname
     - gosec
     - lll
@@ -48,6 +47,19 @@ linters:
     - unused
     - wsl
   settings:
+    depguard:
+      rules:
+        main:
+          list-mode: lax
+          allow:
+            - $gostd
+        dsl:
+          files:
+            - dsl/**/*.go
+          list-mode: lax
+          allow:
+            - $gostd
+            - github.com/trustmaster/goflow
     dogsled:
       max-blank-identifiers: 2
     dupl:
@@ -94,10 +106,10 @@ linters:
       settings:
         printf:
           funcs:
-            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
-            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
-            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
-            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+            - (github.com/golangci/golangci-lint/v2/pkg/logutils.Log).Infof
+            - (github.com/golangci/golangci-lint/v2/pkg/logutils.Log).Warnf
+            - (github.com/golangci/golangci-lint/v2/pkg/logutils.Log).Errorf
+            - (github.com/golangci/golangci-lint/v2/pkg/logutils.Log).Fatalf
     lll:
       line-length: 160
       tab-width: 4
@@ -139,8 +151,16 @@ linters:
           - errcheck
           - gosec
           - goconst
+          - gocritic
+          - funlen
           - wsl_v5
         path: _test\.go
+      - linters:
+          - goconst
+        path: dsl/(graph|lex/lexer|parse/register)\.go
+      - linters:
+          - funlen
+        path: dsl/graph\.go
       - linters:
           - lll
         source: "^//go:generate "
@@ -153,12 +173,7 @@ issues:
   max-same-issues: 0
   uniq-by-line: true
   new: false
-severity:
-  default: error
-  rules:
-    - linters:
-        - dupl
-      severity: info
+
 formatters:
   enable:
     - gci

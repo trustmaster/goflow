@@ -1,0 +1,21 @@
+# Lexer subgraph: File -> StartCursor -> Dispatch -> scanners -> Advance -> Tokens
+INPORT=StartCursor.File:In
+OUTPORT=Advance.Out:Out
+
+StartCursor(dsl/StartCursor) Out -> In Dispatch(dsl/Dispatch)
+Advance(dsl/Advance) Next -> In Dispatch
+
+Dispatch Whitespace -> In ScanWhitespace(dsl/ScanWhitespaceToken)
+Dispatch Comment -> In ScanComment(dsl/ScanCommentToken)
+Dispatch Quoted -> In ScanQuoted(dsl/ScanQuotedToken)
+Dispatch Ident -> In ScanIdent(dsl/ScanIdentToken)
+Dispatch Number -> In ScanNumber(dsl/ScanNumberToken)
+Dispatch Operator -> In ScanOperator(dsl/ScanOperatorToken)
+Dispatch Eof -> In Advance
+
+ScanWhitespace Out -> In Advance
+ScanComment Out -> In Advance
+ScanQuoted Out -> In Advance
+ScanIdent Out -> In Advance
+ScanNumber Out -> In Advance
+ScanOperator Out -> In Advance
