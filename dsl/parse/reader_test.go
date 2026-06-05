@@ -79,7 +79,8 @@ loop:
 				break loop
 			}
 		case <-time.After(5 * time.Second):
-			t.Fatal("test timeout - graph did not complete")
+			t.Errorf("test timeout - graph did not complete")
+			break loop
 		}
 	}
 }
