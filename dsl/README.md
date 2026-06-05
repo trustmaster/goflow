@@ -11,7 +11,7 @@ The parser understands the FBP network definition language:
 - **IIPs** — send an initial value to a port before the network starts.
 - **Exports** — expose a process port as a graph-level port.
 
-The package exposes a high-level API that hides the internal lexer / parser pipeline, as well as lower-level helpers for inspecting or caching parsed graphs.
+The package exposes a high-level API that hides the internal lexer / parser pipeline, as well as lower-level helpers for inspecting or caching parsed graphs. Internally, that pipeline is authored as `.fbp` topology files and compiled into checked-in Go definitions used at runtime.
 
 ## Installation
 
@@ -139,11 +139,18 @@ g, err := dsl.Build(cached, f)
 
 ## Package Structure
 
-The `dsl` package is organized into three subdirectories:
+The `dsl` package is primarily organized into three subdirectories:
 
 - **`types/`** — Core type definitions (Token, Cursor, Definition, Statement, errors)
-- **`lex/`** — Lexical analysis (tokenization)
-- **`parse/`** — Parsing and graph building
+- **`lex/`** — Lexical analysis (tokenization) and generated lexer topology definition
+- **`parse/`** — Parsing, graph building, and generated parser topology definition
+
+Additional internal support files live at the package root:
+
+- **`dsl.fbp`** — authoritative top-level parser pipeline topology
+- **`internal_defs_gen.go`** — generated top-level topology definition
+- **`generate.go`** and **`cmd/dslgen/`** — generation entrypoint for refreshing checked-in definitions
+- **`internal/graphbuild/`** — shared internal helper for building graphs from `types.Definition`
 
 The public API is exposed at the top level of the `dsl` package, making internal organization transparent to users.
 
@@ -171,10 +178,28 @@ See [types/definition.go](types/definition.go) for the core data structures:
 
 The parser is itself implemented as a GoFlow network: a lexer tokenizes the input, a strip-trivia stage removes whitespace and comments, a segmenter groups tokens into statements, and finally a parser emits `Fragment`s that are collected into a `Definition`. This design is an example of dog-fooding — the FBP parser is built with the FBP framework it serves.
 
-The graph structure is described in `.fbp` files that mirror the runtime implementation:
+The authoritative graph structure is defined in `.fbp` files:
 
 - **[`dsl.fbp`](dsl.fbp)** — the top-level pipeline: `Lexer` → `StripTrivia` → `SegmentStatements` → `Parser`.
 - **[`lex/lexer.fbp`](lex/lexer.fbp)** — the lexer subgraph: `StartCursor` → `Dispatch` → scanner components → `Advance`.
 - **[`parse/parser.fbp`](parse/parser.fbp)** — the parser subgraph: `RouteStatements` → `ParseExport` / `ParseIIP` / `ParseConnection` → `CollectDefinition`.
 
+Those `.fbp` files are converted into generated Go `types.Definition` values that are checked into the repository:
+
+- **`internal_defs_gen.go`**
+- **`lex/internal_defs_gen.go`**
+- **`parse/internal_defs_gen.go`**
+
+At runtime, the public parse path builds graphs from those generated definitions rather than from handwritten topology code. `ParseDefinition` and `LoadDefinitionFile` now execute the whole internal pipeline as one top-level generated graph, while internal component registration is initialized once and reused across parses.
+
 For most users the internal pipeline is an implementation detail; the public API (`Parse`, `LoadFile`, `ParseDefinition`, etc.) handles wiring and execution automatically.
+
+## Regenerating internal topology definitions
+
+If you change any of the internal `.fbp` files, regenerate the checked-in Go definitions with:
+
+```sh
+go generate ./dsl
+```
+
+This refreshes the generated topology files deterministically so runtime behavior stays aligned with the authored `.fbp` graphs.
