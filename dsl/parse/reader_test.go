@@ -35,14 +35,14 @@ func TestReader(t *testing.T) {
 	filenames := []string{"dsl.fbp", "404notfound.fbp"}
 	expectations := []string{"data", "error"}
 
-	for _, name := range filenames {
-		in <- name
-	}
-
 	go func() {
 		readReaderOutput(t, expectations, filenames, out, e)
 		close(in)
 	}()
+
+	for _, name := range filenames {
+		in <- name
+	}
 
 	<-wait
 }

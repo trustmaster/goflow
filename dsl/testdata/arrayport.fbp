@@ -1,2 +1,2 @@
-Sender(test/sender) OUT -> IN[0] ArrayRcvr(test/arrayReceiver)
 OUTPORT=ArrayRcvr.OUT:OUT
+Sender(test/sender) OUT -> IN[0] ArrayRcvr(test/arrayReceiver)

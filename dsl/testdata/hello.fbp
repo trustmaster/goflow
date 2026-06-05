@@ -1,2 +1,3 @@
-Sender(test/sender) OUT -> IN Receiver(test/receiver)
 OUTPORT=Receiver.OUT:OUT
+
+Sender(test/sender) OUT -> IN Receiver(test/receiver)
