@@ -2,7 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/trustmaster/goflow.svg)](https://pkg.go.dev/github.com/trustmaster/goflow)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/trustmaster/goflow)](https://golang.org)
-[![CI](https://github.com/trustmaster/goflow/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/trustmaster/goflow/actions/workflows/golangci-lint.yml)
+[![CI](https://github.com/trustmaster/goflow/actions/workflows/ci.yml/badge.svg)](https://github.com/trustmaster/goflow/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/trustmaster/goflow/branch/master/graph/badge.svg)](https://codecov.io/gh/trustmaster/goflow)
 
 Dataflow and Flow-based programming library for Go.
