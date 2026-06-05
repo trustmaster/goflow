@@ -10,8 +10,8 @@ import (
 
 func TestReader(t *testing.T) {
 	in := make(chan string, 2)
-	out := make(chan *types.File)
-	e := make(chan FileError)
+	out := make(chan *types.File, 2)
+	e := make(chan FileError, 2)
 
 	f := goflow.NewFactory()
 	if err := RegisterParseComponents(f); err != nil {
@@ -32,17 +32,15 @@ func TestReader(t *testing.T) {
 
 	wait := goflow.Run(c)
 
-	filenames := []string{"dsl.fbp", "404notfound.fbp"}
+	filenames := []string{"../dsl.fbp", "404notfound.fbp"}
 	expectations := []string{"data", "error"}
 
-	go func() {
-		readReaderOutput(t, expectations, filenames, out, e)
-		close(in)
-	}()
+	go readReaderOutput(t, expectations, filenames, out, e)
 
 	for _, name := range filenames {
 		in <- name
 	}
+	close(in)
 
 	<-wait
 }
