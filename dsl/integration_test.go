@@ -1,4 +1,4 @@
-package dsl
+package dsl_test
 
 import (
 	"errors"
@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/trustmaster/goflow"
+	"github.com/trustmaster/goflow/dsl"
+	"github.com/trustmaster/goflow/dsl/types"
 )
 
 // ---------------------------------------------------------------------------
@@ -21,7 +23,7 @@ func TestIntegration_MinimalGraph(t *testing.T) {
 	}
 
 	path := filepath.Join("testdata", "minimal.fbp")
-	g, err := LoadFile(path, f)
+	g, err := dsl.LoadFile(path, f)
 	if err != nil {
 		t.Fatalf("LoadFile error: %v", err)
 	}
@@ -52,7 +54,7 @@ func TestIntegration_IIPGraph(t *testing.T) {
 	}
 
 	path := filepath.Join("testdata", "iip.fbp")
-	g, err := LoadFile(path, f)
+	g, err := dsl.LoadFile(path, f)
 	if err != nil {
 		t.Fatalf("LoadFile error: %v", err)
 	}
@@ -83,7 +85,7 @@ func TestIntegration_ArrayPortGraph(t *testing.T) {
 	}
 
 	path := filepath.Join("testdata", "arrayport.fbp")
-	g, err := LoadFile(path, f)
+	g, err := dsl.LoadFile(path, f)
 	if err != nil {
 		t.Fatalf("LoadFile error: %v", err)
 	}
@@ -115,13 +117,13 @@ func TestIntegration_ErrorUnknownComponent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := Parse([]byte(src), f)
+	_, err := dsl.Parse([]byte(src), f)
 	if err == nil {
 		t.Fatal("expected error for unknown component, got nil")
 	}
 
-	if !errors.Is(err, &BuildError{}) {
-		var be *BuildError
+	if !errors.Is(err, &types.BuildError{}) {
+		var be *types.BuildError
 		if !errors.As(err, &be) {
 			t.Fatalf("expected *BuildError, got %T: %v", err, err)
 		}
@@ -132,7 +134,7 @@ func TestIntegration_ErrorSyntax(t *testing.T) {
 	src := `INPORT=Reader.FILE
 `
 
-	_, err := ParseDefinition([]byte(src))
+	_, err := dsl.ParseDefinition([]byte(src))
 	if err == nil {
 		t.Fatal("expected error for invalid syntax, got nil")
 	}
@@ -151,7 +153,7 @@ func TestIntegration_ErrorConflictingProcess(t *testing.T) {
 Sender(test/other) OUT -> IN Receiver2(test/receiver)
 `
 
-	_, err := ParseDefinition([]byte(src))
+	_, err := dsl.ParseDefinition([]byte(src))
 	if err == nil {
 		t.Fatal("expected error for conflicting process declaration, got nil")
 	}
@@ -171,12 +173,12 @@ func TestIntegration_ErrorInvalidExportTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := Parse([]byte(src), f)
+	_, err := dsl.Parse([]byte(src), f)
 	if err == nil {
 		t.Fatal("expected error for invalid export target, got nil")
 	}
 
-	var be *BuildError
+	var be *types.BuildError
 	if !errors.As(err, &be) {
 		t.Fatalf("expected *BuildError, got %T: %v", err, err)
 	}

@@ -157,7 +157,7 @@ linters:
         path: _test\.go
       - linters:
           - goconst
-        path: dsl/(graph|lexer|tokenizer)\.go
+        path: dsl/(graph|lex/lexer|parse/register)\.go
       - linters:
           - funlen
         path: dsl/graph\.go

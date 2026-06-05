@@ -1,0 +1,4 @@
+# Two senders feeding distinct indices of an array port.
+Sender1(test/sender) OUT -> IN[0] ArrayRcvr(test/arrayReceiver)
+Sender2(test/sender) OUT -> IN[1] ArrayRcvr
+OUTPORT=ArrayRcvr.OUT:OUT

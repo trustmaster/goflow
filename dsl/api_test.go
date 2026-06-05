@@ -1,4 +1,4 @@
-package dsl
+package dsl_test
 
 import (
 	"encoding/json"
@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/trustmaster/goflow"
+	"github.com/trustmaster/goflow/dsl"
+	"github.com/trustmaster/goflow/dsl/types"
 )
 
 func TestParseDefinition(t *testing.T) {
@@ -16,7 +18,7 @@ INPORT=Read.IN:INPUT
 OUTPORT=Echo.OUT:OUTPUT
 Split(test/receiver) OUT[0] -> IN Merge(test/receiver)
 `
-	def, err := ParseDefinition([]byte(src))
+	def, err := dsl.ParseDefinition([]byte(src))
 	if err != nil {
 		t.Fatalf("ParseDefinition error: %v", err)
 	}
@@ -72,12 +74,12 @@ Split(test/receiver) OUT[0] -> IN Merge(test/receiver)
 	}
 
 	exp0 := def.Exports[0]
-	if exp0.Kind != ExportInPort || exp0.Public != "INPUT" || exp0.Proc != "Read" || exp0.Port != "IN" {
+	if exp0.Kind != types.ExportInPort || exp0.Public != "INPUT" || exp0.Proc != "Read" || exp0.Port != "IN" {
 		t.Fatalf("unexpected export[0]: %+v", exp0)
 	}
 
 	exp1 := def.Exports[1]
-	if exp1.Kind != ExportOutPort || exp1.Public != "OUTPUT" || exp1.Proc != "Echo" || exp1.Port != "OUT" {
+	if exp1.Kind != types.ExportOutPort || exp1.Public != "OUTPUT" || exp1.Proc != "Echo" || exp1.Port != "OUT" {
 		t.Fatalf("unexpected export[1]: %+v", exp1)
 	}
 }
@@ -85,7 +87,7 @@ Split(test/receiver) OUT[0] -> IN Merge(test/receiver)
 func TestParseDefinition_Error(t *testing.T) {
 	src := `INPORT=Reader.FILE
 `
-	_, err := ParseDefinition([]byte(src))
+	_, err := dsl.ParseDefinition([]byte(src))
 	if err == nil {
 		t.Fatal("expected error for invalid export syntax")
 	}
@@ -100,7 +102,7 @@ func TestLoadDefinitionFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	def, err := LoadDefinitionFile(path)
+	def, err := dsl.LoadDefinitionFile(path)
 	if err != nil {
 		t.Fatalf("LoadDefinitionFile error: %v", err)
 	}
@@ -119,7 +121,7 @@ OUTPORT=Receiver.OUT:OUT
 		t.Fatal(err)
 	}
 
-	g, err := Parse([]byte(src), f)
+	g, err := dsl.Parse([]byte(src), f)
 	if err != nil {
 		t.Fatalf("Parse error: %v", err)
 	}
@@ -152,7 +154,7 @@ OUTPORT=Receiver.OUT:OUT
 		t.Fatal(err)
 	}
 
-	g, err := LoadFile(path, f)
+	g, err := dsl.LoadFile(path, f)
 	if err != nil {
 		t.Fatalf("LoadFile error: %v", err)
 	}
@@ -171,18 +173,18 @@ OUTPORT=Receiver.OUT:OUT
 }
 
 func TestUnmarshalDefinition(t *testing.T) {
-	def := &Definition{
-		Processes: map[string]ProcessDef{
+	def := &types.Definition{
+		Processes: map[string]types.ProcessDef{
 			"Read": {Name: "Read", Component: "test/sender"},
 		},
-		Connections: []ConnectionDef{
-			{Src: Endpoint{Process: "Read", Port: "OUT"}, Tgt: Endpoint{Process: "Echo", Port: "IN"}},
+		Connections: []types.ConnectionDef{
+			{Src: types.Endpoint{Process: "Read", Port: "OUT"}, Tgt: types.Endpoint{Process: "Echo", Port: "IN"}},
 		},
-		IIPs: []IIPDef{
-			{Data: "hello", Tgt: Endpoint{Process: "Echo", Port: "IN"}},
+		IIPs: []types.IIPDef{
+			{Data: "hello", Tgt: types.Endpoint{Process: "Echo", Port: "IN"}},
 		},
-		Exports: []ExportDef{
-			{Kind: ExportInPort, Public: "INPUT", Proc: "Read", Port: "IN"},
+		Exports: []types.ExportDef{
+			{Kind: types.ExportInPort, Public: "INPUT", Proc: "Read", Port: "IN"},
 		},
 	}
 
@@ -191,7 +193,7 @@ func TestUnmarshalDefinition(t *testing.T) {
 		t.Fatalf("marshal error: %v", err)
 	}
 
-	got, err := UnmarshalDefinition(data)
+	got, err := dsl.UnmarshalDefinition(data)
 	if err != nil {
 		t.Fatalf("UnmarshalDefinition error: %v", err)
 	}
@@ -212,28 +214,28 @@ func TestUnmarshalDefinition(t *testing.T) {
 		t.Fatalf("export count mismatch")
 	}
 
-	if got.Exports[0].Kind != ExportInPort || got.Exports[0].Public != "INPUT" {
+	if got.Exports[0].Kind != types.ExportInPort || got.Exports[0].Public != "INPUT" {
 		t.Fatalf("unexpected export: %+v", got.Exports[0])
 	}
 }
 
 func TestDefinitionJSONRoundTrip(t *testing.T) {
 	idx := 3
-	original := Definition{
-		Processes: map[string]ProcessDef{
+	original := types.Definition{
+		Processes: map[string]types.ProcessDef{
 			"A": {Name: "A", Component: "comp/a"},
 		},
-		Connections: []ConnectionDef{
+		Connections: []types.ConnectionDef{
 			{
-				Src: Endpoint{Process: "A", Port: "OUT", Index: &idx},
-				Tgt: Endpoint{Process: "B", Port: "IN"},
+				Src: types.Endpoint{Process: "A", Port: "OUT", Index: &idx},
+				Tgt: types.Endpoint{Process: "B", Port: "IN"},
 			},
 		},
-		IIPs: []IIPDef{
-			{Data: 42, Tgt: Endpoint{Process: "B", Port: "IN"}},
+		IIPs: []types.IIPDef{
+			{Data: 42, Tgt: types.Endpoint{Process: "B", Port: "IN"}},
 		},
-		Exports: []ExportDef{
-			{Kind: ExportOutPort, Public: "RESULT", Proc: "B", Port: "OUT"},
+		Exports: []types.ExportDef{
+			{Kind: types.ExportOutPort, Public: "RESULT", Proc: "B", Port: "OUT"},
 		},
 	}
 
@@ -242,7 +244,7 @@ func TestDefinitionJSONRoundTrip(t *testing.T) {
 		t.Fatalf("marshal error: %v", err)
 	}
 
-	var roundTripped Definition
+	var roundTripped types.Definition
 	if err := json.Unmarshal(data, &roundTripped); err != nil {
 		t.Fatalf("unmarshal error: %v", err)
 	}

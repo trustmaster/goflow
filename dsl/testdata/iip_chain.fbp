@@ -1,0 +1,6 @@
+# Pipeline seeded by an initial information packet.
+Stage1(test/receiver)
+Stage2(test/receiver)
+99 -> IN Stage1
+Stage1 OUT -> IN Stage2
+OUTPORT=Stage2.OUT:OUTPUT

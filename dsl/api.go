@@ -8,32 +8,35 @@ import (
 	"path/filepath"
 
 	"github.com/trustmaster/goflow"
+	"github.com/trustmaster/goflow/dsl/lex"
+	"github.com/trustmaster/goflow/dsl/parse"
+	"github.com/trustmaster/goflow/dsl/types"
 )
 
 // ParseDefinition parses FBP source bytes into a Definition.
-func ParseDefinition(src []byte) (*Definition, error) {
+func ParseDefinition(src []byte) (*types.Definition, error) {
 	if len(src) == 0 {
-		return &Definition{
-			Processes:   make(map[string]ProcessDef),
-			Connections: []ConnectionDef{},
-			IIPs:        []IIPDef{},
-			Exports:     []ExportDef{},
+		return &types.Definition{
+			Processes:   make(map[string]types.ProcessDef),
+			Connections: []types.ConnectionDef{},
+			IIPs:        []types.IIPDef{},
+			Exports:     []types.ExportDef{},
 		}, nil
 	}
 
-	file := &File{Name: "<input>", Data: src}
+	file := &types.File{Name: "<input>", Data: src}
 
 	return parseFile(file)
 }
 
 // LoadDefinitionFile reads an FBP file from disk and parses it into a Definition.
-func LoadDefinitionFile(path string) (*Definition, error) {
+func LoadDefinitionFile(path string) (*types.Definition, error) {
 	data, err := os.ReadFile(filepath.Clean(path)) // #nosec G304
 	if err != nil {
 		return nil, fmt.Errorf("load definition file: %w", err)
 	}
 
-	file := &File{Name: path, Data: data}
+	file := &types.File{Name: path, Data: data}
 
 	return parseFile(file)
 }
@@ -46,7 +49,7 @@ func Parse(src []byte, f *goflow.Factory) (*goflow.Graph, error) {
 		return nil, err
 	}
 
-	return Build(def, f)
+	return parse.Build(def, f)
 }
 
 // LoadFile reads an FBP file from disk and builds a runnable *goflow.Graph
@@ -57,12 +60,12 @@ func LoadFile(path string, f *goflow.Factory) (*goflow.Graph, error) {
 		return nil, err
 	}
 
-	return Build(def, f)
+	return parse.Build(def, f)
 }
 
 // UnmarshalDefinition unmarshals a JSON-encoded Definition.
-func UnmarshalDefinition(data []byte) (*Definition, error) {
-	var def Definition
+func UnmarshalDefinition(data []byte) (*types.Definition, error) {
+	var def types.Definition
 	if err := json.Unmarshal(data, &def); err != nil {
 		return nil, err
 	}
@@ -76,12 +79,12 @@ func createLexerParser() (*goflow.Graph, *goflow.Graph, error) {
 		return nil, nil, fmt.Errorf("register components: %w", err)
 	}
 
-	lexer, err := NewLexer(f)
+	lexer, err := lex.NewLexer(f)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create lexer: %w", err)
 	}
 
-	parser, err := NewParser(f)
+	parser, err := parse.NewParser(f)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create parser: %w", err)
 	}
@@ -89,36 +92,71 @@ func createLexerParser() (*goflow.Graph, *goflow.Graph, error) {
 	return lexer, parser, nil
 }
 
-func runPipeline(file *File) (DefinitionResult, error) {
+func wireLexerInOut(lexer *goflow.Graph, fileCh chan *types.File, tokenCh chan types.Token) error {
+	if err := lexer.SetInPort("In", fileCh); err != nil {
+		return fmt.Errorf("set lexer in port: %w", err)
+	}
+
+	if err := lexer.SetOutPort("Out", tokenCh); err != nil {
+		return fmt.Errorf("set lexer out port: %w", err)
+	}
+
+	return nil
+}
+
+func wireParserInOut(parser *goflow.Graph, stmtCh chan types.Statement, resultCh chan types.DefinitionResult) error {
+	if err := parser.SetInPort("In", stmtCh); err != nil {
+		return fmt.Errorf("set parser in port: %w", err)
+	}
+
+	if err := parser.SetOutPort("Out", resultCh); err != nil {
+		return fmt.Errorf("set parser out port: %w", err)
+	}
+
+	return nil
+}
+
+func runIntermediateStages(tokenCh chan types.Token, stmtCh chan types.Statement) {
+	strippedCh := make(chan types.Token)
+
+	strip := &parse.StripTrivia{In: tokenCh, Out: strippedCh}
+	stripWait := goflow.Run(strip)
+
+	go func() {
+		<-stripWait
+		close(strippedCh)
+	}()
+
+	segment := &parse.SegmentStatements{In: strippedCh, Out: stmtCh}
+	segmentWait := goflow.Run(segment)
+
+	go func() {
+		<-segmentWait
+		close(stmtCh)
+	}()
+}
+
+func runPipeline(file *types.File) (types.DefinitionResult, error) {
 	if file == nil {
-		return DefinitionResult{}, errors.New("file cannot be nil")
+		return types.DefinitionResult{}, errors.New("file cannot be nil")
 	}
 
 	lexer, parser, err := createLexerParser()
 	if err != nil {
-		return DefinitionResult{}, err
+		return types.DefinitionResult{}, err
 	}
 
-	fileCh := make(chan *File, 1)
-	tokenCh := make(chan Token)
-	strippedCh := make(chan Token)
-	stmtCh := make(chan Statement)
-	resultCh := make(chan DefinitionResult)
+	fileCh := make(chan *types.File, 1)
+	tokenCh := make(chan types.Token)
+	stmtCh := make(chan types.Statement)
+	resultCh := make(chan types.DefinitionResult)
 
-	if err := lexer.SetInPort("In", fileCh); err != nil {
-		return DefinitionResult{}, fmt.Errorf("set lexer in port: %w", err)
+	if err := wireLexerInOut(lexer, fileCh, tokenCh); err != nil {
+		return types.DefinitionResult{}, err
 	}
 
-	if err := lexer.SetOutPort("Out", tokenCh); err != nil {
-		return DefinitionResult{}, fmt.Errorf("set lexer out port: %w", err)
-	}
-
-	if err := parser.SetInPort("In", stmtCh); err != nil {
-		return DefinitionResult{}, fmt.Errorf("set parser in port: %w", err)
-	}
-
-	if err := parser.SetOutPort("Out", resultCh); err != nil {
-		return DefinitionResult{}, fmt.Errorf("set parser out port: %w", err)
+	if err := wireParserInOut(parser, stmtCh, resultCh); err != nil {
+		return types.DefinitionResult{}, err
 	}
 
 	go func() {
@@ -129,21 +167,7 @@ func runPipeline(file *File) (DefinitionResult, error) {
 
 	lexerWait := goflow.Run(lexer)
 
-	strip := &StripTrivia{In: tokenCh, Out: strippedCh}
-	stripWait := goflow.Run(strip)
-
-	go func() {
-		<-stripWait
-		close(strippedCh)
-	}()
-
-	segment := &SegmentStatements{In: strippedCh, Out: stmtCh}
-	segmentWait := goflow.Run(segment)
-
-	go func() {
-		<-segmentWait
-		close(stmtCh)
-	}()
+	runIntermediateStages(tokenCh, stmtCh)
 
 	parserWait := goflow.Run(parser)
 
@@ -157,7 +181,7 @@ func runPipeline(file *File) (DefinitionResult, error) {
 
 // parseFile runs the lexer -> strip trivia -> segment statements -> parser
 // pipeline and returns the collected Definition.
-func parseFile(file *File) (*Definition, error) {
+func parseFile(file *types.File) (*types.Definition, error) {
 	result, err := runPipeline(file)
 	if err != nil {
 		return nil, err
@@ -168,4 +192,10 @@ func parseFile(file *File) (*Definition, error) {
 	}
 
 	return &result.Definition, nil
+}
+
+// Build builds a runnable *goflow.Graph from a Definition.
+// This is a convenience wrapper around parse.Build.
+func Build(def *types.Definition, f *goflow.Factory) (*goflow.Graph, error) {
+	return parse.Build(def, f)
 }

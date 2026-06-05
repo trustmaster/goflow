@@ -137,6 +137,16 @@ if err != nil {
 g, err := dsl.Build(cached, f)
 ```
 
+## Package Structure
+
+The `dsl` package is organized into three subdirectories:
+
+- **`types/`** — Core type definitions (Token, Cursor, Definition, Statement, errors)
+- **`lex/`** — Lexical analysis (tokenization)
+- **`parse/`** — Parsing and graph building
+
+The public API is exposed at the top level of the `dsl` package, making internal organization transparent to users.
+
 ## Error handling
 
 The parser returns three kinds of errors:
@@ -149,7 +159,7 @@ All three implement the standard `error` interface.
 
 ## Types
 
-See [definition.go](definition.go) for the core data structures:
+See [types/definition.go](types/definition.go) for the core data structures:
 
 - `Definition` — the top-level graph description.
 - `ProcessDef` — a named process and its component.
@@ -164,7 +174,7 @@ The parser is itself implemented as a GoFlow network: a lexer tokenizes the inpu
 The graph structure is described in `.fbp` files that mirror the runtime implementation:
 
 - **[`dsl.fbp`](dsl.fbp)** — the top-level pipeline: `Lexer` → `StripTrivia` → `SegmentStatements` → `Parser`.
-- **[`lexer.fbp`](lexer.fbp)** — the lexer subgraph: `StartCursor` → `Dispatch` → scanner components → `Advance`.
-- **[`parser.fbp`](parser.fbp)** — the parser subgraph: `RouteStatements` → `ParseExport` / `ParseIIP` / `ParseConnection` → `CollectDefinition`.
+- **[`lex/lexer.fbp`](lex/lexer.fbp)** — the lexer subgraph: `StartCursor` → `Dispatch` → scanner components → `Advance`.
+- **[`parse/parser.fbp`](parse/parser.fbp)** — the parser subgraph: `RouteStatements` → `ParseExport` / `ParseIIP` / `ParseConnection` → `CollectDefinition`.
 
 For most users the internal pipeline is an implementation detail; the public API (`Parse`, `LoadFile`, `ParseDefinition`, etc.) handles wiring and execution automatically.
