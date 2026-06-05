@@ -114,6 +114,34 @@ func main() {
 
 More terms can be found in the [Flowbased.org Terminology](https://github.com/flowbased/flowbased.org/wiki/Terminology) and the [FBP wiki](http://www.jpaulmorrison.com/cgi-bin/wiki.pl?action=index).
 
+## DSL / FBP Syntax
+
+GoFlow includes a built-in **`dsl`** package that lets you define application graphs using standard [Flow-Based Programming](http://en.wikipedia.org/wiki/Flow-based_programming) (FBP) syntax in `.fbp` files instead of writing Go code.
+
+```go
+import "github.com/trustmaster/goflow/dsl"
+```
+
+A minimal `.fbp` file looks like this:
+
+```fbp
+# Declare the sender's input as a graph port
+INPORT=Sender.IN:IN
+# Declare the receiver's output as a graph port
+OUTPORT=Receiver.OUT:OUT
+
+# Declare two processes and connect them
+Sender(test/sender) OUT -> IN Receiver(test/receiver)
+```
+
+Load and run it with:
+
+```go
+g, err := dsl.LoadFile("graph.fbp", factory)
+```
+
+The `dsl` package supports process declarations, connections, array ports, IIPs (initial information packets), and port exports. See the [`dsl` package README](dsl/README.md) for the full syntax guide and API reference.
+
 ## Documentation
 
 ### Wiki
@@ -148,8 +176,7 @@ Contributions are welcome! Please open an issue or pull request on [GitHub](http
 Before submitting changes, make sure your code passes the linter and tests:
 
 ```bash
-golangci-lint run ./...
-go test -v -race ./...
+make test
 ```
 
 ## License
