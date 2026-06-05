@@ -12,6 +12,7 @@ import (
 	"github.com/trustmaster/goflow/dsl/types"
 )
 
+//nolint:gochecknoglobals // package-level singletons are intentional and immutable after init.
 var (
 	internalFactoryOnce   sync.Once
 	cachedInternalFactory *goflow.Factory
@@ -102,10 +103,13 @@ func runInternalPipeline(file *types.File) (types.DefinitionResult, error) {
 	}
 
 	wait := goflow.Run(pipeline)
+
 	in <- file
+
 	close(in)
 
 	result := <-out
+
 	<-wait
 
 	return result, nil

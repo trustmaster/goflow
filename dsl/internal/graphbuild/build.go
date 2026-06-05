@@ -22,8 +22,8 @@ func Build(def *types.Definition, f *goflow.Factory) (*goflow.Graph, error) {
 
 	g := goflow.NewGraph()
 
-	for name, proc := range def.Processes {
-		if err := g.AddNew(name, proc.Component, f); err != nil {
+	for name := range def.Processes {
+		if err := g.AddNew(name, def.Processes[name].Component, f); err != nil {
 			return nil, &types.BuildError{
 				Err: fmt.Errorf("process %q: %w", name, err),
 			}

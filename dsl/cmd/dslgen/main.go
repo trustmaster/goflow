@@ -22,6 +22,7 @@ type target struct {
 func main() {
 	if err := run(); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
+
 		os.Exit(1)
 	}
 }
@@ -71,7 +72,7 @@ func writeDefinitionFile(t target, def *types.Definition) error {
 	buf.WriteString("func generatedIndex(v int) *int { return &v }\n\n")
 	buf.WriteString("var " + t.variableName + " = ")
 
-	if err := emitDefinition(&buf, *def, ""); err != nil {
+	if err := emitDefinition(&buf, def, ""); err != nil {
 		return fmt.Errorf("emit %s: %w", t.outputPath, err)
 	}
 
@@ -82,14 +83,14 @@ func writeDefinitionFile(t target, def *types.Definition) error {
 		return fmt.Errorf("format %s: %w", t.outputPath, err)
 	}
 
-	if err := os.WriteFile(t.outputPath, formatted, 0o644); err != nil {
+	if err := os.WriteFile(t.outputPath, formatted, 0o600); err != nil {
 		return fmt.Errorf("write %s: %w", t.outputPath, err)
 	}
 
 	return nil
 }
 
-func emitDefinition(buf *bytes.Buffer, def types.Definition, indent string) error {
+func emitDefinition(buf *bytes.Buffer, def *types.Definition, indent string) error {
 	next := indent + "\t"
 
 	buf.WriteString("types.Definition{\n")
@@ -97,6 +98,7 @@ func emitDefinition(buf *bytes.Buffer, def types.Definition, indent string) erro
 	emitProcesses(buf, def.Processes, next)
 
 	buf.WriteString(next + "Connections: []types.ConnectionDef{\n")
+
 	for i := range def.Connections {
 		buf.WriteString(next + "\t{\n")
 		buf.WriteString(next + "\t\tSrc: ")
@@ -107,9 +109,11 @@ func emitDefinition(buf *bytes.Buffer, def types.Definition, indent string) erro
 		buf.WriteString(",\n")
 		buf.WriteString(next + "\t},\n")
 	}
+
 	buf.WriteString(next + "},\n")
 
 	buf.WriteString(next + "IIPs: []types.IIPDef{\n")
+
 	for i := range def.IIPs {
 		lit, err := literalFor(def.IIPs[i].Data)
 		if err != nil {
@@ -123,11 +127,14 @@ func emitDefinition(buf *bytes.Buffer, def types.Definition, indent string) erro
 		buf.WriteString(",\n")
 		buf.WriteString(next + "\t},\n")
 	}
+
 	buf.WriteString(next + "},\n")
 
 	buf.WriteString(next + "Exports: []types.ExportDef{\n")
+
 	for i := range def.Exports {
 		exp := def.Exports[i]
+
 		buf.WriteString(next + "\t{\n")
 		buf.WriteString(next + "\t\tKind: " + exportKindLiteral(exp.Kind) + ",\n")
 		buf.WriteString(next + "\t\tPublic: " + strconv.Quote(exp.Public) + ",\n")
@@ -135,6 +142,7 @@ func emitDefinition(buf *bytes.Buffer, def types.Definition, indent string) erro
 		buf.WriteString(next + "\t\tPort: " + strconv.Quote(exp.Port) + ",\n")
 		buf.WriteString(next + "\t},\n")
 	}
+
 	buf.WriteString(next + "},\n")
 
 	buf.WriteString(indent + "}")
@@ -147,9 +155,11 @@ func emitProcesses(buf *bytes.Buffer, processes map[string]types.ProcessDef, ind
 	for name := range processes {
 		names = append(names, name)
 	}
+
 	sort.Strings(names)
 
 	buf.WriteString(indent + "Processes: map[string]types.ProcessDef{\n")
+
 	for i := range names {
 		proc := processes[names[i]]
 		buf.WriteString(indent + "\t" + strconv.Quote(names[i]) + ": {\n")
@@ -157,6 +167,7 @@ func emitProcesses(buf *bytes.Buffer, processes map[string]types.ProcessDef, ind
 		buf.WriteString(indent + "\t\tComponent: " + strconv.Quote(proc.Component) + ",\n")
 		buf.WriteString(indent + "\t},\n")
 	}
+
 	buf.WriteString(indent + "},\n")
 }
 
@@ -164,9 +175,11 @@ func emitEndpoint(buf *bytes.Buffer, ep types.Endpoint, indent string) {
 	buf.WriteString("types.Endpoint{\n")
 	buf.WriteString(indent + "\tProcess: " + strconv.Quote(ep.Process) + ",\n")
 	buf.WriteString(indent + "\tPort: " + strconv.Quote(ep.Port) + ",\n")
+
 	if ep.Index != nil {
 		buf.WriteString(indent + "\tIndex: generatedIndex(" + strconv.Itoa(*ep.Index) + "),\n")
 	}
+
 	buf.WriteString(indent + "}")
 }
 
